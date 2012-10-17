@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="51">
+  <logicalFolder name="root" displayName="root" projectFiles="true">
+    <logicalFolder name="main" displayName="main" projectFiles="true">
+      <itemPath>../../../main/input_henrik.f90</itemPath>
+      <itemPath>../../../main/input_rafa.f90</itemPath>
+      <itemPath>../../../main/input_x000.f90</itemPath>
+      <itemPath>../../../main/main_henrik.f90</itemPath>
+      <itemPath>../../../main/main_rafa.f90</itemPath>
+      <itemPath>../../../main/main_x000.f90</itemPath>
+    </logicalFolder>
+    <logicalFolder name="linux" displayName="routines" projectFiles="true">
+      <itemPath>../../src/cbeam3_asbly.f90</itemPath>
+      <itemPath>../../src/cbeam3_solv.f90</itemPath>
+      <itemPath>../../src/xbeam_asbly.f90</itemPath>
+      <itemPath>../../src/xbeam_fdiff.f90</itemPath>
+      <itemPath>../../src/xbeam_shared.f90</itemPath>
+      <itemPath>../../src/xbeam_solv.f90</itemPath>
+      <itemPath>../../src/xbeam_undef.f90</itemPath>
+    </logicalFolder>
+    <logicalFolder name="src" displayName="src" projectFiles="true">
+      <itemPath>../../../../lib/src/interface_lapack_v3.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_bgeom.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_cbeam3.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_fem.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_lu.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_out.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_rot.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_rotvect.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_sparse.f90</itemPath>
+      <itemPath>../../../../lib/src/lib_xbeam.f90</itemPath>
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false">
+      <itemPath>linux_sun2-Makefile.mk</itemPath>
+      <itemPath>../Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceRootList>
+    <Elem>..</Elem>
+    <Elem>../../src</Elem>
+    <Elem>../../../../lib/src</Elem>
+    <Elem>../../../main</Elem>
+  </sourceRootList>
+  <projectmakefile>linux_sun2-Makefile.mk</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <developmentServer>localhost</developmentServer>
+        <compilerSet>SunStudio_mrbeam|SunStudio_12.1</compilerSet>
+        <platform>2</platform>
+      </toolsSet>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>..</buildCommandWorkingDir>
+          <buildCommand>make -f Makefile</buildCommand>
+          <cleanCommand>make -f Makefile clean</cleanCommand>
+          <executablePath>../../../bin/xbeam.exe</executablePath>
+        </makeTool>
+        <requiredProjects>
+        </requiredProjects>
+      </makefileType>
+      <item path="../../../../lib/src/interface_lapack_v3.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_bgeom.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_cbeam3.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_fem.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_lu.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_out.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_rot.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_rotvect.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_sparse.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../../lib/src/lib_xbeam.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../main/input_henrik.f90">
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../main/input_rafa.f90">
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../main/input_x000.f90">
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../main/main_henrik.f90">
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../main/main_rafa.f90">
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../../main/main_x000.f90">
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../src/cbeam3_asbly.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../src/cbeam3_solv.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../src/xbeam_asbly.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../src/xbeam_fdiff.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../src/xbeam_shared.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../src/xbeam_solv.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+      <item path="../../src/xbeam_undef.f90">
+        <itemExcluded>true</itemExcluded>
+        <itemTool>2</itemTool>
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>
