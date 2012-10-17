@@ -436,6 +436,9 @@ module lib_rotvect
   real(8):: Psi   (3)      ! CRV
   real(8):: NormPsi        ! Norm of the CRV
 
+  NormPsi = 0.d0    ! Rob: stops normpsi uninitialized warning flag.
+                    ! Rob: the if statement below makes no sense.
+
 ! Compute normal vector.
   NormTheta=dsqrt(dot_product(Theta,Theta))
   if (abs(NormPsi).le.rot_Epsilon) then
