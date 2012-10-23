@@ -665,7 +665,7 @@ module test
 	&			PrintInfo, OutInBframe, OutInaframe,	&!for pack_xbopts
 	&			ElemProj, MaxIterations, NumLoadSteps,	&!for pack_xbopts
 	&			NumGauss, Solution, DeltaCurved, 		&!for pack_xbopts
-	&			MinDelta, NewmarkDamp)					&!for pack_xbopts
+	&			MinDelta, NewmarkDamp)					 !for pack_xbopts
         
         integer          ,intent(in)   :: NumElems
         character(len=25),intent(inout):: OutFile
