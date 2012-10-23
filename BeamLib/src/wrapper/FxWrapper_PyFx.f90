@@ -17,7 +17,8 @@
 ! 20120205 1.0     A.Da Ronch  Created/allocated memory set to zero
 ! 20120210 1.0     A.Da Ronch  Function wrap_cbeam3_asbly_dynamic modified
 ! 20120222 1.0     A.Da Ronch  Function wrap_cbeam3_solv_state2disp modified
-!
+! 20120929 1.0     A.Da Ronch  Added function wrap_fem_glob2loc_extract
+! 
 !-------------------------------------------------------------------------------
 ! 
 ! To be done
@@ -1872,6 +1873,74 @@ module test
         
     end subroutine wrap_xbeam_asbly_dynamic
     
-end module test
+    !---------------------------------------------------------------------------
+    ! Wrapper to fem_glob2loc_extract
+    !---------------------------------------------------------------------------
+    subroutine wrap_fem_glob2loc_extract(NumElems,NumNodes_tot,NumNodes,MemNo,&
+    &           Conn,Master_Array,Length,PreCurv,Psi,Vector,Mass_Array,&
+    &           Stiff_Array,InvStiff_Array,RBMass_Array,PosDefor_Array,&
+    &           PsiDefor_Array,PosGlob_Array,NumNE_array)
+        
+        integer,intent(in) :: NumElems
+        integer,intent(in) :: NumNodes_tot
+        integer,intent(in) :: NumNodes(NumElems)
+        integer,intent(in) :: MemNo(NumElems)
+        integer,intent(in) :: Conn(MaxElNod*NumElems)
+        integer,intent(in) :: Master_Array(MaxElNod*NumElems*2)
+        real(8),intent(in) :: Length(NumElems)
+        real(8),intent(in) :: PreCurv(3*NumElems)
+        real(8),intent(in) :: Psi(3*NumElems)
+        real(8),intent(in) :: Vector(3*NumElems)
+        real(8),intent(in) :: Mass_Array(6*NumElems*6)
+        real(8),intent(in) :: Stiff_Array(6*NumElems*6)
+        real(8),intent(in) :: InvStiff_Array(6*NumElems*6)
+        real(8),intent(in) :: RBMass_Array(MaxElNod*NumElems*6*6)
+        real(8),intent(in) :: PosDefor_Array(NumNodes_tot*3)
+        real(8),intent(in) :: PsiDefor_Array(NumElems*MaxElNod*3)
+        real(8),intent(out):: PosGlob_Array(NumElems*MaxElNod*3)
+        integer,intent(out):: NumNE_array(NumElems)
+        
+        type(xbelem),allocatable:: Elem(:)
+        real(8)     ,allocatable:: PosDef(:,:)
+        real(8)     ,allocatable:: PsiDef(:,:,:)
+        real(8)     ,allocatable:: PosElem(:,:)
+        real(8)     ,allocatable:: PosGlob(:,:)
+        
+        integer:: iElem,i1,i2,NumNE
+        
+        allocate(Elem(NumElems))
+        allocate(PosDef(NumNodes_tot,3)); PosDef = 0.d0
+        allocate(PsiDef(NumElems,MaxElNod,3)); PsiDef = 0.d0
+        allocate(PosElem(MaxElNod,3)); PosElem = 0.d0
+        allocate(PosGlob(NumElems*MaxElNod,3)); PosGlob = 0.d0
+        
+        ! Convert PY data to F90 data
+        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,Master_Array,&
+        &                  Length,PreCurv,Psi,Vector,Mass_Array,Stiff_Array,&
+        &                  InvStiff_Array,RBMass_Array)
+        
+        call vec2mat_double(  PosDefor_Array,PosDef,NumNodes_tot,     3)
+        call vec2mat3d_double(PsiDefor_Array,PsiDef,NumElems,MaxElNod,3)
+        
+        do iElem=1,NumElems
+            call fem_glob2loc_extract(Elem(iElem)%Conn,PosDef,PosElem,NumNE)
+            i1 = 1 + (iElem-1)*NumNE
+            i2 = i1 + NumNE
+            PosGlob(i1:i2,:) = PosElem
+            NumNE_array(iElem) = NumNE
+        end do
+        
+        call mat2vec_double(PosGlob,PosGlob_Array,NumElems*MaxElNod,3)
 
+        deallocate(Elem)
+        deallocate(PosDef)
+        deallocate(PsiDef)
+        deallocate(PosElem)
+        deallocate(PosGlob)
+        
+        return
+        
+    end subroutine wrap_fem_glob2loc_extract
+    
+end module test
 
