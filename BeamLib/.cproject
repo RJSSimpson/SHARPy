@@ -38,7 +38,7 @@
 					<folderInfo id="0.1432183127." name="/" resourcePath="">
 						<toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.1856037473" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF;org.eclipse.cdt.core.PE;org.eclipse.cdt.core.Cygwin_PE;org.eclipse.cdt.core.XCOFF32;org.eclipse.cdt.core.SOM;org.eclipse.cdt.core.MachO;org.eclipse.cdt.core.MachO64" id="org.eclipse.cdt.build.core.prefbase.toolchain.1856037473.136990250" name=""/>
-							<builder id="org.eclipse.cdt.build.core.settings.default.builder.944684042" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder buildPath="${workspace_loc:/BeamLib}/src/wrapper" command="make" id="org.eclipse.cdt.build.core.settings.default.builder.944684042" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.libs.1578177506" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.434214444" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1749553733" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
@@ -72,6 +72,11 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/BeamLib"/>
+		</configuration>
+	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
 		<buildTargets>
 			<target name="all" path="src/wrapper" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
@@ -88,7 +93,13 @@
 				<buildTarget>clean</buildTarget>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>true</useDefaultCommand>
-				<runAllBuilders>false</runAllBuilders>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
+			<target name="add python project existing files" path="src/fortran" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>add python project existing files</buildCommand>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>false</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
 			</target>
 		</buildTargets>
 	</storageModule>

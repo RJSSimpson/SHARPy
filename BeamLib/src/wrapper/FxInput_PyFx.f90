@@ -68,7 +68,7 @@ module input
   real(8) :: E=0.d0,G=0.d0,rho=0.d0
   real(8) :: sigma
 
-  TestCase='DSTL'
+  TestCase='HALE'
   Options%Solution=112     ! See xbeam_shared for options.
 
 ! Default values.
@@ -366,11 +366,10 @@ subroutine input_elem (NumElems,NumNodes,Elem)
     select case (trim(TestCase))
     case ('HALE','GOLD')
       Coords(i,1)=BeamLength1*(dble(i-1)/dble(NumNodes-1))
+    case ('DSTL')
+      Coords(i,2)=BeamLength1*(dble(i-1)/dble(NumNodes-1))/11.531d0+0.73d0
+      Coords(i,1)=11.4877d0*Coords(i,2)+6.8107d0
     end select
-
-    Coords(i,2)=BeamLength1*(dble(i-1)/dble(NumNodes-1))/11.5312240284977+0.73
-    Coords(i,1)=11.487781665552436*Coords(i,2)+6.8107
-    
   end do
 
 ! Initial pretwist angle.
@@ -383,12 +382,12 @@ subroutine input_elem (NumElems,NumNodes,Elem)
   select case (trim(TestCase))
 
   case default
-!    do i=1,NumNodes
-!        Forces(i,1:3)=ExtForce
-!        Forces(i,4:6)=ExtMomnt
-!    end do
-    Forces(NumNodes,1:3)=ExtForce
-    Forces(NumNodes,4:6)=ExtMomnt
+    do i=1,NumNodes
+        Forces(i,1:3)=ExtForce
+        Forces(i,4:6)=ExtMomnt
+    end do
+!    Forces(NumNodes,1:3)=ExtForce
+!    Forces(NumNodes,4:6)=ExtMomnt
   end select
 
 ! Boundary conditions

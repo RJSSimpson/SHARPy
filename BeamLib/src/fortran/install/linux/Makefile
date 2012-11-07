@@ -61,10 +61,10 @@ LIBSDIR=-L/opt/lib
 #
 F90COMP= gfortran
 #F90OPTS= -fPIC -O3 -m64 -J $(OBJDIR)
-F90OPTS= -g -m64 -J $(OBJDIR)
+F90OPTS= -g -m64 -cpp -J $(OBJDIR)
 
 # *** Compilation command with SUN Studio.
-CCCOMP= suncc
+#CCCOMP= suncc
 #
 #F90COMP= sunf95
 #F90OPTS= -C -g -moddir=$(OBJDIR)
