@@ -54,6 +54,7 @@ def Elem(XBINPUT, XBOPTS, XBELEM):
     #TODO: populate XBELEM. Stiff Mass InvStiff
     #TODO: Element orientation
     #TODO: member number (0 anyway)
+    #DOING: test svn
     
     
 if __name__ == '__main__':
