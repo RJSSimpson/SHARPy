@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>SharPy</name>
+	<comment></comment>
+	<projects>
+		<project>BeamLib</project>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.python.pydev.PyDevBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.python.pydev.pythonNature</nature>
+	</natures>
+	<variableList>
+		<variable>
+			<name>BeamLib</name>
+			<value>file:/home/rjs10/SharPyProject/BeamLib/bin/BeamLib.so</value>
+		</variable>
+	</variableList>
+</projectDescription>
