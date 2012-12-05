@@ -48,102 +48,25 @@ def Solve_F90(XBINPUT,XBOPTS):
     assert XBOPTS.Solution.value == 112, ('NonlinearStatic_F90 requested' +\
                                               ' with wrong solution code')
     
-    "Declare variables not dependent on NumNodes_tot."
+    "Declare variables not dependent on NumNodes_tot"
     XBELEM      = DerivedTypes.Xbelem(XBINPUT.NumElems,Settings.MaxElNod)
-    NumNodes_tot= ct.c_int()
     NumDof      = ct.c_int()
     PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),\
                          dtype=ct.c_double, order='F')
     
     sys.stdout.write('Setup testcase ... ')
     
-    OutFile = ct.create_string_buffer(25)
-
-    f_input_setup(ct.byref(ct.c_int(XBINPUT.NumElems)), ct.byref(OutFile),\
-        ct.byref(XBOPTS.FollowerForce),\
-        ct.byref(XBOPTS.FollowerForceRig),\
-        ct.byref(XBOPTS.PrintInfo),\
-        ct.byref(XBOPTS.OutInBframe),\
-        ct.byref(XBOPTS.OutInaframe),\
-        ct.byref(XBOPTS.ElemProj),\
-        ct.byref(XBOPTS.MaxIterations),\
-        ct.byref(XBOPTS.NumLoadSteps),\
-        ct.byref(XBOPTS.NumGauss),\
-        ct.byref(XBOPTS.Solution),\
-        ct.byref(XBOPTS.DeltaCurved),\
-        ct.byref(XBOPTS.MinDelta),\
-        ct.byref(XBOPTS.NewmarkDamp) )
+    "Check inputs"
+    XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS)
     
-    sys.stdout.write('done\n')
+    "Set-up element properties"
+    NumNodes_tot, XBELEM = Input.Elem(XBINPUT, XBOPTS, XBELEM)
     
-    # XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS) #TODO Make this work with fortran
-
-    sys.stdout.write('Setup element properties ... ')
+    "Set-up nodal properties"
+    PosIni, PhiNodes, ForceStatic, BoundConds = \
+        Input.Node(XBINPUT, XBOPTS, NumNodes_tot, XBELEM)
         
-    f_input_elem( \
-        ct.byref(ct.c_int(XBINPUT.NumElems)), \
-        ct.byref(NumNodes_tot), \
-        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)) )
-    
-    "Declare variables dependent on NumNodes_tot."
-    BoundConds  = np.zeros(NumNodes_tot.value,dtype=ct.c_int,order='F')
-    PosIni      = np.zeros((NumNodes_tot.value,3), dtype=ct.c_double, order='F') 
-    ForceStatic = np.zeros((NumNodes_tot.value,6), dtype=ct.c_double, order='F')
-    PhiNodes    = np.zeros(NumNodes_tot.value, dtype=ct.c_double, order='F')
-    
-    sys.stdout.write('done\n')
-
-    
-    sys.stdout.write('Setup nodal properties ... ')
-    
-    f_input_node( \
-        ct.byref(ct.c_int(XBINPUT.NumElems)), \
-        ct.byref(NumNodes_tot), \
-        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        BoundConds.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        PosIni.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        ForceStatic.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        PhiNodes.ctypes.data_as(ct.POINTER(ct.c_double)) )
-    
-    sys.stdout.write('done\n')
-    
-    #---------------------------------------------------------------------------
-    
-    # Apply nodal forces specified in input ------------------------------------
-    
-    # TODO: Somehow the number of elements must be known at the input stage
-    # Some kind of python based initialisation that uses the input_func.f90
-    # routines should create and save XBELEM, XBNODE, XBOPTS with nodal info
-    
-    ForceStatic[-1,:] = XBINPUT.ForceStatic
-    
-
-
-    
-    sys.stdout.write('Compute initial (undeformed) geometry ... ')
-    
+    "Compute initial (undeformed) geometry"
     f_xbeam_undef_geom( \
         ct.byref(ct.c_int(XBINPUT.NumElems)), \
         ct.byref(NumNodes_tot), \
@@ -175,16 +98,13 @@ def Solve_F90(XBINPUT,XBOPTS):
         ct.byref(XBOPTS.DeltaCurved),\
         ct.byref(XBOPTS.MinDelta),\
         ct.byref(XBOPTS.NewmarkDamp) )
-    
-    sys.stdout.write('done\n')
 
-
+    "Write to undeformed geometry to file"
     WriteMode = 'a'
     BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,\
                               PosIni,PsiIni,\
                               Settings.OutputFileRoot + '_SOL112',WriteMode)
     
-    sys.stdout.write('done\n')
     
     
     
@@ -287,10 +207,29 @@ def Solve_F90(XBINPUT,XBOPTS):
     
 
 if __name__ == '__main__':
+    """Set up Xbopts for nonlinear static analysis defined in input_rob.f90
+    TPY0 test case"""
+    XBOPTS = DerivedTypes.Xbopts()
+    XBOPTS.Solution.value = 112 
+    XBOPTS.NumLoadSteps.value = 10
+    XBOPTS.MinDelta.value = 1e-04       
+    """Set up Xbinput for nonlinear static analysis defined in input_rob.f90
+    TPY0 test case"""
     XBINPUT = DerivedTypes.Xbinput()
     XBINPUT.NumElems = 8
-    XBINPUT.NumNodesElem = 2
+    XBINPUT.BeamLength = 16.0
+    XBINPUT.BeamStiffness[0,0] = 1.0e+09
+    XBINPUT.BeamStiffness[1,1] = 1.0e+09
+    XBINPUT.BeamStiffness[2,2] = 1.0e+09
+    XBINPUT.BeamStiffness[3,3] = 1.0e+04
+    XBINPUT.BeamStiffness[4,4] = 2.0e+04
+    XBINPUT.BeamStiffness[5,5] = 4.0e+06
+    XBINPUT.BeamMass[0,0] = 0.75
+    XBINPUT.BeamMass[1,1] = 0.75
+    XBINPUT.BeamMass[2,2] = 0.75
+    XBINPUT.BeamMass[3,3] = 0.1
+    XBINPUT.BeamMass[4,4] = 0.001
+    XBINPUT.BeamMass[5,5] = 0.001
     XBINPUT.ForceStatic[2] = 800
-    XBOPTS = DerivedTypes.Xbopts()
-    XBOPTS.Solution.value = 112
+
     Solve_F90(XBINPUT,XBOPTS)

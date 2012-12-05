@@ -97,7 +97,6 @@ class TestNonlinearStatic_v_Executable(unittest.TestCase):
         XBINPUT.BeamMass[4,4] = 0.001
         XBINPUT.BeamMass[5,5] = 0.001
         XBINPUT.ForceStatic[2] = 800
-        XBINPUT.Sigma = 0.1
         
         "Solve using F90 subroutine"
         NonlinearStatic.Solve_F90(XBINPUT,XBOPTS)
