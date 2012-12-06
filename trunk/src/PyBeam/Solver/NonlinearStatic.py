@@ -54,8 +54,6 @@ def Solve_F90(XBINPUT,XBOPTS):
     PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),\
                          dtype=ct.c_double, order='F')
     
-    sys.stdout.write('Setup testcase ... ')
-    
     "Check inputs"
     XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS)
     
@@ -100,7 +98,7 @@ def Solve_F90(XBINPUT,XBOPTS):
         ct.byref(XBOPTS.NewmarkDamp) )
 
     "Write to undeformed geometry to file"
-    WriteMode = 'a'
+    WriteMode = 'w'
     BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,\
                               PosIni,PsiIni,\
                               Settings.OutputFileRoot + '_SOL112',WriteMode)
