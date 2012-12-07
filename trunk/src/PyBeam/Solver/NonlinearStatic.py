@@ -99,14 +99,18 @@ def Solve_F90(XBINPUT,XBOPTS):
 
     "Write to undeformed geometry to file"
     WriteMode = 'w'
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('Writing file (mode: %s) %s' %(WriteMode,\
+                            Settings.OutputFileRoot + '_SOL112'\
+                            + '_und.dat\n'))
     BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,\
                               PosIni,PsiIni,\
                               Settings.OutputFileRoot + '_SOL112',WriteMode)
     
     
     
-    
-    sys.stdout.write('Identify nodal degrees of freedom ... ')
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('Identify nodal degrees of freedom ... ')
     
     XBNODE = DerivedTypes.Xbnode(NumNodes_tot.value)
     
@@ -131,14 +135,16 @@ def Solve_F90(XBINPUT,XBOPTS):
         XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)), \
         ct.byref(NumDof) )
     
-    sys.stdout.write('done\n')
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('done\n')
     
     
     PosDefor = PosIni.copy(order='F') #Set initial conditions to undef config
     PsiDefor = PsiIni.copy(order='F')
     
     
-    sys.stdout.write('Solve nonlinear static case (using .f90 routines) ... \n')
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('Solve nonlinear static case (using .f90 routines) ... \n')
     
     f_cbeam3_solv_nlnstatic(ct.byref(NumDof),\
                             ct.byref(ct.c_int(XBINPUT.NumElems)),\
@@ -177,31 +183,34 @@ def Solve_F90(XBINPUT,XBOPTS):
                             ct.byref(XBOPTS.MinDelta),\
                             ct.byref(XBOPTS.NewmarkDamp) )
     
-    sys.stdout.write(' ... done\n')
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write(' ... done\n')
     
     
     ofile = Settings.OutputFileRoot + '_SOL112_def.dat'
-    sys.stdout.write('Writing file %s ... ' %(ofile))
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('Writing file %s ... ' %(ofile))
     fp = open(ofile,'w')
     fp.write('TITLE="Non-linear static solution: deformed geometry"\n')
     fp.write('VARIABLES="iElem" "iNode" "Px" "Py" "Pz" "Rx" "Ry" "Rz"\n')
     fp.close()
-    sys.stdout.write('done\n')
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('done\n')
     WriteMode = 'a'
     
     BeamIO.OutputElems(XBINPUT.NumElems, NumNodes_tot.value, XBELEM, \
                        PosDefor, PsiDefor, ofile, WriteMode)
     
-    
-    sys.stdout.write('--------------------------------------\n')
-    sys.stdout.write('NONLINEAR STATIC SOLUTION\n')
-    sys.stdout.write('%10s %10s %10s\n' %('X','Y','Z'))
-    for inodi in range(NumNodes_tot.value):
-        sys.stdout.write(' ')
-        for inodj in range(3):
-            sys.stdout.write('%12.5e' %(PosDefor[inodi,inodj]))
-        sys.stdout.write('\n')
-    sys.stdout.write('--------------------------------------\n')
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('--------------------------------------\n')
+        sys.stdout.write('NONLINEAR STATIC SOLUTION\n')
+        sys.stdout.write('%10s %10s %10s\n' %('X','Y','Z'))
+        for inodi in range(NumNodes_tot.value):
+            sys.stdout.write(' ')
+            for inodj in range(3):
+                sys.stdout.write('%12.5e' %(PosDefor[inodi,inodj]))
+                sys.stdout.write('\n')
+        sys.stdout.write('--------------------------------------\n')
     
 
 if __name__ == '__main__':

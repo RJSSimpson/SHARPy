@@ -56,9 +56,9 @@ def Elem(XBINPUT, XBOPTS, XBELEM):
     elif XBINPUT.NumNodesElem == 3:
         for ElemNo in range(0,XBINPUT.NumElems):
             i = ElemNo*Settings.MaxElNod
-            XBELEM.Conn[i]=ElemNo+1
-            XBELEM.Conn[i+1]=ElemNo+3
-            XBELEM.Conn[i+2]=ElemNo+2
+            XBELEM.Conn[i]=2*ElemNo+1
+            XBELEM.Conn[i+1]=2*ElemNo+3
+            XBELEM.Conn[i+2]=2*ElemNo+2
             XBELEM.NumNodes[ElemNo] = 3
         
         NumNodes_tot = ct.c_int(2*XBINPUT.NumElems + 1)

@@ -194,7 +194,7 @@ class Xbopts:
 
     def __init__(self, FollowerForce = ct.c_bool(True), \
                  FollowerForceRig = ct.c_bool(True), \
-                 PrintInfo = ct.c_bool(True), OutInBframe = ct.c_bool(True), \
+                 PrintInfo = ct.c_bool(False), OutInBframe = ct.c_bool(True), \
                  OutInaframe = ct.c_bool(False), ElemProj = ct.c_int(0), \
                  MaxIterations = ct.c_int(99), NumLoadSteps = ct.c_int(5), \
                  NumGauss = ct.c_int(1), Solution = ct.c_int(111), \

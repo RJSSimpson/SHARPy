@@ -82,9 +82,7 @@ def WriteUndefGeometry(NumElems,TotNumNodes,XBELEM,\
     
     Default behaviour is to append to existing file
     TotNumNodes is a Python int equal to NumNodes_tot.value"""
-    sys.stdout.write('Writing file (mode: %s) %s' %(WriteMode,\
-                                                         RootFile\
-                                                         + '_UndefGeom.dat'))
+
     ofile = RootFile + '_und.dat'
     fp = open(ofile,WriteMode)
     fp.write('TITLE="Undeformed initial geometry"\n')
