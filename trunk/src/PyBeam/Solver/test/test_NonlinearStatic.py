@@ -8,6 +8,7 @@
 @warning    None'''
 import unittest
 import os
+import sys
 import SharPySettings as Settings
 import DerivedTypes
 
@@ -53,6 +54,8 @@ class TestNonlinearStatic_v_Executable(unittest.TestCase):
         os.chdir(Settings.SharPyProjectDir + \
                  'BeamLib/src/fortran/install/linux')
         os.system('make clean')
+        sys.stderr.write('test_TipDispRot '\
+                         + '(__main__.TestNonlinearStatic_v_Executable)\n')
 
 
     def test_TipDispRot(self):
@@ -252,5 +255,5 @@ if __name__ == "__main__":
     alltests = unittest.TestSuite([suite1, suite2])
     #alltests.run(unittest.defaultTestResult())
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    TestRunner.run(suite2) #run a single suite
-    #TestRunner.run(alltests) #run all tests
+    #TestRunner.run(suite2) #run a single suite
+    TestRunner.run(alltests) #run all tests

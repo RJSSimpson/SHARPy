@@ -10,36 +10,12 @@
 
 import sys
 import ctypes as ct #http://docs.python.org/3.2/library/ctypes.html
-import numpy as np
 import SharPySettings as Settings
 import DerivedTypes
 import BeamIO
 import Input
-
-BeamPath = Settings.BeamLibDir + Settings.BeamLibName
-BeamLib = ct.cdll.LoadLibrary(BeamPath)
-
-f_input_setup               = BeamLib.__test_MOD_wrap_input_setup
-f_input_elem                = BeamLib.__test_MOD_wrap_input_elem
-f_input_node                = BeamLib.__test_MOD_wrap_input_node
-f_xbeam_undef_geom          = BeamLib.__test_MOD_wrap_xbeam_undef_geom
-f_xbeam_undef_dofs          = BeamLib.__test_MOD_wrap_xbeam_undef_dofs
-f_cbeam3_solv_nlnstatic      = BeamLib.__test_MOD_wrap_cbeam3_solv_nlnstatic
-
-"""ctypes does not check whether the correct number OR type of input arguments
-are passed to each of these functions - great care must be taken to ensure the
-number of arguments and the argument types are correct.
-TODO: library loading within a separate module which also contains
-developer provided argtypes which must be a sequence of C data types.
-http://docs.python.org/2/library/ctypes.html"""
-
-f_input_setup.restype               = None
-f_input_elem.restype                = None
-f_input_node.restype                = None
-f_xbeam_undef_geom.restype          = None
-f_xbeam_undef_dofs.restype          = None
-f_cbeam3_solv_nlnstatic.restype     = None
-
+import BeamLib
+import BeamInit
 
 def Solve_F90(XBINPUT,XBOPTS):
     """ Nonlinear static structural solver using f90 solve routine."""
@@ -48,105 +24,21 @@ def Solve_F90(XBINPUT,XBOPTS):
     assert XBOPTS.Solution.value == 112, ('NonlinearStatic_F90 requested' +\
                                               ' with wrong solution code')
     
-    "Declare variables not dependent on NumNodes_tot"
-    XBELEM      = DerivedTypes.Xbelem(XBINPUT.NumElems,Settings.MaxElNod)
-    NumDof      = ct.c_int()
-    PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),\
-                         dtype=ct.c_double, order='F')
-    
-    "Check inputs"
-    XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS)
-    
-    "Set-up element properties"
-    NumNodes_tot, XBELEM = Input.Elem(XBINPUT, XBOPTS, XBELEM)
-    
-    "Set-up nodal properties"
-    PosIni, PhiNodes, ForceStatic, BoundConds = \
-        Input.Node(XBINPUT, XBOPTS, NumNodes_tot, XBELEM)
-        
-    "Compute initial (undeformed) geometry"
-    f_xbeam_undef_geom( \
-        ct.byref(ct.c_int(XBINPUT.NumElems)), \
-        ct.byref(NumNodes_tot), \
-        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)),\
-        PosIni.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        PhiNodes.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        PsiIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
-        ct.byref(XBOPTS.FollowerForce),\
-        ct.byref(XBOPTS.FollowerForceRig),\
-        ct.byref(XBOPTS.PrintInfo),\
-        ct.byref(XBOPTS.OutInBframe),\
-        ct.byref(XBOPTS.OutInaframe),\
-        ct.byref(XBOPTS.ElemProj),\
-        ct.byref(XBOPTS.MaxIterations),\
-        ct.byref(XBOPTS.NumLoadSteps),\
-        ct.byref(XBOPTS.NumGauss),\
-        ct.byref(XBOPTS.Solution),\
-        ct.byref(XBOPTS.DeltaCurved),\
-        ct.byref(XBOPTS.MinDelta),\
-        ct.byref(XBOPTS.NewmarkDamp) )
-
-    "Write to undeformed geometry to file"
-    WriteMode = 'w'
-    if XBOPTS.PrintInfo==True:
-        sys.stdout.write('Writing file (mode: %s) %s' %(WriteMode,\
-                            Settings.OutputFileRoot + '_SOL112'\
-                            + '_und.dat\n'))
-    BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,\
-                              PosIni,PsiIni,\
-                              Settings.OutputFileRoot + '_SOL112',WriteMode)
+    "Initialise beam"
+    XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
+            ForceStatic, XBNODE, NumDof \
+                = BeamInit.Initialise(XBINPUT,XBOPTS)
     
     
-    
-    if XBOPTS.PrintInfo==True:
-        sys.stdout.write('Identify nodal degrees of freedom ... ')
-    
-    XBNODE = DerivedTypes.Xbnode(NumNodes_tot.value)
-    
-    f_xbeam_undef_dofs( \
-        ct.byref(ct.c_int(XBINPUT.NumElems)), \
-        ct.byref(NumNodes_tot), \
-        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        BoundConds.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        ct.byref(NumDof) )
-    
-    if XBOPTS.PrintInfo==True:
-        sys.stdout.write('done\n')
-    
-    
-    PosDefor = PosIni.copy(order='F') #Set initial conditions to undef config
+    "Set initial conditions as undef config"
+    PosDefor = PosIni.copy(order='F')
     PsiDefor = PsiIni.copy(order='F')
     
     
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Solve nonlinear static case (using .f90 routines) ... \n')
     
-    f_cbeam3_solv_nlnstatic(ct.byref(NumDof),\
+    BeamLib.f_cbeam3_solv_nlnstatic(ct.byref(NumDof),\
                             ct.byref(ct.c_int(XBINPUT.NumElems)),\
                             XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)),\
                             XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)),\
@@ -187,6 +79,7 @@ def Solve_F90(XBINPUT,XBOPTS):
         sys.stdout.write(' ... done\n')
     
     
+    "Write deformed configuration to file"
     ofile = Settings.OutputFileRoot + '_SOL112_def.dat'
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Writing file %s ... ' %(ofile))
@@ -201,6 +94,7 @@ def Solve_F90(XBINPUT,XBOPTS):
     BeamIO.OutputElems(XBINPUT.NumElems, NumNodes_tot.value, XBELEM, \
                        PosDefor, PsiDefor, ofile, WriteMode)
     
+    "Print deformed configuration"
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('--------------------------------------\n')
         sys.stdout.write('NONLINEAR STATIC SOLUTION\n')
