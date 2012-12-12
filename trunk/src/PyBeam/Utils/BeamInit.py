@@ -5,9 +5,7 @@
 @version    0.0
 @date       10/12/2012
 @pre        None
-@warning    None
-
-'''
+@warning    None'''
 
 import sys
 import DerivedTypes
@@ -18,8 +16,8 @@ import BeamIO
 import BeamLib
 import Input
 
-def Initialise(XBINPUT,XBOPTS):
-    """@brief Initialise everything needed for beam simulation."""
+def Static(XBINPUT,XBOPTS):
+    """@brief Initialise everything needed for Static beam simulation."""
     
     "Declare variables not dependent on NumNodes_tot"
     XBELEM      = DerivedTypes.Xbelem(XBINPUT.NumElems,Settings.MaxElNod)
@@ -34,7 +32,7 @@ def Initialise(XBINPUT,XBOPTS):
     NumNodes_tot, XBELEM = Input.Elem(XBINPUT, XBOPTS, XBELEM)
     
     "Set-up nodal properties"
-    PosIni, PhiNodes, ForceStatic, BoundConds = \
+    PosIni, PhiNodes, BoundConds = \
         Input.Node(XBINPUT, XBOPTS, NumNodes_tot, XBELEM)
         
     "Compute initial (undeformed) geometry"
@@ -112,7 +110,7 @@ def Initialise(XBINPUT,XBOPTS):
         sys.stdout.write('done\n')
         
     return XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
-            ForceStatic, XBNODE, NumDof
+            XBNODE, NumDof
 
 if __name__ == '__main__':
     XBINPUT = DerivedTypes.Xbinput()
@@ -127,4 +125,4 @@ if __name__ == '__main__':
     
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
             ForceStatic, XBNODE, NumDof \
-                = Initialise(XBINPUT,XBOPTS)               
+                = Static(XBINPUT,XBOPTS)               

@@ -7,7 +7,7 @@ xbeam_shared.f90 plus extras.
 @version    2.0
 @date       14/11/2012
 @pre        None
-@warning    None'''
+@warning    Stiffness parameter Sigma not implemented.'''
 
 import sys
 import ctypes
@@ -225,32 +225,59 @@ class Xbinput:
     
     @param NumNodesElem Number of nodes in each beam element, either 2 or 3.
     @param NumElems Number of elements in the beam model.
+    @param NumSteps Number of timesteps.
     @param BeamLength Length of beam.
     @param BeamStiffness 6-by-6 sectional stiffness matrix.
-    Pparam BeamMass 6-by-6 sectional mass matrix.
-    @param ForceStatic 6-by-1 static force vector at single node.
+    @param BeamMass 6-by-6 sectional mass matrix.
+    @param ForceStatic NumNodes-6 static force vector at nodes.
     @param BConds 2-char string with boundary condition, 'CF' = Clamped-Free.
-    @param Sigma Stiffness parameter.
+    @param Sigma Stiffness parameter. Not Implemented.
+    @param iOut Output file.
+    @param ForceDyn Dynamic forces at nodes.
+    @param ForceDynTime Amplitude of dynamic forces with time.
+    @param Time Vector of time ordinates.
     @details N.B: Xbinput variables are not declared as ctypes variables 
     because they are for input only. A new object is created for C/f90 
-    function calls using ctypes.c_<type>(XbinputVar)."""
+    function calls using ctypes.c_<type>(XbinputVar).
+    NumSteps must be set so arrays can be initialised - if only static analysis
+     is required set to 1."""
 
-    def __init__(self, NumNodesElem = 2, NumElems = 1,\
+    def __init__(self, NumNodesElem, NumElems, NumSteps,\
                  BeamLength = 1.0,\
                  BeamStiffness = np.zeros((6,6),ct.c_double,'F'),\
                  BeamMass = np.zeros((6,6),ct.c_double,'F'),\
-                 ForceStatic = np.zeros(6,ct.c_double,'F'),\
                  BConds = 'CF',\
-                 Sigma = 1.0):
-        """Create Unit beam with 1 element and zero stiffness/mass/tip-force."""
+                 Sigma = 1.0,\
+                 iOut = 1):
+        """@brief NumNodesElem and NumElems must be specified for initialisation
+        of force arrays.
+        
+        @param NumNodes Local variable storing number of nodes in model for
+         array init.
+        """
         self.NumNodesElem = NumNodesElem
         self.NumElems = NumElems
         self.BeamLength = BeamLength
         self.BeamStiffness = BeamStiffness
         self.BeamMass = BeamMass
-        self.ForceStatic = ForceStatic
         self.BConds = BConds
         self.Sigma = Sigma
+        self.iOut = iOut
+        self.NumSteps = NumSteps
+        
+        "Check number of nodes per element"
+        if self.NumNodesElem != 2 and self.NumNodesElem != 3:
+            sys.stderr.write('Invalid number of nodes per element\n')
+        elif self.NumNodesElem == 2:
+            NumNodes = NumElems + 1
+        elif self.NumNodesElem == 3:
+            NumNodes = 2*NumElems + 1 
+        
+        "Init arrays"
+        self.ForceStatic = np.zeros((NumNodes,6),ct.c_double,'F')
+        self.ForceDyn = np.zeros((NumNodes,6),ct.c_double,'F')
+        self.ForceDynTime= np.zeros(NumSteps+1,ct.c_double,'F')
+        self.Time = np.zeros(NumSteps+1,ct.c_double,'F')
         
         
 def dump(obj):

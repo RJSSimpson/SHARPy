@@ -1,5 +1,12 @@
-#!/usr/bin/env python3
-"""
+"""@package PyBeam.Utils.BeamIO
+@brief      Input/Output routines.
+@author     Rob Simpson
+@author     A. Da-Ronch (Liverpool)
+@contact    r.simpson11@imperial.ac.uk
+@version    1.0
+@date       01/11/2012
+@pre        None
+@warning    None
 """
 
 import sys, os

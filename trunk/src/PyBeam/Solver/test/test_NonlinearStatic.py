@@ -85,9 +85,7 @@ class TestNonlinearStatic_v_Executable(unittest.TestCase):
         XBOPTS.NumGauss.value = 2  
         """Set up Xbinput for nonlinear static analysis defined in input_rob.f90
         TPY0 test case"""
-        XBINPUT = DerivedTypes.Xbinput()
-        XBINPUT.NumNodesElem = 3
-        XBINPUT.NumElems = 8
+        XBINPUT = DerivedTypes.Xbinput(3,8,1)
         XBINPUT.BeamLength = 16.0
         XBINPUT.BeamStiffness[0,0] = 1.0e+09
         XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -101,7 +99,7 @@ class TestNonlinearStatic_v_Executable(unittest.TestCase):
         XBINPUT.BeamMass[3,3] = 0.1
         XBINPUT.BeamMass[4,4] = 0.001
         XBINPUT.BeamMass[5,5] = 0.001
-        XBINPUT.ForceStatic[2] = 800
+        XBINPUT.ForceStatic[-1,2] = 800
         
         "Solve using F90 subroutine"
         NonlinearStatic.Solve_F90(XBINPUT,XBOPTS)
@@ -153,8 +151,7 @@ class TestNonlinearStatic_v_GeradinCardonna(unittest.TestCase):
              
         """Set up Xbinput for nonlinear static analysis defined in 
         NonlinearStatic/testcases.pdf case 1.1."""
-        XBINPUT = DerivedTypes.Xbinput()
-        XBINPUT.NumElems = 20
+        XBINPUT = DerivedTypes.Xbinput(2,20,1)
         XBINPUT.BeamLength = 5.0
         XBINPUT.BeamStiffness[0,0] = 4.8e+08
         XBINPUT.BeamStiffness[1,1] = 3.231e+08
@@ -168,7 +165,7 @@ class TestNonlinearStatic_v_GeradinCardonna(unittest.TestCase):
         XBINPUT.BeamMass[3,3] = 10
         XBINPUT.BeamMass[4,4] = 0.0 #Neglect the cross-section bending inertia
         XBINPUT.BeamMass[5,5] = 0.0 #Neglect the cross-section bending inertia
-        XBINPUT.ForceStatic[2] = 6e+05
+        XBINPUT.ForceStatic[-1,2] = 6e+05
         
         NonlinearStatic.Solve_F90(XBINPUT, XBOPTS)
         
@@ -199,11 +196,11 @@ class TestNonlinearStatic_v_GeradinCardonna(unittest.TestCase):
         XBOPTS.Solution.value = 112 
         XBOPTS.NumLoadSteps.value = 10
         XBOPTS.MinDelta.value = 1e-05
-        XBOPTS.FollowerForce.value = False       
+        XBOPTS.FollowerForce.value = False
+        XBOPTS.NumGauss.value = 2       
         """Set up Xbinput for nonlinear static analysis defined in 
         NonlinearStatic/testcases.pdf case 1.1."""
-        XBINPUT = DerivedTypes.Xbinput()
-        XBINPUT.NumElems = 20
+        XBINPUT = DerivedTypes.Xbinput(3,10,1)
         XBINPUT.BeamLength = 5.0
         XBINPUT.BeamStiffness[0,0] = 4.8e+08
         XBINPUT.BeamStiffness[1,1] = 3.231e+08
@@ -217,12 +214,8 @@ class TestNonlinearStatic_v_GeradinCardonna(unittest.TestCase):
         XBINPUT.BeamMass[3,3] = 10
         XBINPUT.BeamMass[4,4] = 0.0 #Neglect the cross-section bending inertia
         XBINPUT.BeamMass[5,5] = 0.0 #Neglect the cross-section bending inertia
-        XBINPUT.ForceStatic[2] = 6e+05
+        XBINPUT.ForceStatic[-1,2] = 6e+05
         
-        "Now compute using 3-noded elements"
-        XBINPUT.NumElems = 10
-        XBINPUT.NumNodesElem = 3
-        XBOPTS.NumGauss.value = 2
             
         NonlinearStatic.Solve_F90(XBINPUT, XBOPTS)
     

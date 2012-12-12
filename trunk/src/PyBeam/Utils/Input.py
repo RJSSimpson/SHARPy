@@ -97,10 +97,6 @@ def Node(XBINPUT, XBOPTS, NumNodes_tot, XBELEM):
         
     "Define pre-twist"
     PhiNodes = np.zeros(NumNodes_tot.value, dtype=ct.c_double, order='F')
-
-    "Declare nodal Forces and assign tip force vector"
-    ForceStatic = np.zeros((NumNodes_tot.value,6), dtype=ct.c_double, order='F')
-    ForceStatic[-1,:] = XBINPUT.ForceStatic
     
     "Declare and populate boundary conditions"
     BoundConds = np.zeros(NumNodes_tot.value,dtype=ct.c_int,order='F')
@@ -113,7 +109,7 @@ def Node(XBINPUT, XBOPTS, NumNodes_tot, XBELEM):
     else:
         raise Exception('Invalid boundary conditions string.')
     
-    return PosIni, PhiNodes, ForceStatic, BoundConds
+    return PosIni, PhiNodes, BoundConds
     
 
 if __name__ == '__main__':

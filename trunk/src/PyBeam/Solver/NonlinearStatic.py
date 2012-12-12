@@ -1,5 +1,5 @@
-'''@package PyBeam.Main.SharPySettings
-@brief      Nonlinear static solvers and related tests.
+'''@package PyBeam.Solver.NonlinearStatic
+@brief      Nonlinear static solvers.
 @author     Rob Simpson
 @contact    r.simpson11@imperial.ac.uk
 @version    0.0
@@ -9,25 +9,22 @@
 '''
 
 import sys
-import ctypes as ct #http://docs.python.org/3.2/library/ctypes.html
 import SharPySettings as Settings
 import DerivedTypes
 import BeamIO
-import Input
 import BeamLib
 import BeamInit
 
 def Solve_F90(XBINPUT,XBOPTS):
-    """ Nonlinear static structural solver using f90 solve routine."""
+    """@brief Nonlinear static structural solver using f90 solve routine."""
     
     "Check correct solution code"
-    assert XBOPTS.Solution.value == 112, ('NonlinearStatic_F90 requested' +\
+    assert XBOPTS.Solution.value == 112, ('NonlinearStatic (F90) requested' +\
                                               ' with wrong solution code')
     
     "Initialise beam"
-    XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
-            ForceStatic, XBNODE, NumDof \
-                = BeamInit.Initialise(XBINPUT,XBOPTS)
+    XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
+                = BeamInit.Static(XBINPUT,XBOPTS)
     
     
     "Set initial conditions as undef config"
@@ -38,42 +35,9 @@ def Solve_F90(XBINPUT,XBOPTS):
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Solve nonlinear static case (using .f90 routines) ... \n')
     
-    BeamLib.f_cbeam3_solv_nlnstatic(ct.byref(NumDof),\
-                            ct.byref(ct.c_int(XBINPUT.NumElems)),\
-                            XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)),\
-                            XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)),\
-                            XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)),\
-                            XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
-                            XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-                            ct.byref(NumNodes_tot),\
-                            XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
-                            XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
-                            XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
-                            ForceStatic.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            PosIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            PsiIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            PosDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            PsiDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
-                            ct.byref(XBOPTS.FollowerForce),\
-                            ct.byref(XBOPTS.FollowerForceRig),\
-                            ct.byref(XBOPTS.PrintInfo),\
-                            ct.byref(XBOPTS.OutInBframe),\
-                            ct.byref(XBOPTS.OutInaframe),\
-                            ct.byref(XBOPTS.ElemProj),\
-                            ct.byref(XBOPTS.MaxIterations),\
-                            ct.byref(XBOPTS.NumLoadSteps),\
-                            ct.byref(XBOPTS.NumGauss),\
-                            ct.byref(XBOPTS.Solution),\
-                            ct.byref(XBOPTS.DeltaCurved),\
-                            ct.byref(XBOPTS.MinDelta),\
-                            ct.byref(XBOPTS.NewmarkDamp) )
+    BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
+                                PosIni, PsiIni, XBNODE, NumDof,\
+                                PosDefor, PsiDefor)
     
     if XBOPTS.PrintInfo==True:
         sys.stdout.write(' ... done\n')
@@ -105,6 +69,10 @@ def Solve_F90(XBINPUT,XBOPTS):
                 sys.stdout.write('%12.5e' %(PosDefor[inodi,inodj]))
                 sys.stdout.write('\n')
         sys.stdout.write('--------------------------------------\n')
+        
+    
+    "Return solution as optional output argument"
+    return PosDefor, PsiDefor
     
 
 if __name__ == '__main__':
