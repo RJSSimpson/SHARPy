@@ -695,6 +695,12 @@ module test
         ! Setup testcase
         call input_setup(NumElems,OutFile,Options)
         
+
+        ! Convert F90 into PY data
+!        call unpack_xbopts(Options,FollowerForce,FollowerForceRig,PrintInfo,&
+!&           OutInBframe,OutInaframe,ElemProj,MaxIterations,NumLoadSteps,    &
+!&           NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
+
         return
         
     end subroutine wrap_input_setup

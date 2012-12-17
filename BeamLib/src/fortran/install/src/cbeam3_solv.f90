@@ -138,6 +138,8 @@ module cbeam3_solv
     end do
   end do
 
+  call flush(6) !Flush stdout buffer so SharPy output looks nice
+
   deallocate (Kglobal,Qglobal,DeltaX)
 
   return
@@ -441,9 +443,10 @@ module cbeam3_solv
 ! Loop in the time steps.
   do iStep=1,size(Time)-1
     dt= Time(iStep+1)-Time(iStep)
-    call out_time(iStep,Time(iStep+1),Text)
-    write (*,'(5X,A,$)') trim(Text)
-
+    if (Options%PrintInfo) then
+      call out_time(iStep,Time(iStep+1),Text)
+      write (*,'(5X,A,$)') trim(Text)
+    end if
 ! Update transformation matrix for given angular velocity
     call lu_invers ((Unit4+0.25d0*xbeam_QuadSkew(Vrel(iStep+1,4:6))*(Time(iStep+1)-Time(iStep))),Temp)
     Quat=matmul(Temp,matmul((Unit4-0.25d0*xbeam_QuadSkew(Vrel(iStep,4:6))*(Time(iStep+1)-Time(iStep))),Quat))
@@ -483,7 +486,9 @@ module cbeam3_solv
 
 ! Check convergence.
       if (maxval(abs(DX)+abs(Qglobal)).lt.MinDelta) then
-        write (*,'(5X,A,I4,A,1PE12.3)') 'Subiteration',Iter, '  Delta=', maxval(abs(Qglobal))
+        if (Options%PrintInfo) then
+          write (*,'(5X,A,I4,A,1PE12.3)') 'Subiteration',Iter, '  Delta=', maxval(abs(Qglobal))
+        end if
         exit
       end if
 

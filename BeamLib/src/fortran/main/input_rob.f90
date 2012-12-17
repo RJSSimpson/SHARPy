@@ -1,4 +1,6 @@
-!-> Module.- INPUT Henrik Hesse & Rafa Palacios. 07/01/2011
+!-> Module.- INPUT Rob Simpson 22/11/2012
+!
+!-> Author:Rob Simpson copied from input_andrea.f90 (R Palacios and H Hesse)
 !
 !-> Language: FORTRAN90, Free format.
 !
@@ -60,16 +62,16 @@ module input
  subroutine input_setup (NumElems,OutFile,Options)
 
 ! I/O Variables.
-  integer,          intent(in) :: NumElems       ! Number of elements in the model.
+  integer,          intent(out):: NumElems       ! Number of elements in the model.
   character(len=25),intent(out):: OutFile        ! Output file.
-  type(xbopts),     intent(in):: Options        ! Solution options.
+  type(xbopts),     intent(out):: Options        ! Solution options.
 
 ! Local variables.
   real(8) :: E=0.d0,G=0.d0,rho=0.d0
   real(8) :: sigma
 
-  TestCase='HALE'
-! Options%Solution=112     ! See xbeam_shared for options.
+  TestCase='TPY0'
+  Options%Solution=312     ! See xbeam_shared for options.
 
 ! Default values.
   ExtForce(1:3)=0.d0
@@ -80,7 +82,8 @@ module input
 
   case ('HALE')
   ! half wing of HALE model aircraft presented in Table 4 in Murua et al (2011), AIAA-2011-1915
-! ! !     NumElems    = 50
+  ! Rob: modified for SharPy PyBeam NonLinearStatic test case 0
+    NumElems    = 8
     NumNodesElem= 2
     ThetaRoot   = 0.d0
     ThetaTip    = 0.d0
@@ -89,50 +92,51 @@ module input
     sigma=1.0d0     ! Parameter to change torsion and bending stiffness
 
     TipMass =0.0d0;
-	TipMassY=0.0d0;
-	TipMassZ=0.0d0;
+    TipMassY=0.0d0;
+    TipMassZ=0.0d0;
 
     BConds  ='CF'
-    !ExtForce=(/0.d0,0.d0,10.d0/)*1.d0
-	ExtForce=(/0.d0,0.d0,0.d0/)*1.d0
-    ExtMomnt=(/0.d0,0.d0,0.d0/)*1.d0
+    ExtForce=(/0.d0,0.d0,800.d0/)*1.d0
+    ExtMomnt=(/0.d0,0.d0,800.d0/)*1.d0
 
-    !Options%FollowerForce    = .true.
-    !Options%FollowerForceRig = .true.
-    !Options%OutInaframe      = .false.
-    !Options%NumLoadSteps  = 10
-    !Options%MinDelta      = 1.d-4
-    !Options%MaxIterations = 99
+    Options%FollowerForce    = .true.
+    Options%FollowerForceRig = .true.
+    Options%OutInaframe      = .false.
+    Options%NumLoadSteps  = 10
+    Options%MinDelta      = 1.d-4
+    Options%MaxIterations = 99
 
   case ('GOLD')
   ! half Goland wing taken from Table 3 in Murua et al (2011), AIAA-2011-1915
-! ! !     NumElems    = 12
+    NumElems    = 12
     NumNodesElem= 2
     ThetaRoot   = 0.d0
     ThetaTip    = 0.d0
     BeamLength1 = 6.096d0
 
     TipMass =0.0d0;
-	TipMassY=0.0d0;
-	TipMassZ=0.0d0;
+    TipMassY=0.0d0;
+    TipMassZ=0.0d0;
 
     BConds  ='CF'
-    ExtForce=(/0.d0,0.d0,0.d0/)*1.d0
+    ExtForce=(/0.d0,0.d0,0.d0/)*1.d5
     ExtMomnt=(/0.d0,0.d0,0.d0/)*1.d0
 
-    !Options%FollowerForce    = .true.
-    !Options%FollowerForceRig = .true.
-    !Options%OutInaframe      = .false.
-    !Options%NumLoadSteps  = 10
-    !Options%MinDelta      = 1.d-4
-    !Options%MaxIterations = 99
+    Options%FollowerForce    = .true.
+    Options%FollowerForceRig = .true.
+    Options%OutInaframe      = .false.
+    Options%NumLoadSteps  = 10
+    Options%MinDelta      = 1.d-4
+    Options%MaxIterations = 99
 
-  case ('DSTL')
-
-    NumNodesElem= 2
+  case ('TPY0')
+  ! half wing of HALE model aircraft presented in Table 4 in Murua et al (2011), AIAA-2011-1915
+  ! Rob: modified for SharPy PyBeam NonLinearStatic test case 0
+    NumElems    = 8
+    NumNodesElem= 3
     ThetaRoot   = 0.d0
     ThetaTip    = 0.d0
-    BeamLength1 = 17.044282d0
+    BeamLength1 = 16.0d0
 
     sigma=1.0d0     ! Parameter to change torsion and bending stiffness
 
@@ -141,15 +145,15 @@ module input
     TipMassZ=0.0d0;
 
     BConds  ='CF'
-    ExtForce=(/0.d0,0.d0,10.d0/)*1.d0
+    ExtForce=(/0.d0,0.d0,80.d0/)*1.d0
     ExtMomnt=(/0.d0,0.d0,0.d0/)*1.d0
 
-    !Options%FollowerForce    = .true.
-    !Options%FollowerForceRig = .true.
-    !Options%OutInaframe      = .false.
-    !Options%NumLoadSteps  = 10
-    !Options%MinDelta      = 1.d-4
-    !Options%MaxIterations = 99
+    Options%FollowerForce    = .true.
+    Options%FollowerForceRig = .true.
+    Options%OutInaframe      = .false.
+    Options%NumLoadSteps  = 10
+    Options%MinDelta      = 1.d-4
+    Options%MaxIterations = 99
 
   end select
 
@@ -178,7 +182,7 @@ module input
     BeamStiffness(5,5)=9.77221d6
     BeamStiffness(6,6)=9.77221d8
 
-  case ('HALE')
+  case ('HALE','TPY0')
     BeamMass(1,1)=0.75d0
     BeamMass(2,2)=BeamMass(1,1)
     BeamMass(3,3)=BeamMass(1,1)
@@ -193,25 +197,7 @@ module input
     BeamStiffness(5,5)=2.0d4
     BeamStiffness(6,6)=4.0d6
 
-    BeamStiffness=BeamStiffness/sigma
-
-  case ('DSTL')
-    BeamMass(1,1)=0.75d0
-    BeamMass(2,2)=BeamMass(1,1)
-    BeamMass(3,3)=BeamMass(1,1)
-    BeamMass(4,4)=1.d-1
-    BeamMass(5,5)=1.d-3
-    BeamMass(6,6)=1.d-3
-
-    BeamStiffness(1,1)=1.0d9
-    BeamStiffness(2,2)=BeamStiffness(1,1)
-    BeamStiffness(3,3)=BeamStiffness(1,1)
-    BeamStiffness(4,4)=1.0d4
-    BeamStiffness(5,5)=2.0d4
-    BeamStiffness(6,6)=4.0d6
-
-    BeamStiffness=BeamStiffness/sigma
-
+    BeamStiffness=BeamStiffness*sigma
   end select
 
 ! Set name for output file.
@@ -229,13 +215,13 @@ module input
 ! Define number of Gauss points (2-noded displacement-based element needs reduced integration).
   select case (NumNodesElem)
     case (2)
-      ! Options%NumGauss=1
+      Options%NumGauss=1
     case (3)
-      ! Options%NumGauss=2
+      Options%NumGauss=2
   end select
 
 ! Minimum angle for two unit vectors to be parallel.
-  !Options%DeltaCurved=1.d-5
+  Options%DeltaCurved=1.d-5
 
   return
  end subroutine input_setup
@@ -266,7 +252,7 @@ subroutine input_elem (NumElems,NumNodes,Elem)
 ! Connectivies.
   select case (trim(TestCase))
 
-    case default 
+    case default
       select case (NumNodesElem)
       case (2)
         do i=1,NumElems
@@ -300,28 +286,28 @@ subroutine input_elem (NumElems,NumNodes,Elem)
 
 ! Define lumped masses at element nodes.
   do i=1,NumElems
-  	Elem(i)%RBMass = 0.d0
+    Elem(i)%RBMass = 0.d0
   end do
 
   select case (trim(TestCase))
 
   case default
         LocPos(1)=0.d0
-		LocPos(2)=TipMassY
-		LocPos(3)=TipMassZ
+        LocPos(2)=TipMassY
+        LocPos(3)=TipMassZ
 
-!		Elem(NumElems/2)%RBMass(2,1:3,1:3)= TipMass*Unit
-!		Elem(NumElems/2)%RBMass(2,1:3,4:6)=-TipMass*rot_skew(LocPos)
-!		Elem(NumElems/2)%RBMass(2,4:6,1:3)= TipMass*rot_skew(LocPos)
-!		Elem(NumElems/2)%RBMass(2,4:6,4:6)=-TipMass*matmul(rot_skew(LocPos),rot_skew(LocPos))
+!       Elem(NumElems/2)%RBMass(2,1:3,1:3)= TipMass*Unit
+!       Elem(NumElems/2)%RBMass(2,1:3,4:6)=-TipMass*rot_skew(LocPos)
+!       Elem(NumElems/2)%RBMass(2,4:6,1:3)= TipMass*rot_skew(LocPos)
+!       Elem(NumElems/2)%RBMass(2,4:6,4:6)=-TipMass*matmul(rot_skew(LocPos),rot_skew(LocPos))
 !
-!		Elem(NumElems)%RBMass(1,:,:)= Elem(NumElems/2)%RBMass(2,:,:)
+!       Elem(NumElems)%RBMass(1,:,:)= Elem(NumElems/2)%RBMass(2,:,:)
   end select
 
 ! Element orientation.
   do i=1,NumElems
     select case (trim(TestCase))
-    case ('HALE','GOLD','DSTL')
+    case ('HALE','GOLD','TPY0')
       Elem(i)%Vector(2)= 1.d0
     end select
   end do
@@ -365,11 +351,8 @@ subroutine input_elem (NumElems,NumNodes,Elem)
   Coords= 0.d0
   do i=1,NumNodes
     select case (trim(TestCase))
-    case ('HALE','GOLD')
+    case ('HALE','GOLD','TPY0')
       Coords(i,1)=BeamLength1*(dble(i-1)/dble(NumNodes-1))
-    case ('DSTL')
-      Coords(i,2)=BeamLength1*(dble(i-1)/dble(NumNodes-1))/11.531d0+0.73d0
-      Coords(i,1)=11.4877d0*Coords(i,2)+6.8107d0
     end select
   end do
 
@@ -383,12 +366,10 @@ subroutine input_elem (NumElems,NumNodes,Elem)
   select case (trim(TestCase))
 
   case default
-    do i=1,NumNodes
-        Forces(i,1:3)=ExtForce
-        Forces(i,4:6)=ExtMomnt
-    end do
-!    Forces(NumNodes,1:3)=ExtForce
-!    Forces(NumNodes,4:6)=ExtMomnt
+    Forces(1,1:3)=-ExtForce
+    Forces(1,4:6)=-ExtMomnt
+    Forces(NumNodes,1:3)=ExtForce
+    Forces(NumNodes,4:6)=ExtMomnt
   end select
 
 ! Boundary conditions
@@ -434,11 +415,19 @@ subroutine input_elem (NumElems,NumNodes,Elem)
     Options%NewmarkDamp=0.01d0
     Omega=20.d0    ! rad/s
 
-  case ('HALE','DSTL')
+  case ('HALE')
     t0  = 0.0d0   ! 0.d0
     dt  = 1.0d-2
     tfin= 10.0d0
     NumSteps= ceiling((tfin-t0)/dt)
+    Options%NewmarkDamp=0.01d0
+    Omega=20.d0    ! rad/s
+
+  case ('TPY0')
+    t0  = 0.0d0   ! 0.d0
+    dt  = 1.0d-2
+    tfin= 1.0d0
+    NumSteps= ceiling((tfin-t0)/dt) + 2
     Options%NewmarkDamp=0.01d0
     Omega=20.d0    ! rad/s
 
@@ -477,55 +466,49 @@ subroutine input_elem (NumElems,NumNodes,Elem)
 
   select case (trim(TestCase))
 
-    case default
-        ForceDynAmp = 1.d0*ForceStatic
-        ForceTime   = 0.d0
+  case default
+    !ForceDynAmp = 2.d0*ForceStatic
+    ForceTime   = 1.d0
+    ForceDynAmp(NumNodes,3) = 160.d0
 
-        do i=1,NumSteps
-            if((Time(i).gt.0.1) .and. (Time(i).le.0.3) ) then
-                ForceTime(i) = 1.
-            else if((Time(i).gt.0.3) .and. (Time(i).le.0.5)) then
-                ForceTime(i) = -1.
-            end if
-        end do
+! Ramped harmonic load.
+    if (.false.) then
+      Time0= Time(NumSteps)/2.d0
+      ForceTime=0.d0
+      do i=1,NumSteps
+        ForceTime(i+1)=sin(Omega*Time(i+1))
+        if (Time(i+1) < Time0) ForceTime(i+1)=ForceTime(i+1)*Time(i+1)/Time0
+      end do
+    end if
 
-! ! Ramped harmonic load.
-!     if (.false.) then
-!       Time0= Time(NumSteps)/2.d0
-!       ForceTime=0.d0
-!       do i=1,NumSteps
-!         ForceTime(i+1)=sin(Omega*Time(i+1))
-!         if (Time(i+1) < Time0) ForceTime(i+1)=ForceTime(i+1)*Time(i+1)/Time0
-!       end do
-!     end if
-! 
-! ! 1-Cos load.
-!     if (.false.) then
-!      do i=1,NumSteps+1
-!          if ((Time(i).ge.0.d0).and.(Time(i).le.1.d1)) then
-!              ForceTime(i)=(1.d0-cos(Pi*dble(Time(i)-0.d0)/dble(10.d0)))/2.d0
-!          end if
-!      end do
-!     end if
-! 
-! ! Ramped load.
-!     if (.true.) then
-!       ForceTime=1.d0
-!       do i=1,NumSteps+1
-!         if ((Time(i).ge.0.d0).and.(Time(i).le.2.5d0)) then
-!             ForceTime(i)=Time(i)/2.5d0
-!         end if
-!       end do
-!     end if
-! 
-! ! sinusiodal load.
-!     if (.false.) then
-!      do i=1,NumSteps+1
-!          ForceTime(i)=sin(Pi*dble(Time(i)-0.d0)/dble(5.d0))
-!      end do
-!     end if
+! 1-Cos load.
+    if (.false.) then
+     do i=1,NumSteps+1
+         if ((Time(i).ge.0.d0).and.(Time(i).le.1.d1)) then
+             ForceTime(i)=(1.d0-cos(Pi*dble(Time(i)-0.d0)/dble(10.d0)))/2.d0
+         end if
+     end do
+    end if
+
+! Ramped load.
+    if (.false.) then
+      ForceTime=1.d0
+      do i=1,NumSteps+1
+        if ((Time(i).ge.0.d0).and.(Time(i).le.2.5d0)) then
+            ForceTime(i)=Time(i)/2.5d0
+        end if
+      end do
+    end if
+
+! sinusiodal load.
+    if (.false.) then
+     do i=1,NumSteps+1
+        ! ForceTime(i) = sin(2.*1.*Time(i))
+        ForceTime(i)=sin(Pi*dble(Time(i)-0.d0)/dble(0.5))
+     end do
+    end if
   end select
-
+print *, ForceDynAmp
   return
  end subroutine input_dynforce
 
