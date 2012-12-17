@@ -9,13 +9,11 @@
 '''
 
 import sys
-import ctypes as ct #http://docs.python.org/3.2/library/ctypes.html
 import SharPySettings as Settings
 import DerivedTypes
 import BeamIO
 import BeamLib
 import BeamInit
-import NonlinearStatic
 
 def Solve_F90(XBINPUT,XBOPTS):
     """@brief Nonlinear dynamic structural solver using f90 solve routine."""
@@ -33,9 +31,11 @@ def Solve_F90(XBINPUT,XBOPTS):
     "Change solution code to NonlinearStatic"
     XBOPTS.Solution.value = 112
     
+    
     "Set initial conditions as undef config"
     PosDefor = PosIni.copy(order='F')
     PsiDefor = PsiIni.copy(order='F')
+    
     
     "Solve static"
     BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
@@ -43,26 +43,72 @@ def Solve_F90(XBINPUT,XBOPTS):
                             PosDefor, PsiDefor)
     
     
+    "Write deformed configuration to file"
+    ofile = Settings.OutputFileRoot + '_SOL312_def.dat'
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('Writing file %s ... ' %(ofile))
+    fp = open(ofile,'w')
+    fp.write('TITLE="Non-linear static solution: deformed geometry"\n')
+    fp.write('VARIABLES="iElem" "iNode" "Px" "Py" "Pz" "Rx" "Ry" "Rz"\n')
+    fp.close()
+    if XBOPTS.PrintInfo==True:
+        sys.stdout.write('done\n')
+    WriteMode = 'a'
     
-
-    """subroutine wrap_cbeam3_solv_nlndyn(iOut,NumDof,NumSteps,Time,&
-&                    NumElems, NumNodes, MemNo, Conn,        &!for do_xbelem_var
-&                    Master_Array,                             &!for do_xbelem_var
-&                    Length, PreCurv,                        &!for do_xbelem_var
-&                    Psi, Vector, Mass_Array,                &!for do_xbelem_var
-&                    Stiff_Array,                            &!for do_xbelem_var
-&                    InvStiff_Array, RBMass_Array,            &!for do_xbelem_var
-&                    NumNodes_tot, Master, Vdof, Fdof,        &!for pack_xbnode
-&                    F0_Vec,Fa_Vec,Ftime,                            &
-&                   Vrel_Vec, VrelDot_Vec, Coords_Vec, Psi0_Vec, PosDefor_Vec,    &
-&                    PsiDefor_Vec, PosDotDefor_Vec, PsiDotDefor_Vec,        &
-&                   PosPsiTime_Vec,VelocTime_Vec,DynOut_Vec,            &
-&                   OutGrids,                                &
-&                   FollowerForce, FollowerForceRig,        &!for pack_xbopts
-&                    PrintInfo, OutInBframe, OutInaframe,    &!for pack_xbopts
-&                    ElemProj, MaxIterations, NumLoadSteps,    &!for pack_xbopts
-&                    NumGauss, Solution, DeltaCurved,         &!for pack_xbopts
-&                    MinDelta, NewmarkDamp)                     !for pack_xbopts"""
+    BeamIO.OutputElems(XBINPUT.NumElems, NumNodes_tot.value, XBELEM, \
+                       PosDefor, PsiDefor, ofile, WriteMode)
+    
+    
+    "Change solution code to NonlinearDynamic"
+    XBOPTS.Solution.value = 312
+    
+    
+    "Initialise variables for dynamic analysis"
+    Time, NumSteps, ForceTime, ForcedVel, ForcedVelDot,\
+    PosDotDef, PsiDotDef,\
+    OutGrids, PosPsiTime, VelocTime, DynOut\
+        = BeamInit.Dynamic(XBINPUT,XBOPTS)
+    
+    """TODO: move time vector init to input"""
+    
+    "Write _force file"
+    ofile = Settings.OutputFileRoot + '_SOL312_force.dat'
+    fp = open(ofile,'w')
+    BeamIO.Write_force_File(fp, Time, ForceTime, ForcedVel, ForcedVelDot)
+    fp.close() 
+    
+    
+    "Write _vel file"   
+    #TODO: write _vel file
+    
+    
+    "Write .mrb file"
+    #TODO: write .mrb file
+    
+    "Solve dynamic using f90 solver"
+    BeamLib.Cbeam3_Solv_NonlinearDynamic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
+            PosIni, PsiIni, XBNODE, NumDof,\
+            PosDefor, PsiDefor,\
+            NumSteps, Time, ForceTime, ForcedVel, ForcedVelDot,\
+            PosDotDef, PsiDotDef,\
+            PosPsiTime, VelocTime, DynOut, OutGrids)
+    
+    
+    "Write _dyn file"
+    ofile = Settings.OutputFileRoot + '_SOL312_dyn.dat'
+    fp = open(ofile,'w')
+    BeamIO.Write_dyn_File(fp, Time, PosPsiTime)
+    fp.close()
+    
+    
+    "Write _shape file"
+    ofile = Settings.OutputFileRoot + '_SOL312_shape.dat'
+    fp = open(ofile,'w')
+    BeamIO.Write_shape_File(fp, len(Time), NumNodes_tot.value, Time, DynOut)
+    fp.close()
+    
+    
+    
 
 if __name__ == '__main__':
     """Main"""
@@ -77,8 +123,7 @@ if __name__ == '__main__':
          
     """Set up Xbinput for nonlinear static analysis defined in 
     NonlinearStatic/testcases.pdf case 1.1."""
-    XBINPUT = DerivedTypes.Xbinput(2,20,10)
-    XBINPUT.NumElems = 20
+    XBINPUT = DerivedTypes.Xbinput(2,20)
     XBINPUT.BeamLength = 5.0
     XBINPUT.BeamStiffness[0,0] = 4.8e+08
     XBINPUT.BeamStiffness[1,1] = 3.231e+08
@@ -90,9 +135,11 @@ if __name__ == '__main__':
     XBINPUT.BeamMass[1,1] = 100
     XBINPUT.BeamMass[2,2] = 100
     XBINPUT.BeamMass[3,3] = 10
-    XBINPUT.BeamMass[4,4] = 0.0 #Neglect the cross-section bending inertia
-    XBINPUT.BeamMass[5,5] = 0.0 #Neglect the cross-section bending inertia
-    XBINPUT.ForceStatic[2] = 6e+05
+    XBINPUT.BeamMass[4,4] = 0.0001 #Must be non-zero
+    XBINPUT.BeamMass[5,5] = 0.0001 #Must be non-zero
+    XBINPUT.ForceStatic[-1,2] = 6e+05
+    XBINPUT.tfin = 1.0
+    XBINPUT.dt = 0.1
     
     Solve_F90(XBINPUT,XBOPTS)
     

@@ -1,0 +1,12 @@
+
+
+          GLOBAL CONSTANTS IN THE MODEL:
+          ===============================
+              Number of Beam DOFs:               6
+
+
+          OUTPUT OPTIONS:
+          ================
+              Number of Output Nodes:            1
+              Print Displacements:               1
+              Print Velocities:                  1

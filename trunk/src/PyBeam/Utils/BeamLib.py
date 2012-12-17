@@ -34,11 +34,11 @@ f_input_node.restype                = None
 f_xbeam_undef_geom.restype          = None
 f_xbeam_undef_dofs.restype          = None
 f_cbeam3_solv_nlnstatic.restype     = None
-f_cbeam3_solv_nlndyn                = None
+f_cbeam3_solv_nlndyn.restype        = None
 
 def Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, \
             PsiIni, XBNODE, NumDof, PosDefor, PsiDefor):
-    """@brief Python wrapper for f_cbeam3_solv_nlndyn
+    """@brief Python wrapper for f_cbeam3_solv_nlnstatic
     
     @details Numpy arrays are mutable so the changes (solution) made here are
      reflected in the data of the calling script after execution."""
@@ -81,5 +81,62 @@ def Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, \
                 ct.byref(XBOPTS.NewmarkDamp) )
     
 
+def Cbeam3_Solv_NonlinearDynamic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni,\
+            PsiIni, XBNODE, NumDof, PosDefor, PsiDefor, NumSteps, Time,\
+            ForceTime, ForcedVel, ForcedVelDot, PosDotDef, PsiDotDef,\
+            PosPsiTime, VelocTime, DynOut, OutGrids):
+    """@brief Python wrapper for f_cbeam3_solv_nlndyn"""
+    
+    f_cbeam3_solv_nlndyn(ct.byref(ct.c_int(XBINPUT.iOut)),\
+                ct.byref(NumDof),\
+                ct.byref(NumSteps),\
+                Time.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                ct.byref(ct.c_int(XBINPUT.NumElems)),\
+                XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                ct.byref(NumNodes_tot),\
+                XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBINPUT.ForceStatic.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBINPUT.ForceDyn.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                ForceTime.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                ForcedVel.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                ForcedVelDot.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PosIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PsiIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PosDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PsiDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PosDotDef.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PsiDotDef.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PosPsiTime.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                VelocTime.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                DynOut.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                OutGrids.ctypes.data_as(ct.POINTER(ct.c_bool)),\
+                ct.byref(XBOPTS.FollowerForce),\
+                ct.byref(XBOPTS.FollowerForceRig),\
+                ct.byref(XBOPTS.PrintInfo),\
+                ct.byref(XBOPTS.OutInBframe),\
+                ct.byref(XBOPTS.OutInaframe),\
+                ct.byref(XBOPTS.ElemProj),\
+                ct.byref(XBOPTS.MaxIterations),\
+                ct.byref(XBOPTS.NumLoadSteps),\
+                ct.byref(XBOPTS.NumGauss),\
+                ct.byref(XBOPTS.Solution),\
+                ct.byref(XBOPTS.DeltaCurved),\
+                ct.byref(XBOPTS.MinDelta),\
+                ct.byref(XBOPTS.NewmarkDamp) )
+
+    
 if __name__ == '__main__':
     pass

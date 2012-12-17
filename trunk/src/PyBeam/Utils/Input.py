@@ -13,8 +13,6 @@ import DerivedTypes
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-import BeamIO
-import BeamLib
 
 def Setup(XBINPUT, XBOPTS):
     """@brief Initial functionality adapted from FxInput_PyFx.f90."""

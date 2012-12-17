@@ -229,26 +229,28 @@ class Xbinput:
     @param BeamLength Length of beam.
     @param BeamStiffness 6-by-6 sectional stiffness matrix.
     @param BeamMass 6-by-6 sectional mass matrix.
-    @param ForceStatic NumNodes-6 static force vector at nodes.
     @param BConds 2-char string with boundary condition, 'CF' = Clamped-Free.
     @param Sigma Stiffness parameter. Not Implemented.
     @param iOut Output file.
-    @param ForceDyn Dynamic forces at nodes.
-    @param ForceDynTime Amplitude of dynamic forces with time.
-    @param Time Vector of time ordinates.
-    @details N.B: Xbinput variables are not declared as ctypes variables 
-    because they are for input only. A new object is created for C/f90 
-    function calls using ctypes.c_<type>(XbinputVar).
-    NumSteps must be set so arrays can be initialised - if only static analysis
-     is required set to 1."""
+    @param t0 Initial time.
+    @param tfin Final time.
+    @param dt Timestep.
+    @param Omega Angular velocity of oscillatory motions.
+    @param NumNodesTot total number of nodes in the model.
+    @param ForceStatic NumNodes-6 static force vector at nodes.
+    @param ForceDyn Numnodes-6 dynamic forces at nodes."""
 
-    def __init__(self, NumNodesElem, NumElems, NumSteps,\
+    def __init__(self, NumNodesElem, NumElems,\
                  BeamLength = 1.0,\
                  BeamStiffness = np.zeros((6,6),ct.c_double,'F'),\
                  BeamMass = np.zeros((6,6),ct.c_double,'F'),\
                  BConds = 'CF',\
                  Sigma = 1.0,\
-                 iOut = 1):
+                 iOut = 1,\
+                 t0 = 0.0,\
+                 tfin = 0.0,\
+                 dt = 0.0,\
+                 Omega = 0.0):
         """@brief NumNodesElem and NumElems must be specified for initialisation
         of force arrays.
         
@@ -263,21 +265,24 @@ class Xbinput:
         self.BConds = BConds
         self.Sigma = Sigma
         self.iOut = iOut
-        self.NumSteps = NumSteps
+        self.t0 = t0
+        self.tfin = tfin
+        self.dt = dt
+        self.Omega = Omega
         
         "Check number of nodes per element"
         if self.NumNodesElem != 2 and self.NumNodesElem != 3:
             sys.stderr.write('Invalid number of nodes per element\n')
         elif self.NumNodesElem == 2:
-            NumNodes = NumElems + 1
+            NumNodesTot = NumElems + 1
         elif self.NumNodesElem == 3:
-            NumNodes = 2*NumElems + 1 
+            NumNodesTot = 2*NumElems + 1
+            
+        self.NumNodesTot = NumNodesTot
         
-        "Init arrays"
-        self.ForceStatic = np.zeros((NumNodes,6),ct.c_double,'F')
-        self.ForceDyn = np.zeros((NumNodes,6),ct.c_double,'F')
-        self.ForceDynTime= np.zeros(NumSteps+1,ct.c_double,'F')
-        self.Time = np.zeros(NumSteps+1,ct.c_double,'F')
+        "Init nodal arrays"
+        self.ForceStatic = np.zeros((NumNodesTot,6),ct.c_double,'F')
+        self.ForceDyn = np.zeros((NumNodesTot,6),ct.c_double,'F')
         
         
 def dump(obj):

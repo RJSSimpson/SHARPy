@@ -64,13 +64,15 @@ class TestNonlinearStatic_v_Executable(unittest.TestCase):
         
         import NonlinearStatic # imported after clean/make process
         
+        ExecOutFile = 'TPY0_SOL312_def.txt' #same run used for dynamic test
+        
         "Test if correctly named solution file is created"
-        self.assertTrue(os.path.isfile('TPY0_SOL112_def.txt'),'TPY0 solution'\
+        self.assertTrue(os.path.isfile(ExecOutFile),'TPY0 solution'\
                         +' does not exist: check testcase in input_rob.f90'\
                         +' is set to \'TPY0\' ')
         
         "Read executable output"
-        f = open('TPY0_SOL112_def.txt')
+        f = open(ExecOutFile)
         fLines = f.readlines() #save all lines
         f.close()
         fLast = str(fLines[-1]) #isolate final line as string
@@ -85,7 +87,7 @@ class TestNonlinearStatic_v_Executable(unittest.TestCase):
         XBOPTS.NumGauss.value = 2  
         """Set up Xbinput for nonlinear static analysis defined in input_rob.f90
         TPY0 test case"""
-        XBINPUT = DerivedTypes.Xbinput(3,8,1)
+        XBINPUT = DerivedTypes.Xbinput(3,8)
         XBINPUT.BeamLength = 16.0
         XBINPUT.BeamStiffness[0,0] = 1.0e+09
         XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -99,7 +101,7 @@ class TestNonlinearStatic_v_Executable(unittest.TestCase):
         XBINPUT.BeamMass[3,3] = 0.1
         XBINPUT.BeamMass[4,4] = 0.001
         XBINPUT.BeamMass[5,5] = 0.001
-        XBINPUT.ForceStatic[-1,2] = 800
+        XBINPUT.ForceStatic[-1,2] = 80
         
         "Solve using F90 subroutine"
         NonlinearStatic.Solve_F90(XBINPUT,XBOPTS)
@@ -151,7 +153,7 @@ class TestNonlinearStatic_v_GeradinCardonna(unittest.TestCase):
              
         """Set up Xbinput for nonlinear static analysis defined in 
         NonlinearStatic/testcases.pdf case 1.1."""
-        XBINPUT = DerivedTypes.Xbinput(2,20,1)
+        XBINPUT = DerivedTypes.Xbinput(2,20)
         XBINPUT.BeamLength = 5.0
         XBINPUT.BeamStiffness[0,0] = 4.8e+08
         XBINPUT.BeamStiffness[1,1] = 3.231e+08
@@ -200,7 +202,7 @@ class TestNonlinearStatic_v_GeradinCardonna(unittest.TestCase):
         XBOPTS.NumGauss.value = 2       
         """Set up Xbinput for nonlinear static analysis defined in 
         NonlinearStatic/testcases.pdf case 1.1."""
-        XBINPUT = DerivedTypes.Xbinput(3,10,1)
+        XBINPUT = DerivedTypes.Xbinput(3,10)
         XBINPUT.BeamLength = 5.0
         XBINPUT.BeamStiffness[0,0] = 4.8e+08
         XBINPUT.BeamStiffness[1,1] = 3.231e+08

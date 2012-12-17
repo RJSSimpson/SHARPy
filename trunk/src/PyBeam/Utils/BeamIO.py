@@ -130,27 +130,20 @@ def Write_force_File(fp,Time,ForceTime,ForcedVel,ForcedVelDot):
 #-------------------------------------------------------------------------------
 # START - Write_dyn_File
 #-------------------------------------------------------------------------------
-def Write_dyn_File(fp,Time,PosPsiTime,uc,ug,case):
-    """
+def Write_dyn_File(fp,Time,PosPsiTime):
+    """ @brief Writes _dyn file based on data from PosPsiTime.
     """
     
     nr1 = np.size(PosPsiTime,0); nr2 = np.size(PosPsiTime,1)
-    nc = 3; ng = 3
 
     fp.write('TITLE="Wing-tip dynamic response"\n')
-    fp.write('VARIABLES="T" "PX" "PY" "PZ" "RX" "RY" "RZ" "UC0" "UC1" "UC2" "UGX" "UGY" "UGZ"\n')
-    fp.write('ZONE I=%d T="%s"\n' %(nr1,case))
+    fp.write('VARIABLES="T" "PX" "PY" "PZ" "RX" "RY" "RZ"\n')
+    fp.write('ZONE I=%d T="%s"\n' %(nr1,'dyn'))
 
     for i1 in range(nr1):
         fp.write(' %12.5e ' %(Time[i1]))
         for i2 in range(nr2):
             fp.write('%12.5e ' %(PosPsiTime[i1,i2]))
-        # Add control inputs
-        for i2 in range(nc):
-            fp.write('%12.5e ' %(uc[i2,i1]))
-        # Add gust inputs
-        for i2 in range(ng):
-            fp.write('%12.5e ' %(ug[i2,i1]))
         fp.write('\n')
     
     return

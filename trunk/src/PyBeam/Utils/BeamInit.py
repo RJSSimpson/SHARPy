@@ -72,7 +72,8 @@ def Static(XBINPUT,XBOPTS):
     WriteMode = 'w'
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Writing file (mode: %s) %s' %(WriteMode,\
-                            Settings.OutputFileRoot + '_SOL112'\
+                            Settings.OutputFileRoot + '_SOL' +\
+                            XBOPTS.Solution.value \
                             + '_und.dat\n'))
         
     BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,\
@@ -111,9 +112,59 @@ def Static(XBINPUT,XBOPTS):
         
     return XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
             XBNODE, NumDof
+            
+
+def Dynamic(XBINPUT,XBOPTS):
+    """@brief Initialise everything for dynamic analysis."""
+    
+    "Create time vector"
+    Time = np.arange(XBINPUT.t0,XBINPUT.tfin  + XBINPUT.dt, XBINPUT.dt,\
+                     ct.c_double)
+    
+    "Calculate number of timesteps"
+    NumSteps = ct.c_int(len(Time) - 1)
+    
+    "Create default force-amp-in-time array"
+    ForceTime = np.ones(NumSteps.value+1,ct.c_double,'F')
+    
+    "Create default forced velocities and accelerations."
+    ForcedVel = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
+    ForcedVelDot = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
+    
+    "Rates of Dof Arrays"
+    PosDotDef  = np.zeros((XBINPUT.NumNodesTot,3),ct.c_double,'F')
+    PsiDotDef  = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),\
+                           ct.c_double, 'F')
+    
+    "Create Outgrids and check only 1 node specified"
+    OutGrids = np.zeros(XBINPUT.NumNodesTot, ct.c_bool, 'F')
+    OutGrids[-1] = True #at tip
+    Nonzeros = np.nonzero(OutGrids)
+    if len(Nonzeros[0]) == 0:
+        raise Exception('Zero Outgrid output nodes: min is 1.')
+    elif len(Nonzeros[0]) > 1:
+        raise Exception('Too many Outgrid output nodes: max is 1.')
+    
+    "Position/rotation history at Outgrids = True element"
+    PosPsiTime = np.zeros((NumSteps.value+1,6), ct.c_double, 'F')
+    VelocTime  = np.zeros((NumSteps.value+1,XBINPUT.NumNodesTot),\
+                           ct.c_double, 'F')
+    
+    "Position of all nodes at all times"
+    DynOut     = np.zeros(((NumSteps.value+1)*XBINPUT.NumNodesTot,3),\
+                           ct.c_double, 'F')
+    
+    return Time, NumSteps, ForceTime, ForcedVel, ForcedVelDot,\
+            PosDotDef, PsiDotDef,\
+            OutGrids, PosPsiTime, VelocTime, DynOut
+    
+    
 
 if __name__ == '__main__':
-    XBINPUT = DerivedTypes.Xbinput()
+    XBINPUT = DerivedTypes.Xbinput(2,1)
+    XBINPUT.tfin = 1.0
+    XBINPUT.dt = 0.1
+    
     XBOPTS = DerivedTypes.Xbopts()
     
     XBINPUT.BeamStiffness[0,0] = 1.0e+09 #otherwise inverse fails
@@ -123,6 +174,7 @@ if __name__ == '__main__':
     XBINPUT.BeamStiffness[4,4] = 2.0e+04
     XBINPUT.BeamStiffness[5,5] = 4.0e+06
     
-    XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
-            ForceStatic, XBNODE, NumDof \
-                = Static(XBINPUT,XBOPTS)               
+    XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
+                = Static(XBINPUT,XBOPTS) 
+                
+    Dynamic(XBINPUT,XBOPTS)            

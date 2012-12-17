@@ -84,8 +84,7 @@ if __name__ == '__main__':
     XBOPTS.MinDelta.value = 1e-04       
     """Set up Xbinput for nonlinear static analysis defined in input_rob.f90
     TPY0 test case"""
-    XBINPUT = DerivedTypes.Xbinput()
-    XBINPUT.NumElems = 8
+    XBINPUT = DerivedTypes.Xbinput(2,8)
     XBINPUT.BeamLength = 16.0
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
