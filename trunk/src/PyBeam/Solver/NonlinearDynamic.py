@@ -44,7 +44,7 @@ def Solve_F90(XBINPUT,XBOPTS):
     
     
     "Write deformed configuration to file"
-    ofile = Settings.OutputFileRoot + '_SOL312_def.dat'
+    ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_def.dat'
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Writing file %s ... ' %(ofile))
     fp = open(ofile,'w')
@@ -72,7 +72,7 @@ def Solve_F90(XBINPUT,XBOPTS):
     """TODO: move time vector init to input"""
     
     "Write _force file"
-    ofile = Settings.OutputFileRoot + '_SOL312_force.dat'
+    ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_force.dat'
     fp = open(ofile,'w')
     BeamIO.Write_force_File(fp, Time, ForceTime, ForcedVel, ForcedVelDot)
     fp.close() 
@@ -95,14 +95,14 @@ def Solve_F90(XBINPUT,XBOPTS):
     
     
     "Write _dyn file"
-    ofile = Settings.OutputFileRoot + '_SOL312_dyn.dat'
+    ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_dyn.dat'
     fp = open(ofile,'w')
     BeamIO.Write_dyn_File(fp, Time, PosPsiTime)
     fp.close()
     
     
     "Write _shape file"
-    ofile = Settings.OutputFileRoot + '_SOL312_shape.dat'
+    ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_shape.dat'
     fp = open(ofile,'w')
     BeamIO.Write_shape_File(fp, len(Time), NumNodes_tot.value, Time, DynOut)
     fp.close()

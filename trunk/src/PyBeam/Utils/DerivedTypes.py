@@ -238,7 +238,8 @@ class Xbinput:
     @param Omega Angular velocity of oscillatory motions.
     @param NumNodesTot total number of nodes in the model.
     @param ForceStatic NumNodes-6 static force vector at nodes.
-    @param ForceDyn Numnodes-6 dynamic forces at nodes."""
+    @param ForceDyn Numnodes-6 dynamic forces at nodes.
+    @param ForcingType Type of dynamic forcing."""
 
     def __init__(self, NumNodesElem, NumElems,\
                  BeamLength = 1.0,\
@@ -250,7 +251,9 @@ class Xbinput:
                  t0 = 0.0,\
                  tfin = 0.0,\
                  dt = 0.0,\
-                 Omega = 0.0):
+                 Omega = 0.0,\
+                 ForcingType = 'Const',
+                 RampTime = 0.0):
         """@brief NumNodesElem and NumElems must be specified for initialisation
         of force arrays.
         
@@ -269,6 +272,8 @@ class Xbinput:
         self.tfin = tfin
         self.dt = dt
         self.Omega = Omega
+        self.ForcingType = ForcingType
+        self.RampTime = RampTime
         
         "Check number of nodes per element"
         if self.NumNodesElem != 2 and self.NumNodesElem != 3:

@@ -16,7 +16,7 @@ BeamLibDir = SharPyProjectDir + 'BeamLib/bin/'
 BeamLibName = './BeamLib.so'
 
 OutputDir =  SharPyProjectDir + 'Output/Temp/'
-OutputFileRoot = OutputDir + 'Foo'
+OutputFileRoot = 'Foo'
 
 """Structural Code Constants"""
 

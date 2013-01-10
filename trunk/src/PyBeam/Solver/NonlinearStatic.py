@@ -32,26 +32,26 @@ def Solve_F90(XBINPUT,XBOPTS):
     PsiDefor = PsiIni.copy(order='F')
     
     
-    if XBOPTS.PrintInfo==True:
+    if XBOPTS.PrintInfo.value==True:
         sys.stdout.write('Solve nonlinear static case (using .f90 routines) ... \n')
     
     BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
                                 PosIni, PsiIni, XBNODE, NumDof,\
                                 PosDefor, PsiDefor)
     
-    if XBOPTS.PrintInfo==True:
+    if XBOPTS.PrintInfo.value==True:
         sys.stdout.write(' ... done\n')
     
     
     "Write deformed configuration to file"
-    ofile = Settings.OutputFileRoot + '_SOL112_def.dat'
-    if XBOPTS.PrintInfo==True:
+    ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL112_def.dat'
+    if XBOPTS.PrintInfo.value==True:
         sys.stdout.write('Writing file %s ... ' %(ofile))
     fp = open(ofile,'w')
     fp.write('TITLE="Non-linear static solution: deformed geometry"\n')
     fp.write('VARIABLES="iElem" "iNode" "Px" "Py" "Pz" "Rx" "Ry" "Rz"\n')
     fp.close()
-    if XBOPTS.PrintInfo==True:
+    if XBOPTS.PrintInfo.value==True:
         sys.stdout.write('done\n')
     WriteMode = 'a'
     
@@ -59,7 +59,7 @@ def Solve_F90(XBINPUT,XBOPTS):
                        PosDefor, PsiDefor, ofile, WriteMode)
     
     "Print deformed configuration"
-    if XBOPTS.PrintInfo==True:
+    if XBOPTS.PrintInfo.value==True:
         sys.stdout.write('--------------------------------------\n')
         sys.stdout.write('NONLINEAR STATIC SOLUTION\n')
         sys.stdout.write('%10s %10s %10s\n' %('X','Y','Z'))
@@ -67,13 +67,101 @@ def Solve_F90(XBINPUT,XBOPTS):
             sys.stdout.write(' ')
             for inodj in range(3):
                 sys.stdout.write('%12.5e' %(PosDefor[inodi,inodj]))
-                sys.stdout.write('\n')
+            sys.stdout.write('\n')
         sys.stdout.write('--------------------------------------\n')
         
     
     "Return solution as optional output argument"
     return PosDefor, PsiDefor
+
+
+def Solve_F90_steps(XBINPUT,XBOPTS):
+    """@brief Nonlinear static structural solver using f90 solve routine called
+    once per load-step."""
     
+    "Check correct solution code"
+    assert XBOPTS.Solution.value == 112, ('NonlinearStatic (F90) requested' +\
+                                              ' with wrong solution code')
+    
+    "Initialise beam"
+    XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
+                = BeamInit.Static(XBINPUT,XBOPTS)
+    
+    
+    "Set initial conditions as undef config"
+    PosDefor = PosIni.copy(order='F')
+    PsiDefor = PsiIni.copy(order='F')
+    
+    
+    if XBOPTS.PrintInfo.value==True:
+        sys.stdout.write('Solve nonlinear static case (using .f90 routine at' +\
+                         ' each load-step) ... \n')
+    
+    "Initialise load increments and set F90 load-step to 1"
+    LoadSteps = XBOPTS.NumLoadSteps.value
+    LoadIncrement = XBINPUT.ForceStatic/LoadSteps
+    XBOPTS.NumLoadSteps.value = 1
+    
+    
+    "Start loading loop"
+    for step in range(1,LoadSteps+1):
+        "Current load to be applied"
+        XBINPUT.ForceStatic = step*LoadIncrement
+        
+        "Print load step"
+        if XBOPTS.PrintInfo.value == True:
+            print('     Python-based outer load step %d' %(step))
+        
+        
+        "Solve with one load step"
+        BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
+                                PosIni, PsiIni, XBNODE, NumDof,\
+                                PosDefor, PsiDefor)
+        
+        
+    if XBOPTS.PrintInfo.value==True:
+        sys.stdout.write(' ... done\n')
+    
+    
+    "Write deformed configuration to file"
+    ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL112_def.dat'
+    if XBOPTS.PrintInfo.value==True:
+        sys.stdout.write('Writing file %s ... ' %(ofile))
+    fp = open(ofile,'w')
+    fp.write('TITLE="Non-linear static solution: deformed geometry"\n')
+    fp.write('VARIABLES="iElem" "iNode" "Px" "Py" "Pz" "Rx" "Ry" "Rz"\n')
+    fp.close()
+    if XBOPTS.PrintInfo.value==True:
+        sys.stdout.write('done\n')
+    WriteMode = 'a'
+    
+    BeamIO.OutputElems(XBINPUT.NumElems, NumNodes_tot.value, XBELEM, \
+                       PosDefor, PsiDefor, ofile, WriteMode)
+    
+    
+    "Print deformed configuration"
+    if XBOPTS.PrintInfo.value==True:
+        sys.stdout.write('--------------------------------------\n')
+        sys.stdout.write('NONLINEAR STATIC SOLUTION\n')
+        sys.stdout.write('%10s %10s %10s\n' %('X','Y','Z'))
+        for inodi in range(NumNodes_tot.value):
+            sys.stdout.write(' ')
+            for inodj in range(3):
+                sys.stdout.write('%12.5e' %(PosDefor[inodi,inodj]))
+            sys.stdout.write('\n')
+        sys.stdout.write('--------------------------------------\n')
+        
+    
+    "Return solution as optional output argument"
+    return PosDefor, PsiDefor
+
+
+def Solve_Py(XBINPUT,XBOPTS):
+    """Nonlinear static structural solver using python to solve residual
+    equation. Assembly of matrices is carried out with fortran subroutines.
+    TODO: all"""
+
+
 
 if __name__ == '__main__':
     """Set up Xbopts for nonlinear static analysis defined in input_rob.f90
@@ -81,7 +169,8 @@ if __name__ == '__main__':
     XBOPTS = DerivedTypes.Xbopts()
     XBOPTS.Solution.value = 112 
     XBOPTS.NumLoadSteps.value = 10
-    XBOPTS.MinDelta.value = 1e-04       
+    XBOPTS.MinDelta.value = 1e-04
+    XBOPTS.PrintInfo.value = True      
     """Set up Xbinput for nonlinear static analysis defined in input_rob.f90
     TPY0 test case"""
     XBINPUT = DerivedTypes.Xbinput(2,8)
@@ -98,6 +187,7 @@ if __name__ == '__main__':
     XBINPUT.BeamMass[3,3] = 0.1
     XBINPUT.BeamMass[4,4] = 0.001
     XBINPUT.BeamMass[5,5] = 0.001
-    XBINPUT.ForceStatic[2] = 800
+    XBINPUT.ForceStatic[-1,2] = 800
 
     Solve_F90(XBINPUT,XBOPTS)
+    Solve_F90_steps(XBINPUT,XBOPTS)

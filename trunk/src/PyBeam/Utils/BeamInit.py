@@ -72,13 +72,13 @@ def Static(XBINPUT,XBOPTS):
     WriteMode = 'w'
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Writing file (mode: %s) %s' %(WriteMode,\
-                            Settings.OutputFileRoot + '_SOL' +\
-                            XBOPTS.Solution.value \
-                            + '_und.dat\n'))
-        
+                            Settings.OutputDir + Settings.OutputFileRoot +\
+                             '_SOL' + XBOPTS.Solution.value + '_und.dat\n'))
+    
     BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,\
                               PosIni,PsiIni,\
-                              Settings.OutputFileRoot + '_SOL112',WriteMode)
+                              Settings.OutputDir + Settings.OutputFileRoot + \
+                               '_INIT' , WriteMode)
     
     
     if XBOPTS.PrintInfo==True:
@@ -124,8 +124,62 @@ def Dynamic(XBINPUT,XBOPTS):
     "Calculate number of timesteps"
     NumSteps = ct.c_int(len(Time) - 1)
     
-    "Create default force-amp-in-time array"
-    ForceTime = np.ones(NumSteps.value+1,ct.c_double,'F')
+    "Create force-amp-in-time array"
+    ForceTime = np.zeros(NumSteps.value+1,ct.c_double,'F')
+    if XBINPUT.ForcingType == 'Const':
+        ForceTime[:] = 1.0
+        
+    elif XBINPUT.ForcingType == 'Sin':
+        assert XBINPUT.Omega != 0.0, ('Dynamic forcing requested with zero ' +
+                                       'frequency')
+        for i in np.arange(len(Time)):
+            ForceTime[i] = np.sin(XBINPUT.Omega * Time[i])
+            
+    elif XBINPUT.ForcingType == 'Ramp':
+        assert XBINPUT.RampTime <= XBINPUT.tfin,'Ramp time greater than final time'
+        assert XBINPUT.RampTime >= XBINPUT.t0,'Ramp time less than start time'
+        assert Time.__contains__(XBINPUT.RampTime),('RampTime is not equal to '+
+                                                    'element in Time array')
+        ForceTime[:] = 1.0
+        Gradient = 1.0/(XBINPUT.RampTime - XBINPUT.t0)
+        t = XBINPUT.t0
+        i = 0
+        while t <= XBINPUT.RampTime:
+            ForceTime[i] = Gradient*i*XBINPUT.dt
+            i += 1
+            t += XBINPUT.dt
+    
+    elif XBINPUT.ForcingType == 'RampSin':
+        assert XBINPUT.Omega != 0.0, ('Dynamic forcing requested with zero ' +
+                                       'frequency')
+        assert XBINPUT.RampTime <= XBINPUT.tfin,'Ramp time greater than final time'
+        assert XBINPUT.RampTime >= XBINPUT.t0,'Ramp time less than start time'
+        assert Time.__contains__(XBINPUT.RampTime),('RampTime is not equal to '+
+                                                    'element in Time array')
+        
+        "Define sinusoid"
+        SinVect = np.zeros_like(ForceTime, ct.c_double, 'F')
+        for i in np.arange(len(Time)):
+            SinVect[i] = np.sin(XBINPUT.Omega * Time[i])
+            
+        "Define ramp"
+        RampVect = np.zeros_like(ForceTime, ct.c_double, 'F')
+        RampVect[:] = 1.0
+        Gradient = 1.0/(XBINPUT.RampTime - XBINPUT.t0)
+        t = XBINPUT.t0
+        i = 0
+        while t <= XBINPUT.RampTime:
+            RampVect[i] = Gradient*i*XBINPUT.dt
+            i += 1
+            t += XBINPUT.dt
+            
+        "Combine"
+        for i in np.arange(len(ForceTime)):
+            ForceTime[i] = RampVect[i] * SinVect[i]
+        
+    else:
+        assert False, 'ForcingType not recognised'
+        
     
     "Create default forced velocities and accelerations."
     ForcedVel = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
@@ -163,7 +217,7 @@ def Dynamic(XBINPUT,XBOPTS):
 if __name__ == '__main__':
     XBINPUT = DerivedTypes.Xbinput(2,1)
     XBINPUT.tfin = 1.0
-    XBINPUT.dt = 0.1
+    XBINPUT.dt = 0.01
     
     XBOPTS = DerivedTypes.Xbopts()
     
@@ -175,6 +229,10 @@ if __name__ == '__main__':
     XBINPUT.BeamStiffness[5,5] = 4.0e+06
     
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
-                = Static(XBINPUT,XBOPTS) 
+                = Static(XBINPUT,XBOPTS)
+    
+    XBINPUT.Omega = 4*np.pi
+    XBINPUT.ForcingType = 'RampSin'
+    XBINPUT.RampTime = 0.5
                 
     Dynamic(XBINPUT,XBOPTS)            
