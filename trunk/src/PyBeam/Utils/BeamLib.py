@@ -21,6 +21,11 @@ f_xbeam_undef_geom          = BeamLib.__test_MOD_wrap_xbeam_undef_geom
 f_xbeam_undef_dofs          = BeamLib.__test_MOD_wrap_xbeam_undef_dofs
 f_cbeam3_solv_nlnstatic     = BeamLib.__test_MOD_wrap_cbeam3_solv_nlnstatic
 f_cbeam3_solv_nlndyn        = BeamLib.__test_MOD_wrap_cbeam3_solv_nlndyn
+f_cbeam3_asbly_static       = BeamLib.__test_MOD_wrap_cbeam3_asbly_static
+f_cbeam3_solv_disp2state    = BeamLib.__test_MOD_wrap_cbeam3_solv_disp2state
+f_fem_m2v                   = BeamLib.__test_MOD_wrap_fem_m2v
+f_cbeam3_solv_update_static = BeamLib.__test_MOD_wrap_cbeam3_solv_update_static
+f_cbeam3_solv_disp2state    = BeamLib.__test_MOD_wrap_cbeam3_solv_disp2state
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -35,6 +40,9 @@ f_xbeam_undef_geom.restype          = None
 f_xbeam_undef_dofs.restype          = None
 f_cbeam3_solv_nlnstatic.restype     = None
 f_cbeam3_solv_nlndyn.restype        = None
+f_cbeam3_asbly_static.restype       = None
+f_cbeam3_solv_disp2state.restype    = None
+f_fem_m2v.restype                   = None
 
 def Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, \
             PsiIni, XBNODE, NumDof, PosDefor, PsiDefor):
@@ -85,7 +93,10 @@ def Cbeam3_Solv_NonlinearDynamic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni,\
             PsiIni, XBNODE, NumDof, PosDefor, PsiDefor, NumSteps, Time,\
             ForceTime, ForcedVel, ForcedVelDot, PosDotDef, PsiDotDef,\
             PosPsiTime, VelocTime, DynOut, OutGrids):
-    """@brief Python wrapper for f_cbeam3_solv_nlndyn"""
+    """@brief Python wrapper for f_cbeam3_solv_nlndyn
+    
+    @details Numpy arrays are mutable so the changes (solution) made here are
+     reflected in the data of the calling script after execution."""
     
     f_cbeam3_solv_nlndyn(ct.byref(ct.c_int(XBINPUT.iOut)),\
                 ct.byref(NumDof),\
@@ -136,6 +147,117 @@ def Cbeam3_Solv_NonlinearDynamic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni,\
                 ct.byref(XBOPTS.DeltaCurved),\
                 ct.byref(XBOPTS.MinDelta),\
                 ct.byref(XBOPTS.NewmarkDamp) )
+
+
+def Cbeam3_Asbly_Static(XBINPUT, NumNodes_tot, XBELEM, XBNODE,\
+                        PosIni, PsiIni, PosDefor, PsiDefor,\
+                        ForceStatic, NumDof,\
+                        ks, KglobalFull, fs, FglobalFull, Qglobal,
+                        XBOPTS):
+    """@brief Python wrapper for f_cbeam3_asbly_static.
+    
+    @details Numpy arrays are mutable so the changes made here are 
+    reflected in the data of the calling script after execution."""
+    
+    f_cbeam3_asbly_static( \
+                ct.byref(ct.c_int(XBINPUT.NumElems)),\
+                ct.byref(NumNodes_tot),\
+                XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                PosIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PsiIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PosDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PsiDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                ForceStatic.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                ct.byref(ct.c_int(Settings.DimMat)), \
+                ct.byref(NumDof), \
+                ct.byref(ks), \
+                KglobalFull.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                ct.byref(fs), \
+                FglobalFull.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                Qglobal.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                ct.byref(XBOPTS.FollowerForce),\
+                ct.byref(XBOPTS.FollowerForceRig),\
+                ct.byref(XBOPTS.PrintInfo),\
+                ct.byref(XBOPTS.OutInBframe),\
+                ct.byref(XBOPTS.OutInaframe),\
+                ct.byref(XBOPTS.ElemProj),\
+                ct.byref(XBOPTS.MaxIterations),\
+                ct.byref(XBOPTS.NumLoadSteps),\
+                ct.byref(XBOPTS.NumGauss),\
+                ct.byref(XBOPTS.Solution),\
+                ct.byref(XBOPTS.DeltaCurved),\
+                ct.byref(XBOPTS.MinDelta),\
+                ct.byref(XBOPTS.NewmarkDamp) )
+    
+    
+def Cbeam_Solv_Disp2State(NumNodes_tot, NumDof, XBINPUT, XBNODE,\
+                          PosDefor, PsiDefor, PosDot, PsiDot,
+                          x, dxdt):
+    """@brief Python wrapper for f_cbeam3_solv_disp2state.
+    
+    @details Numpy arrays are mutable so the changes made here are 
+    reflected in the data of the calling script after execution."""
+    
+    f_cbeam3_solv_disp2state( \
+                ct.byref(NumNodes_tot), \
+                ct.byref(NumDof), \
+                ct.byref(ct.c_int(XBINPUT.NumElems)), \
+                XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                PosDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PsiDefor.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                PosDot.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                PsiDot.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                x.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                dxdt.ctypes.data_as(ct.POINTER(ct.c_double)) )
+    
+
+def Cbeam3_Solv_Update_Static(XBINPUT, NumNodes_tot, XBELEM, XBNODE, NumDof,\
+                              DeltaS, PosIni, PsiIni, PosDefor, PsiDefor):
+    """@brief Wrapper for f_cbeam3_solv_update_static.
+    
+    @details Numpy arrays are mutable so the changes made here are 
+    reflected in the data of the calling script after execution."""
+    
+    f_cbeam3_solv_update_static( \
+                ct.byref(ct.c_int(XBINPUT.NumElems)), \
+                ct.byref(NumNodes_tot), \
+                XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)),\
+                ct.byref(NumDof), \
+                DeltaS.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                PosIni.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                PsiIni.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                PosDefor.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                PsiDefor.ctypes.data_as(ct.POINTER(ct.c_double)) )
 
     
 if __name__ == '__main__':

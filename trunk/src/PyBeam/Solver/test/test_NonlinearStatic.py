@@ -294,6 +294,59 @@ class TestNonlinearStatic_v_GeradinCardonna(unittest.TestCase):
                         + 'rotation does not match')
         
 
+    def test_Py(self):
+        """@brief Test Python-based solution."""
+         
+        import NonlinearStatic # imported after clean/make process
+            
+        """Set up Xbopts for nonlinear static analysis defined in 
+        NonlinearStatic/testcases.pdf case 1.1."""
+        XBOPTS = DerivedTypes.Xbopts()
+        XBOPTS.Solution.value = 112 
+        XBOPTS.NumLoadSteps.value = 10
+        XBOPTS.MinDelta.value = 1e-05
+        XBOPTS.FollowerForce.value = False
+        XBOPTS.NumGauss.value = 2       
+        """Set up Xbinput for nonlinear static analysis defined in 
+        NonlinearStatic/testcases.pdf case 1.1."""
+        XBINPUT = DerivedTypes.Xbinput(3,10)
+        XBINPUT.BeamLength = 5.0
+        XBINPUT.BeamStiffness[0,0] = 4.8e+08
+        XBINPUT.BeamStiffness[1,1] = 3.231e+08
+        XBINPUT.BeamStiffness[2,2] = 3.231e+08
+        XBINPUT.BeamStiffness[3,3] = 1.0e+06
+        XBINPUT.BeamStiffness[4,4] = 9.346e+06
+        XBINPUT.BeamStiffness[5,5] = 9.346e+06
+        XBINPUT.BeamMass[0,0] = 100
+        XBINPUT.BeamMass[1,1] = 100
+        XBINPUT.BeamMass[2,2] = 100
+        XBINPUT.BeamMass[3,3] = 10
+        XBINPUT.BeamMass[4,4] = 0.0 #Neglect the cross-section bending inertia
+        XBINPUT.BeamMass[5,5] = 0.0 #Neglect the cross-section bending inertia
+        XBINPUT.ForceStatic[-1,2] = 6e+05
+        
+            
+        NonlinearStatic.Solve_Py(XBINPUT, XBOPTS)
+    
+        "Read PyBeam output"
+        f = open('PyBeam2_SOL112_def.dat')
+        fLines = f.readlines() #save all lines
+        f.close()
+        fLast = str(fLines[-2]) #isolate final line as string
+        fWords = fLast.split() #split into words
+        
+        "Compare in-plane displacements and rotations with Rafa"
+        self.assertAlmostEqual(float(fWords[2]), 5-0.596, 3, 'In-plane x-'\
+                        + 'displacement does not match')
+        # the following test result has been changed to 2.160
+        self.assertAlmostEqual(float(fWords[4]), 2.160, 3, 'In-plane z-'\
+                        + 'displacement does not match')
+        # the following test result has been changed to -0.6720 which
+        # matches Geradin and Cardona.
+        self.assertAlmostEqual(float(fWords[6]), -0.6720, 3, 'In-plane y-'\
+                        + 'rotation does not match')
+        
+
 class TestNonlinearStatic_v_FangChen2013(unittest.TestCase):
     """@brief TODO:Test Python NonlinearStatic_F90 v Fang, J and Chen, J-S (2013) 
     Deformation and vibration of a saptial elastica with fixed end slopes. Int.
