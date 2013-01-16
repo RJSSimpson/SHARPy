@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 
 TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyBeam/' \
            + 'Solver/test/NonlinearDynamic/'
-PlotThings = True
            
 class TestNonlinearDynamic_v_Executable(unittest.TestCase):
     """@brief Test Python NonlinearDynamic_F90 v F90 Executable for 'TPY0' case
@@ -156,7 +155,7 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
     
     
     def test_DynTipDispRot(self):
-        """@brief plot response and compare to values in reference above."""
+        """@brief Compare values of F90 to those in reference (above)."""
 
         import NonlinearDynamic # imported after clean/make process
         
@@ -203,7 +202,21 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
         "Read from file"
         Dyn = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot + '_SOL'+\
                         str(XBOPTS.Solution.value) + '_dyn.dat', skiprows=3)
+    
         
+        "Assert z-displacement at 1, 1.5 & 2 secs"
+        """Without the original data set the precision of the Figure data is
+        limited by jpeg resolution and human error."""
+        FigureData = np.loadtxt(Settings.OutputDir + \
+                                'PalaciosCesnikFigure_R3.dat')
+        self.assertAlmostEqual(Dyn[1000,3],FigureData[0,1], 1,\
+                                'z-displacement does not match')
+        self.assertAlmostEqual(Dyn[1500,3],FigureData[1,1], 1,\
+                                'z-displacement does not match')
+        self.assertAlmostEqual(Dyn[2000,3],FigureData[2,1], 1,\
+                                'z-displacement does not match')
+        
+        PlotThings = False
         if PlotThings == True:
             "plot displacements"
             plt.figure(1)
@@ -221,6 +234,54 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
             plt.grid()
             plt.ylabel('\phi_2')
             plt.xlabel('time')
+            #plt.show()
+            
+            "Run Steps Calc"
+            NonlinearDynamic.Solve_F90_steps(XBINPUT,XBOPTS)
+            "Read from file"
+            Dyn = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot + '_SOL'+\
+                        str(XBOPTS.Solution.value) + '_dyn.dat', skiprows=3)
+            "plot displacements"
+            #plt.figure(1)
+            plt.subplot(311)
+            plt.plot(Dyn[:,0],Dyn[:,1],'g--')
+            #plt.grid()
+            plt.ylabel('R_1')
+            plt.ylim(4.95,5.05)
+            plt.subplot(312)
+            plt.plot(Dyn[:,0],Dyn[:,3],'g--')
+            #plt.grid()
+            plt.ylabel('R_3')
+            plt.subplot(313)
+            plt.plot(Dyn[:,0],Dyn[:,5],'g--')
+            #plt.grid()
+            plt.ylabel('\phi_2')
+            plt.xlabel('time')
+            
+            
+            "Run Py Calc"
+            NonlinearDynamic.Solve_Py(XBINPUT,XBOPTS)
+            "Read from file"
+            Dyn = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot + '_SOL'+\
+                        str(XBOPTS.Solution.value) + '_dyn.dat', skiprows=3)
+            "plot displacements"
+            #plt.figure(1)
+            plt.subplot(311)
+            plt.plot(Dyn[:,0],Dyn[:,1],'r.')
+            plt.legend(('.f90 solver','.f90 w/ steps in Python', 'Python'),\
+                        'upper center', shadow=True)
+            #plt.grid()
+            plt.ylabel('R_1')
+            plt.ylim(4.95,5.05)
+            plt.subplot(312)
+            plt.plot(Dyn[:,0],Dyn[:,3],'r.')
+            #plt.grid()
+            plt.ylabel('R_3')
+            plt.subplot(313)
+            plt.plot(Dyn[:,0],Dyn[:,5],'r.')
+            #plt.grid()
+            plt.ylabel('\phi_2')
+            plt.xlabel('time')
             plt.show()
             
             "plot force-amplitude-in-time"
@@ -232,18 +293,129 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
             plt.grid()
             plt.ylabel('F_{time}')
             plt.show()
+
+            
+    def test_DynTipDispRot_F90_steps(self):
+        """@brief Compare to values of F90 steps to those of F90."""
+        
+        "Read file from previous test (F90)"
+        DynF90 = np.loadtxt(Settings.OutputDir+Settings.OutputFileRoot+'_SOL'+\
+                        str(312) + '_dyn.dat', skiprows=3)
+        
+        import NonlinearDynamic
+        
+        """Set up Xbopts for nonlinear static analysis defined in 
+        NonlinearStatic/testcases.pdf case 1.2."""
+        XBOPTS = DerivedTypes.Xbopts()
+        XBOPTS.Solution.value = 312 
+        XBOPTS.NumLoadSteps.value = 10
+        XBOPTS.MinDelta.value = 1e-05
+        XBOPTS.FollowerForce.value = False
+        XBOPTS.NumGauss.value = 1
+               
+        """Set up Xbinput for nonlinear static analysis defined in 
+        NonlinearStatic/testcases.pdf case 1.2."""
+        XBINPUT = DerivedTypes.Xbinput(2,20)
+        XBINPUT.BeamLength = 5.0
+        XBINPUT.BeamStiffness[0,0] = 4.8e+08
+        XBINPUT.BeamStiffness[1,1] = 3.231e+08
+        XBINPUT.BeamStiffness[2,2] = 3.231e+08
+        XBINPUT.BeamStiffness[3,3] = 1.0e+06
+        XBINPUT.BeamStiffness[4,4] = 9.346e+06
+        XBINPUT.BeamStiffness[5,5] = 9.346e+06
+        XBINPUT.BeamMass[0,0] = 100
+        XBINPUT.BeamMass[1,1] = 100
+        XBINPUT.BeamMass[2,2] = 100
+        XBINPUT.BeamMass[3,3] = 10
+        XBINPUT.BeamMass[4,4] = 0.0001
+        XBINPUT.BeamMass[5,5] = 0.0001
+        
+        "Dynamic parameters"
+        XBINPUT.t0 = 0.0
+        XBINPUT.tfin = 2.0
+        XBINPUT.dt = 0.001
+        XBINPUT.Omega = 20.0
+        XBINPUT.ForceDyn[-1,2] = 60e+03
+        XBINPUT.ForcingType = 'RampSin'
+        XBINPUT.RampTime = 1.0
+    
+        XBOPTS.PrintInfo.value = False
+        NonlinearDynamic.Solve_F90_steps(XBINPUT,XBOPTS)
+
+        "Read from file"
+        Dyn = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot + '_SOL'+\
+                        str(XBOPTS.Solution.value) + '_dyn.dat', skiprows=3)
+    
         
         "Assert z-displacement at 1, 1.5 & 2 secs"
-        """Without the original data set the precision of the Figure data is
-        limited by jpeg resolution and human error."""
-        FigureData = np.loadtxt(Settings.OutputDir + \
-                                'PalaciosCesnikFigure_R3.dat')
-        self.assertAlmostEqual(Dyn[1000,3],FigureData[0,1], 1,\
+        self.assertAlmostEqual(Dyn[1000,3],DynF90[1000,3], 3,\
                                 'z-displacement does not match')
-        self.assertAlmostEqual(Dyn[1500,3],FigureData[1,1], 1,\
+        self.assertAlmostEqual(Dyn[1500,3],DynF90[1500,3], 3,\
                                 'z-displacement does not match')
-        self.assertAlmostEqual(Dyn[2000,3],FigureData[2,1], 1,\
+        self.assertAlmostEqual(Dyn[2000,3],DynF90[2000,3], 3,\
                                 'z-displacement does not match')
+        
+    
+    def test_DynTipDispRot_Py(self):
+        """@brief Compare to values of Py to those of F90 steps."""
+        
+        "Read file from previous test (F90)"
+        DynSteps = np.loadtxt(Settings.OutputDir+Settings.OutputFileRoot+'_SOL'+\
+                        str(312) + '_dyn.dat', skiprows=3)
+        
+        import NonlinearDynamic
+        
+        """Set up Xbopts for nonlinear static analysis defined in 
+        NonlinearStatic/testcases.pdf case 1.2."""
+        XBOPTS = DerivedTypes.Xbopts()
+        XBOPTS.Solution.value = 312 
+        XBOPTS.NumLoadSteps.value = 10
+        XBOPTS.MinDelta.value = 1e-05
+        XBOPTS.FollowerForce.value = False
+        XBOPTS.NumGauss.value = 1
+               
+        """Set up Xbinput for nonlinear static analysis defined in 
+        NonlinearStatic/testcases.pdf case 1.2."""
+        XBINPUT = DerivedTypes.Xbinput(2,20)
+        XBINPUT.BeamLength = 5.0
+        XBINPUT.BeamStiffness[0,0] = 4.8e+08
+        XBINPUT.BeamStiffness[1,1] = 3.231e+08
+        XBINPUT.BeamStiffness[2,2] = 3.231e+08
+        XBINPUT.BeamStiffness[3,3] = 1.0e+06
+        XBINPUT.BeamStiffness[4,4] = 9.346e+06
+        XBINPUT.BeamStiffness[5,5] = 9.346e+06
+        XBINPUT.BeamMass[0,0] = 100
+        XBINPUT.BeamMass[1,1] = 100
+        XBINPUT.BeamMass[2,2] = 100
+        XBINPUT.BeamMass[3,3] = 10
+        XBINPUT.BeamMass[4,4] = 0.0001
+        XBINPUT.BeamMass[5,5] = 0.0001
+        
+        "Dynamic parameters"
+        XBINPUT.t0 = 0.0
+        XBINPUT.tfin = 2.0
+        XBINPUT.dt = 0.001
+        XBINPUT.Omega = 20.0
+        XBINPUT.ForceDyn[-1,2] = 60e+03
+        XBINPUT.ForcingType = 'RampSin'
+        XBINPUT.RampTime = 1.0
+    
+        XBOPTS.PrintInfo.value = False
+        NonlinearDynamic.Solve_Py(XBINPUT,XBOPTS)
+
+        "Read from file"
+        Dyn = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot + '_SOL'+\
+                        str(XBOPTS.Solution.value) + '_dyn.dat', skiprows=3)
+    
+        
+        "Assert z-displacement at 1, 1.5 & 2 secs"
+        self.assertAlmostEqual(Dyn[1000,3],DynSteps[1000,3], 3,\
+                                'z-displacement does not match')
+        self.assertAlmostEqual(Dyn[1500,3],DynSteps[1500,3], 3,\
+                                'z-displacement does not match')
+        self.assertAlmostEqual(Dyn[2000,3],DynSteps[2000,3], 3,\
+                                'z-displacement does not match')
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
@@ -255,5 +427,5 @@ if __name__ == "__main__":
     alltests = unittest.TestSuite([suite1, suite2])
     #alltests.run(unittest.defaultTestResult())
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    #TestRunner.run(suite2) #run a single suite
-    TestRunner.run(alltests) #run all tests
+    TestRunner.run(suite2) #run a single suite
+    #TestRunner.run(alltests) #run all tests

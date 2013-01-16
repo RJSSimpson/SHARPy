@@ -189,7 +189,6 @@ def Solve_Py(XBINPUT,XBOPTS):
     
     DeltaS  = np.zeros(NumDof.value, ct.c_double, 'F')
     Qglobal = np.zeros(NumDof.value, ct.c_double, 'F')
-    x0      = np.zeros(NumDof.value, ct.c_double, 'F')
     x       = np.zeros(NumDof.value, ct.c_double, 'F')
     dxdt    = np.zeros(NumDof.value, ct.c_double, 'F')
     
@@ -212,7 +211,7 @@ def Solve_Py(XBINPUT,XBOPTS):
             sys.stdout.write('   SubIter DeltaF     DeltaX     ResLog10\n')
             
         "Newton Iteration"
-        while( (ResLog10 > np.log10(XBOPTS.MinDelta.value) )\
+        while( (ResLog10 > np.log10(XBOPTS.MinDelta.value)) \
              & (Iter < XBOPTS.MaxIterations.value) ):
             
             "Increment iteration counter"
