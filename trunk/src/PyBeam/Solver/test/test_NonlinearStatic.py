@@ -11,7 +11,6 @@ import os
 import sys
 import SharPySettings as Settings
 import DerivedTypes
-import numpy as np
 
 TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyBeam/' \
            + 'Solver/test/NonlinearStatic/'

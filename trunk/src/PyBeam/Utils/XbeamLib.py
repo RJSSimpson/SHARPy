@@ -1,5 +1,5 @@
 '''@package PyBeam.Utils.XbeamLib
-@brief      Functions found in lib_xbeam.f90
+@brief      Functions found in lib_xbeam.f90, lib_rotvect.f90
 @author     Rob Simpson
 @contact    r.simpson11@imperial.ac.uk 
 @version    0.0
@@ -10,6 +10,7 @@
 
 import numpy as np
 import ctypes as ct
+import SharPySettings as Settings
 
 def QuadSkew(Omega):
     """@brief Calculate incremental update operator for Quaternion based on Omega.
@@ -59,5 +60,61 @@ def Rot(q1):
     return RotMat
 
 
+def Psi2TransMat(Psi):
+    """@brief Calculates the transformation matrix associated with CRV Psi."""
+    TransMat = np.zeros((3,3))
+    Norm = TriadNorm(Psi)
+    SkewPsi=Skew(Psi)
+    "Check norm of Psi for linearised OR fully-nonlinear matrix"
+    if Norm < Settings.RotEpsilon:
+        TransMat[:,:] = np.identity(3) + SkewPsi + 0.5*np.dot(SkewPsi,SkewPsi) 
+    else:
+        TransMat[:,:] = np.identity(3) \
+                      + np.sin(Norm)/Norm*SkewPsi \
+                      + (1 - np.cos(Norm))/Norm**2 * np.dot(SkewPsi,SkewPsi)
+    
+    return TransMat
+
+
+def TriadNorm(Triad):
+    """@brief Returns the norm of a 3x1 tensor (Triad)."""
+    return np.sqrt(Triad[0]**2+Triad[1]**2+Triad[2]**2)
+
+
+def Skew(Vector):
+    """@brief Returns the skew-symmetric Matrix associated to Vector"""
+    
+    SkewMat = np.zeros((3,3))
+    
+    SkewMat[0,1]=-Vector[2]
+    SkewMat[0,2]= Vector[1]
+    SkewMat[1,0]= Vector[2]
+    SkewMat[1,2]=-Vector[0]
+    SkewMat[2,0]=-Vector[1]
+    SkewMat[2,1]= Vector[0]
+    
+    return SkewMat
+
+
+def Tangential(Psi):
+    """@brief Calculates the tangential operator related to Psi, a cartesian
+     rotation vector."""
+    Tang = np.zeros((3,3))
+    Norm = TriadNorm(Psi)
+    SkewPsi=Skew(Psi)
+    "Check norm of Psi for linearised OR fully-nonlinear matrix"
+    if Norm < Settings.RotEpsilon:
+        Tang[:,:] = np.identity(3) - 0.5* SkewPsi + 1.0/6.0*np.dot(SkewPsi,SkewPsi) 
+    else:
+        Tang[:,:] = np.identity(3) \
+                    - (1-np.cos(Norm))/Norm**2 * SkewPsi \
+                    + (1 - np.sin(Norm)/Norm) * np.dot(SkewPsi,SkewPsi)/Norm**2
+    
+    return Tang
+     
+
+
 if __name__ == '__main__':
-    pass
+    Psi = np.zeros(3,ct.c_double,'F')
+    Psi[0] = np.pi
+    Psi2TransMat(Psi)

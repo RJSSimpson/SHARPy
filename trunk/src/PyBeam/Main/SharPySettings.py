@@ -22,6 +22,7 @@ OutputFileRoot = 'Foo'
 
 MaxElNod = 3
 DimMat = 18
+RotEpsilon = 0.001 #rotations below this are linearised
 
 if __name__ == '__main__':
     pass
