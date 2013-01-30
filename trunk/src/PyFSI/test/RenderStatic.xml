@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<pqevents>
+  <pqevent object="pqClientMainWindow/menubar" command="activate" arguments="menu_File" />
+  <pqevent object="pqClientMainWindow/menubar/menu_File" command="activate" arguments="actionFileOpen" />
+  <pqevent object="pqClientMainWindow/FileOpenDialog" command="filesSelected" arguments="/home/rjs10/SharPyProject/SharPy/src/PyFSI/test/AeroDef.dat" />
+  <pqevent object="pqClientMainWindow/pqSelectReaderDialog/listWidget" command="mousePress" arguments="1,1,0,69,4,/21:0" />
+  <pqevent object="pqClientMainWindow/pqSelectReaderDialog/listWidget" command="mouseRelease" arguments="1,0,0,69,4,/21:0" />
+  <pqevent object="pqClientMainWindow/pqSelectReaderDialog/okButton" command="activate" arguments="" />
+  <pqevent object="pqClientMainWindow/proxyTabDock/proxyTabWidget/qt_tabwidget_stackedwidget/objectInspector/Accept" command="activate" arguments="" />
+  <pqevent object="pqClientMainWindow/proxyTabDock/proxyTabWidget/qt_tabwidget_tabbar" command="set_tab" arguments="1" />
+  <pqevent object="pqClientMainWindow/proxyTabDock/proxyTabWidget/qt_tabwidget_stackedwidget/1QScrollArea0/qt_scrollarea_viewport/1pqDisplayProxyEditorWidget0/pqDisplayProxyEditor/StyleGroup/StyleRepresentation/comboBox" command="set_string" arguments="Surface With Edges" />
+</pqevents>

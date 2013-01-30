@@ -15,6 +15,9 @@ SharPyProjectDir = '/home/rjs10/SharPyProject/'
 BeamLibDir = SharPyProjectDir + 'BeamLib/bin/'
 BeamLibName = './BeamLib.so'
 
+UVLMLibDir = SharPyProjectDir + 'UVLMLib/Debug/'
+UVLMLibName = './UVLMLib.so'
+
 OutputDir =  SharPyProjectDir + 'Output/Temp/'
 OutputFileRoot = 'Foo'
 
