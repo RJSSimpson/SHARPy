@@ -8,6 +8,9 @@
 #include "vorticity.hpp"
 #include <Eigen/Dense>
 #include <iostream>
+#include <VLM.hpp>
+#include <stdio.h>
+#include <datatypesx.hpp>
 
 
 // forward declare some useful functions
@@ -104,6 +107,25 @@ void c_wrap_test_biotsegment(const int& NumTests) {
 		C_BiotSegment(xp,x1,x2,gam,Result);
 	}
 	return;
+}
+
+void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
+		const double* Uext_Vec, \
+		unsigned int& VMOPTS_M, \
+		unsigned int& VMOPTS_N, \
+		double* Forces_Vec) {
+	/** @brief wrapper for cpp_solver_vlm
+	 *  @details wrapped function takes c arguments only
+	 */
+
+	// Convert VMOPTS_* into class
+	VMopts VMOPTS;
+	VMOPTS.M = VMOPTS_M;
+	VMOPTS.N = VMOPTS_N;
+
+	//call solver
+	cpp_solver_vlm(Zeta_Vec, ZetaDot_Vec, Uext_Vec, VMOPTS, Forces_Vec);
+
 }
 
 } // END extern C

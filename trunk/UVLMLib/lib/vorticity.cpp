@@ -5,41 +5,8 @@
  *      Author: rjs10
  */
 #include <vorticity.hpp>
+#include <triads.hpp>
 #include <cmath>
-
-//some useful functions for operating on 3-by-1 C-arrays
-void AddTriad(const double* x1, const double* x2, double* xOut) {
-	xOut[0] = x1[0] + x2[0];
-	xOut[1] = x1[1] + x2[1];
-	xOut[2] = x1[2] + x2[2];
-}
-
-void SubTriad(const double* x1, const double* x2, double* xOut) {
-	xOut[0] = x1[0] - x2[0];
-	xOut[1] = x1[1] - x2[1];
-	xOut[2] = x1[2] - x2[2];
-}
-
-void MulTriad(const double* x1, const double Factor, double* xOut) {
-	xOut[0] = Factor*x1[0];
-	xOut[1] = Factor*x1[1];
-	xOut[2] = Factor*x1[2];
-}
-
-double DotTriad(const double* x1, const double* x2) {
-	return (x1[0] * x2[0] + x1[1] * x2[1] + x1[2] * x2[2]);
-}
-
-double NormTriad(const double* x1) {
-	return (sqrt(x1[0] * x1[0] + x1[1] * x1[1] + x1[2] * x1[2]));
-}
-
-void CrossTriad(const double* x1, const double* x2, double* xOut) {
-	xOut[0] = x1[1]*x2[2] - x1[2]*x2[1];
-	xOut[1] = x1[2]*x2[0] - x1[0]*x2[2];
-	xOut[2] = x1[0]*x2[1] - x1[1]*x2[0];
-}
-
 
 Eigen::Vector3d BiotSegment(const Eigen::Vector3d& xp, \
 							const Eigen::Vector3d& x1, \

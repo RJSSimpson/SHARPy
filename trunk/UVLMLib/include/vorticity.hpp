@@ -27,4 +27,6 @@ void C_BiotSegment(const double* xP,\
 					  double& Gamma,\
 					  double* Uind);
 
+
+
 #endif /* VORTICITY_HPP_ */
