@@ -563,6 +563,254 @@ module cbeam3_solv
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-> Subroutine CBEAM3_SOLV_NLNDYN_ACCEL
+!
+!-> Description:
+!
+!    Nonlinear dynamic solution of multibeam problem under applied forces
+!    with accelerations added as input/output variable.
+!
+!-> Remarks: Initial accelerations should be calculated outside this routine.
+!-> Author: Rob Simpson
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ subroutine cbeam3_solv_nlndyn_accel (iOut,NumDof,Time,Elem,Node,F0,Fa,Ftime,        &
+&                               Vrel,VrelDot,Coords,Psi0,PosDefor,PsiDefor,          &
+&                               PosDotDefor,PsiDotDefor,PosDDot,PsiDDot,             &
+&                               PosPsiTime,VelocTime,DynOut, &
+&                               OutGrids,Options)
+  use lib_fem
+  use lib_rot
+  use lib_rotvect
+  use lib_lu
+  use lib_out
+  use lib_sparse
+#ifdef NOLAPACK
+  use lib_lu
+#else
+  use interface_lapack
+#endif
+  use cbeam3_asbly
+  use lib_xbeam
+
+! I/O Variables.
+  integer,      intent(in)   :: iOut              ! Output file.
+  integer,      intent(in)   :: NumDof            ! Number of independent DoFs.
+  real(8),      intent(in)   :: Time      (:)     ! Time steps.
+  type(xbelem), intent(in)   :: Elem      (:)     ! Element information.
+  type(xbnode), intent(in)   :: Node      (:)     ! Nodal information.
+  real(8),      intent(in)   :: F0        (:,:)   ! Applied static nodal forces.
+  real(8),      intent(in)   :: Fa        (:,:)   ! Amplitude of the dynamic nodal forces.
+  real(8),      intent(in)   :: Ftime     (:)     ! Time history of the applied forces.
+  real(8),      intent(in)   :: Vrel      (:,:)   ! Time history of the velocities of the reference frame.
+  real(8),      intent(in)   :: VrelDot   (:,:)   ! Time history of the accelerations of the reference frame.
+  real(8),      intent(in)   :: Coords    (:,:)   ! Initial coordinates of the grid points.
+  real(8),      intent(in)   :: Psi0      (:,:,:) ! Initial CRV of the nodes in the elements.
+  real(8),      intent(inout):: PosDefor  (:,:)   ! Current coordinates of the grid points
+  real(8),      intent(inout):: PsiDefor  (:,:,:) ! Current CRV of the nodes in the elements.
+  real(8),      intent(inout):: PosDotDefor(:,:)  ! Current time derivatives of the coordinates of the grid points
+  real(8),      intent(inout):: PsiDotDefor(:,:,:)! Current time derivatives of the CRV of the nodes in the elements.
+  real(8),      intent(inout):: PosDDot(:,:)  ! Current accelerations of the coordinates of the grid points
+  real(8),      intent(inout):: PsiDDot(:,:,:)! Current accelerations of the CRV of the nodes in the elements.
+  real(8),      intent(out)  :: PosPsiTime(:,:)   ! Time-history of the position/rotation at selected nodes.
+  real(8),      intent(out)  :: VelocTime (:,:)   ! Time-history of the time derivatives at selected nodes.
+  real(8),      intent(out)  :: DynOut    (:,:)   ! Time-history of displacement of all nodes.
+  logical,      intent(inout):: OutGrids  (:)     ! Output grids.
+  type(xbopts),intent(in)    :: Options           ! Solver parameters.
+
+! Local variables.
+  real(8):: beta,gamma                     ! Newmark coefficients.
+  real(8):: dt                             ! Time step
+  integer:: k                              ! Counters.
+  integer:: iStep,Iter                     ! Counters on time steps and subiterations.
+  real(8):: MinDelta                       ! Value of Delta for convergence.
+  integer:: NumE(1)                        ! Number of elements in the model.
+  integer:: NumN                           ! Number of nodes in the model.
+
+  real(8),allocatable:: dXdt(:),dXddt(:)  ! Generalized coordinates and derivatives.
+  real(8),allocatable:: X(:), DX(:)
+
+  integer,allocatable::  ListIN     (:)    ! List of independent nodes.
+
+  ! Define variables for system matrices.
+  integer:: as,cs,ks,ms,fs
+  type(sparse),allocatable:: Asys   (:)    ! System matrix for implicit Newmark method.
+  type(sparse),allocatable:: Cglobal(:)    ! Sparse damping matrix.
+  type(sparse),allocatable:: Kglobal(:)    ! Global stiffness matrix in sparse storage.
+  type(sparse),allocatable:: Mglobal(:)    ! Global mass matrix in sparse storage.
+  type(sparse),allocatable:: Fglobal(:)
+  real(8),allocatable::      Qglobal(:)    ! Global vector of discrete generalize forces.
+  real(8),allocatable::      Mvel(:,:)     ! Mass and damping from the motions of reference system.
+  real(8),allocatable::      Cvel(:,:)     ! Mass and damping from the motions of reference system.
+
+  ! Define vaiables for output information.
+  character(len=80)  ::  Text          ! Text with current time information to print out.
+  type(outopts)      ::  OutOptions    ! Output options.
+  real(8),allocatable::  Displ(:,:)    ! Current nodal displacements/rotations.
+  real(8),allocatable::  Veloc(:,:)    ! Current nodal velocities.
+
+  ! Rotation operator for body-fixed frame using quaternions
+  real(8) :: Cao(3,3)
+  real(8) :: Quat(4)
+  real(8) :: Temp(4,4)
+
+! Initialize.
+  NumN=size(Node)
+  NumE(1)=size(Elem)
+  allocate (ListIN (NumN));
+  do k=1,NumN
+    ListIN(k)=Node(k)%Vdof
+  end do
+  gamma=1.d0/2.d0+Options%NewmarkDamp
+  beta =1.d0/4.d0*(gamma+0.5d0)*(gamma+0.5d0)
+
+! Allocate memory for solver (Use a conservative estimate of the size of the matrices).
+  allocate (Asys   (DimMat*NumDof)); call sparse_zero (as,Asys)
+  allocate (Mglobal(DimMat*NumDof)); call sparse_zero (ms,Mglobal)
+  allocate (Cglobal(DimMat*NumDof)); call sparse_zero (cs,Cglobal)
+  allocate (Kglobal(DimMat*NumDof)); call sparse_zero (ks,Kglobal)
+  allocate (Fglobal(DimMat*NumDof)); call sparse_zero (fs,Fglobal)
+  allocate (Qglobal(NumDof));   Qglobal= 0.d0
+  allocate (Mvel   (NumDof,6)); Mvel   = 0.d0
+  allocate (Cvel   (NumDof,6)); Cvel   = 0.d0
+
+  allocate (X     (NumDof)); X      = 0.d0
+  allocate (DX    (NumDof)); DX     = 0.d0
+  allocate (dXdt  (NumDof)); dXdt   = 0.d0
+  allocate (dXddt (NumDof)); dXddt  = 0.d0
+
+! Compute system information at initial condition.
+  allocate (Veloc(NumN,6)); Veloc=0.d0
+  allocate (Displ(NumN,6)); Displ=0.d0
+
+! Allocate quaternions and rotation operator for initially undeformed system
+  Quat = (/1.d0,0.d0,0.d0,0.d0/); Cao = Unit; Temp = Unit4
+
+! Extract initial displacements, velocities AND accelerations.
+  call cbeam3_solv_disp2state (Node,PosDefor,PsiDefor,PosDotDefor,PsiDotDefor,X,dXdt)
+  call cbeam3_solv_accel2state (Node,PosDDot,PsiDDot,dXddt)
+
+! Loop in the time steps.
+  do iStep=1,size(Time)-1
+    dt= Time(iStep+1)-Time(iStep)
+    if (Options%PrintInfo) then
+      call out_time(iStep,Time(iStep+1),Text)
+      write (*,'(5X,A,$)') trim(Text)
+    end if
+! Update transformation matrix for given angular velocity
+    call lu_invers ((Unit4+0.25d0*xbeam_QuadSkew(Vrel(iStep+1,4:6))*(Time(iStep+1)-Time(iStep))),Temp)
+    Quat=matmul(Temp,matmul((Unit4-0.25d0*xbeam_QuadSkew(Vrel(iStep,4:6))*(Time(iStep+1)-Time(iStep))),Quat))
+    Cao = xbeam_Rot(Quat)
+
+! Predictor step.
+    X    = X + dt*dXdt + (0.5d0-beta)*dt*dt*dXddt
+    dXdt = dXdt + (1.d0-gamma)*dt*dXddt
+    dXddt= 0.d0
+
+! Iteration until convergence.
+    do Iter=1,Options%MaxIterations+1
+      if (Iter.gt.Options%MaxIterations) STOP 'Solution did not converge (18235)'
+
+! Update nodal positions and velocities .
+      call cbeam3_solv_state2disp (Elem,Node,Coords,Psi0,X,dXdt,PosDefor,PsiDefor,PosDotDefor,PsiDotDefor)
+
+! Compute system functionals and matrices. (Use initial accelerations for Kgyr).
+      Qglobal= 0.d0
+      Mvel   = 0.d0
+      Cvel   = 0.d0
+      call sparse_zero (ms,Mglobal)
+      call sparse_zero (cs,Cglobal)
+      call sparse_zero (ks,Kglobal)
+      call sparse_zero (fs,Fglobal)
+
+      call cbeam3_asbly_dynamic (Elem,Node,Coords,Psi0,PosDefor,PsiDefor,PosDotDefor,PsiDotDefor,                  &
+&                                0.d0*PosDefor,0.d0*PsiDefor,F0+Ftime(iStep+1)*Fa,Vrel(iStep+1,:),VrelDot(iStep+1,:),    &
+&                                ms,Mglobal,Mvel,cs,Cglobal,Cvel,ks,Kglobal,fs,Fglobal,Qglobal,Options,Cao)
+
+! Compute admissible error.
+      MinDelta=Options%MinDelta*max(1.d0,maxval(abs(Qglobal)))
+
+! Compute the residual.
+      Qglobal= Qglobal + sparse_matvmul(ms,Mglobal,NumDof,dXddt) + matmul(Mvel,Vreldot(iStep+1,:))
+      Qglobal= Qglobal - sparse_matvmul(fs,Fglobal,NumDof,fem_m2v(F0+Ftime(iStep+1)*Fa,NumDof,Filter=ListIN))
+
+! Check convergence.
+      if (maxval(abs(DX)+abs(Qglobal)).lt.MinDelta) then
+        if (Options%PrintInfo) then
+          write (*,'(5X,A,I4,A,1PE12.3)') 'Subiteration',Iter, '  Delta=', maxval(abs(Qglobal))
+        end if
+        exit
+      end if
+
+! Compute Jacobian
+      call sparse_zero (as,Asys)
+      call sparse_addsparse(0,0,ks,Kglobal,as,Asys,Factor=1.d0)
+      call sparse_addsparse(0,0,cs,Cglobal,as,Asys,Factor=gamma/(beta*dt))
+      call sparse_addsparse(0,0,ms,Mglobal,as,Asys,Factor=1.d0/(beta*dt*dt))
+
+! Calculation of the correction.
+#ifdef NOLAPACK
+      call lu_sparse(as,Asys,-Qglobal,DX)
+#else
+      call lapack_sparse (as,Asys,-Qglobal,DX)
+#endif
+      X    = X     + DX
+      dXdt = dXdt  + gamma/(beta*dt)*DX
+      dXddt= dXddt + 1.d0/(beta*dt*dt)*DX
+    end do
+
+! Update nodal positions and velocities on the current converged time step.
+    call cbeam3_solv_state2disp (Elem,Node,Coords,Psi0,X,dXdt,PosDefor,PsiDefor,PosDotDefor,PsiDotDefor)
+    call cbeam3_solv_state2accel(Elem,Node,dXddt,PosDDot,PsiDDot)
+
+!!! Postprocesing (for single cantilever beams) !!!
+! Store data in output variables (V_B, Omega_B).
+!    if (any(OutGrids)) then
+!      Veloc=0.d0
+!      Displ=0.d0
+!
+!      do k=1,NumN
+!        Displ(k,1:3)= PosDefor(k,1:3)-Coords(k,1:3)
+!      end do
+!
+!      Veloc(1,1:3)= PosDotDefor(1,:)+rot_cross(Vrel(iStep,4:6), PosDefor(1,:))+Vrel(iStep,1:3)
+!      do k=2,NumN
+!        Displ(k,4:6)=PsiDefor(k-1,2,:)
+!        CBa=rotvect_psi2mat(PsiDefor(k-1,2,:))
+!        Veloc(k,1:3)= matmul(CBa, PosDotDefor(k,:) + Vrel(iStep,1:3)      &
+!&                               + rot_cross(Vrel(iStep,4:6),PosDefor(k,:)))
+!        Veloc(k,4:6)= matmul(rotvect_psi2rot(PsiDefor(k-1,2,:)),PsiDotDefor(k-1,2,:)) &
+!&                   + matmul(CBa,Vrel(iStep,4:6))
+!      end do
+!
+!!  Write output information in output file.
+!      OutOptions%PrintDispl=.true.
+!      OutOptions%PrintVeloc=.true.
+!      call out_title   (iOut,trim(Text))
+!      call out_outgrid (iOut,'NODE',OutOptions,1,NumE,6,OutGrids,DISPL=Displ,VELOC=Veloc)
+!
+!! Write output to export to main program (obsolete!).
+!      VelocTime (iStep+1,:)= Veloc (1:NumN,3)
+!    end if
+
+! Write output to export to main program (obsolete!).
+    PosPsiTime(iStep+1,1:3)= PosDefor(NumN,:)
+    PosPsiTime(iStep+1,4:6)= PsiDefor(NumE(1),Elem(NumE(1))%NumNodes,:)
+
+    do k=1,NumN
+        DynOut(iStep*NumN+k,:) = PosDefor(k,:)
+    end do
+
+  end do
+
+  deallocate (ListIN,Mvel,Cvel)
+  deallocate (Asys,Fglobal,Mglobal)
+  deallocate (Kglobal,Cglobal,Qglobal)
+  deallocate (X,DX,dXdt,dXddt)
+  deallocate (Displ,Veloc)
+  return
+ end subroutine cbeam3_solv_nlndyn_accel
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !-> Subroutine CBEAM3_SOLV_LINDYN
 !
 !-> Description:
@@ -1041,6 +1289,71 @@ module cbeam3_solv
   return
  end subroutine cbeam3_solv_state2disp
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-> Subroutine CBEAM3_SOLV_STATE2ACCEL
+!
+!-> Description:
+!
+!    Extract current acceleration from the state vector.
+!
+!-> Remarks:
+!-> Author: Rob Simpson
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ subroutine cbeam3_solv_state2accel (Elem,Node,dXddt,PosDDot,PsiDDot)
+  use lib_fem
+  use lib_rotvect
+  use lib_bgeom
+  use lib_cbeam3
+
+! I/O Variables.
+  type(xbelem),intent(in) :: Elem    (:)       ! Element information.
+  type(xbnode),intent(in) :: Node    (:)       ! Nodal information.
+  real(8),intent(in)      :: dXddt    (:)       ! Time derivatives of X.
+  real(8),intent(out)     :: PosDDot  (:,:)     ! Current nodal position.
+  real(8),intent(out)     :: PsiDDot  (:,:,:)   ! Current rotation at element nodes.
+
+! Local variables.
+  integer :: i,j,k               ! Counters.
+  integer :: ix                  ! Counter on the degrees of freedom.
+  integer :: iElem               ! Counter on the elements.
+  integer :: iNode               ! Counter on the nodes.
+
+! Store current accelerations at all nodes and the
+! rotational accel. at the master nodes of each element.
+  ix=0
+  do iNode=1,size(PosDDot,DIM=1)
+    iElem=Node(iNode)%Master(1)
+    k=Node(iNode)%Master(2)
+
+    ! Constrained nodes.
+    if (Node(iNode)%Vdof.eq.0) then
+
+      PosDDot(iNode,:) = 0.d0
+      PsiDDot(iElem,k,:) = 0.d0
+
+    ! Unconstrained nodes.
+    else
+      PosDDot(iNode,:)=dXddt(ix+1:ix+3)
+      PsiDDot(iElem,k,:) = dXddt(ix+4:ix+6)
+
+      ix=ix+6
+    end if
+  end do
+
+! Compute rotation vector and time derivative at slave nodes within elements.
+  do i=1,size(Elem)
+    do j=1,Elem(i)%NumNodes
+
+! Copy rotational accel. from master node for each slave node.
+      if (Elem(i)%Master(j,1).ne.0) then
+        PsiDDot(i,j,:)=PsiDDot(Elem(i)%Master(j,1),Elem(i)%Master(j,2),:)
+      end if
+    end do
+  end do
+
+  return
+ end subroutine cbeam3_solv_state2accel
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !-> Subroutine CBEAM3_SOLV_DISP2STATE
@@ -1091,6 +1404,51 @@ module cbeam3_solv
 
   return
  end subroutine cbeam3_solv_disp2state
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-> Subroutine CBEAM3_SOLV_ACCEL2STATE
+!
+!-> Description:
+!
+!    Extract 2nd time-derivative of state vector from accelerations.
+!
+!-> Remarks:
+!-> Author: Rob Simpson
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ subroutine cbeam3_solv_accel2state (Node,PosDDot,PsiDDot,dXddt)
+  use lib_fem
+
+! I/O Variables.
+  type(xbnode),intent(in) :: Node      (:)       ! Nodal information.
+  real(8),intent(in)      :: PosDDot    (:,:)     ! Current nodal acceleration.
+  real(8),intent(in)      :: PsiDDot    (:,:,:)   ! Current rotational accel. at element nodes.
+  real(8),intent(out)     :: dXddt      (:)       ! Current second time-derivative of X.
+
+! Local variables.
+  integer :: k                   ! Counters.
+  integer :: ix                  ! Counter on the degrees of freedom.
+  integer :: iElem               ! Counter on the elements.
+  integer :: iNode               ! Counter on the nodes.
+
+! Loop in all nodes in the model.
+  ix=0
+  do iNode=1,size(PosDDot,DIM=1)
+    iElem=Node(iNode)%Master(1)
+    if (Node(iNode)%Vdof.ne.0) then
+      k=Node(iNode)%Master(2)
+
+! Current nodal displacements and derivatives.
+      dXddt(ix+1:ix+3)= PosDDot(iNode,:)
+
+! Cartesian rotation vector at master nodes.
+      dXddt(ix+4:ix+6)= PsiDDot(iElem,k,:)
+      ix=ix+6
+    end if
+  end do
+
+  return
+ end subroutine cbeam3_solv_accel2state
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 end module cbeam3_solv
