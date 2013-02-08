@@ -9,7 +9,6 @@
 '''
 
 import numpy as np
-import ctypes as ct
 from math import pow
 from numpy.linalg import norm
 import UVLMLib
@@ -17,10 +16,19 @@ from Misc import Timer
 import matplotlib.pyplot as plt
 
 def BiotSegment(xP,x1,x2,Gamma,Uind):
-    """@brief Velocity induced by segment x1->x2 at point xP."""
+    """@brief Velocity induced by segment x1->x2 at point xP.
+    @param xP Point at which we require velocity.
+    @param x1 Vortex segment start point.
+    @param x2 Vortex segment end point.
+    @param Gamma Circulation strength of vortex segment.
+    @param Uind Velocity at point xP.
+    @warning Much slower than calling equivalent from UVLMLib.so."""
     
     if Gamma == 0.0:
-        return np.array([0.0, 0.0, 0.0])
+        Uind[0] = 0.0
+        Uind[1] = 0.0
+        Uind[2] = 0.0 
+        return
     
     
     "Define position vectors"
@@ -31,8 +39,11 @@ def BiotSegment(xP,x1,x2,Gamma,Uind):
     
     
     "Check if within core radius"
-    if norm(r1) <= 1.0e-5 or norm(r2) <= 10e-5 or norm(rx) <= 1.0e-5:     
-        return np.array([0.0, 0.0, 0.0])
+    if norm(r1) <= 1.0e-5 or norm(r2) <= 10e-5 or norm(rx) <= 1.0e-5: 
+        Uind[0] = 0.0
+        Uind[1] = 0.0
+        Uind[2] = 0.0    
+        return
     
     
     "Calculate 'K' (Katz and Plotkin)"

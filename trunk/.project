@@ -4,6 +4,7 @@
 	<comment></comment>
 	<projects>
 		<project>BeamLib</project>
+		<project>UVLMLib</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

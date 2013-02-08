@@ -20,6 +20,7 @@ cpp_vorticity_biotsegment_map = UVLMLib.cpp_wrap_vorticity_biotsegment_map
 c_vorticity_biotsegment = UVLMLib.c_wrap_vorticity_biotsegment
 cpp_test_biotsegment = UVLMLib.cpp_wrap_test_biotsegment
 c_test_biotsegment = UVLMLib.c_wrap_test_biotsegment
+cpp_solver_vlm = UVLMLib.cpp_wrap_solver_vlm
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -32,6 +33,7 @@ cpp_vorticity_biotsegment_map.restype = None
 c_vorticity_biotsegment.restype = None
 cpp_test_biotsegment.restype = None
 c_test_biotsegment.restype = None
+cpp_solver_vlm.restype = None
 
 def Cpp_Vorticity_BiotSegment(xP,x1,x2,Gamma,Uind):
     """@brief Wrapper for c_vorticity_biotsegment."""
@@ -75,6 +77,21 @@ def C_test_biotsegment(NumTests):
     c_test_biotsegment(ct.byref(ct.c_int(NumTests)))
 
 
+def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
+                   Gamma, GammaStar):
+    """@details wrapper for cpp_solver_vlm."""
+    
+    cpp_solver_vlm(Zeta.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                   ZetaDot.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                   Uext.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                   ZetaStar.ctypes.data_as(ct.POINTER(ct.c_double)),\
+                   ct.byref(VMOPTS.M),\
+                   ct.byref(VMOPTS.N),\
+                   ct.byref(VMOPTS.ImageMethod), \
+                   Forces.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                   Gamma.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                   GammaStar.ctypes.data_as(ct.POINTER(ct.c_double)) )
+    
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')

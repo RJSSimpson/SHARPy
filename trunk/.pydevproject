@@ -10,6 +10,9 @@
 <path>/SharPy/src/PyBeam/Main</path>
 <path>/SharPy/src/PyFSI</path>
 <path>/SharPy/src/PyFSI/Utils</path>
+<path>/SharPy/src/PyAero</path>
+<path>/SharPy/src/PyAero/UVLM</path>
+<path>/SharPy/src/PyAero/UVLM/Utils</path>
 </pydev_pathproperty>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 3.0</pydev_property>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">python3.2</pydev_property>

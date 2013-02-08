@@ -7,10 +7,12 @@
 @pre        None
 @warning    None
 '''
-
+import getpass
 """Directories"""
 
-SharPyProjectDir = '/home/rjs10/SharPyProject/'
+userid = getpass.getuser()
+
+SharPyProjectDir = '/home/' + userid + '/SharPyProject/'
 
 BeamLibDir = SharPyProjectDir + 'BeamLib/bin/'
 BeamLibName = './BeamLib.so'
