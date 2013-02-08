@@ -111,9 +111,13 @@ void c_wrap_test_biotsegment(const int& NumTests) {
 
 void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 		const double* Uext_Vec, \
+		double* ZetaStar_Vec, \
 		unsigned int& VMOPTS_M, \
 		unsigned int& VMOPTS_N, \
-		double* Forces_Vec) {
+		bool& VMOPTS_ImageMethod,\
+		double* Forces_Vec, \
+		double* Gamma_Vec, \
+		double* GammaStar_Vec) {
 	/** @brief wrapper for cpp_solver_vlm
 	 *  @details wrapped function takes c arguments only
 	 */
@@ -122,9 +126,11 @@ void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	VMopts VMOPTS;
 	VMOPTS.M = VMOPTS_M;
 	VMOPTS.N = VMOPTS_N;
+	VMOPTS.ImageMethod = VMOPTS_ImageMethod;
 
 	//call solver
-	cpp_solver_vlm(Zeta_Vec, ZetaDot_Vec, Uext_Vec, VMOPTS, Forces_Vec);
+	cpp_solver_vlm(Zeta_Vec, ZetaDot_Vec, Uext_Vec, ZetaStar_Vec, \
+			VMOPTS, Forces_Vec, Gamma_Vec, GammaStar_Vec);
 
 }
 

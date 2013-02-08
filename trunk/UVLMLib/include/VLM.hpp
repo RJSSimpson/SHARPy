@@ -10,6 +10,10 @@
 #include <datatypesx.hpp>
 
 void cpp_solver_vlm(const double* Zeta, const double* ZetaDot, \
-				    const double* Uext, VMopts VMOPTS, double* Forces);
+				    const double* Uext, \
+				    double* ZetaStar, \
+				    VMopts VMOPTS, \
+				    double* Forces, \
+				    double* Gamma_Vec, double* GammaStar_Vec);
 
 #endif /* VLM_HPP_ */

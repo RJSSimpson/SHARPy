@@ -15,6 +15,7 @@ class VMopts {
 public:
 	unsigned int M;
 	unsigned int N;
+	bool ImageMethod;
 };
 
 class Array3D {

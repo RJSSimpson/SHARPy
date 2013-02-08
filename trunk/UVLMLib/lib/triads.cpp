@@ -49,7 +49,13 @@ double NormTriad(const double* x1) {
 
 void NormaliseTriad(const double* x1, double* xOut) {
 	double Factor = NormTriad(x1);
-	DivTriad(x1,Factor,xOut);
+	if (Factor == 0.0) {
+		xOut[0] = 0.0;
+		xOut[1] = 0.0;
+		xOut[2] = 0.0;
+	} else {
+		DivTriad(x1,Factor,xOut);
+	}
 }
 
 void CrossTriad(const double* x1, const double* x2, double* xOut) {

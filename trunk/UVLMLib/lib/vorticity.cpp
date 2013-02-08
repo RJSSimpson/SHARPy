@@ -12,15 +12,17 @@ Eigen::Vector3d BiotSegment(const Eigen::Vector3d& xp, \
 							const Eigen::Vector3d& x1, \
 							const Eigen::Vector3d& x2, \
 							const double& gam) {
-    /** @brief Calculate the velocity induced at point p by a vortex line.
-    * with start and end points 1 and 2.
-    * Note: if r is less than the vortex core radius then u = v = w = 0
-    * @param xp the coordinates of point p
-    * @param x1 the coordinates of point 1
-    * @param x2 the coordinates of point 2
-    * @param gam the circulation strength of the vortex line segment
-    * @return u/v/w the induced velocity in x/y/z-direction
-    */
+	/** @brief Calculate the velocity induced at point p by a vortex line
+	  * with start and end points 1 and 2.
+	  * @brief Velocity induced by segment x1->x2 at point xP.
+      *	@param xp Point at which we require velocity.
+      *	@param x1 Vortex segment start point.
+      *	@param x2 Vortex segment end point.
+      *	@param gam Circulation strength of vortex segment.
+      *	@returns Eigen::Vector3d Velocity induced at point xP.
+	  * @details Solved using Eigen 3rd party library.
+	  * @details If r is less than the vortex core radius then u = v = w = 0.
+	  */
 
 
     if (gam == 0) {return Eigen::Vector3d(0,0,0);}
@@ -55,14 +57,14 @@ void BiotSegment_map(const Eigen::Map<Eigen::Vector3d>& xp, \
 								const Eigen::Map<Eigen::Vector3d>& x2, \
 								const double& gam,\
 								const Eigen::Map<Eigen::Vector3d>& Uind) {
-    /** @brief Calculate the velocity induced at point p by a vortex line.
-    * with start and end points 1 and 2.
-    * Note: if r is less than the vortex core radius then u = v = w = 0
-    * @param xp the coordinates of point p
-    * @param x1 the coordinates of point 1
-    * @param x2 the coordinates of point 2
-    * @param gam the circulation strength of the vortex line segment
-    * @return u/v/w the induced velocity in x/y/z-direction
+    /** @brief * @brief Calculate the velocity induced at point p by a vortex line
+	* with start and end points 1 and 2.
+	* @brief Velocity induced by segment x1->x2 at point xP.
+    * @param xp Point at which we require velocity.
+    * @param x1 Vortex segment start point.
+    * @param x2 Vortex segment end point.
+    * @param gam Circulation strength of vortex segment.
+    * @param Uind Induced velocity (Eigen pointer to existing memory).
     */
 
     if (gam == 0.0) {
@@ -109,15 +111,16 @@ void C_BiotSegment(const double* xP,\
 					  const double* x2,\
 					  double& Gamma,\
 					  double* Uind) {
-	/** @brief Calculate the velocity induced at point p by a vortex line.
+	/** @brief Calculate the velocity induced at point p by a vortex line
 	  * with start and end points 1 and 2.
-	  * Note: if r is less than the vortex core radius then u = v = w = 0
-	  * @param xp the coordinates of point p
-	  * @param x1 the coordinates of point 1
-	  * @param x2 the coordinates of point 2
-	  * @param gam the circulation strength of the vortex line segment
-	  * @param Uind u/v/w the induced velocity in x/y/z-direction
+	  * @brief Velocity induced by segment x1->x2 at point xP.
+      *	@param xP Point at which we require velocity.
+      *	@param x1 Vortex segment start point.
+      *	@param x2 Vortex segment end point.
+      *	@param Gamma Circulation strength of vortex segment.
+      *	@param Uind Velocity induced at point xP.
 	  * @details Solved using pointers and dereferencing only.
+	  * @details If r is less than the vortex core radius then u = v = w = 0.
 	  */
 
 	if (Gamma == 0.0) {

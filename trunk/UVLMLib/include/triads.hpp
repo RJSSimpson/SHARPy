@@ -14,6 +14,8 @@ void SubTriad(const double* x1, const double* x2, double* xOut);
 
 void MulTriad(const double* x1, const double Factor, double* xOut);
 
+void DivTriad(const double* x1, const double Factor, double* xOut);
+
 double DotTriad(const double* x1, const double* x2);
 
 double NormTriad(const double* x1);
