@@ -282,8 +282,8 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 	double (*Zeta)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Zeta_Vec;
 	double (*ZetaDot)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) ZetaDot_Vec;
 	double (*Uext)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Uext_Vec;
-	double (*Gamma)[VMOPTS.N+1] = (double (*)[VMOPTS.N+1]) Gamma_Vec;
-	double (*Gamma_tm1)[VMOPTS.N+1] = (double (*)[VMOPTS.N+1]) Gamma_tm1_Vec;
+	double (*Gamma)[VMOPTS.N] = (double (*)[VMOPTS.N]) Gamma_Vec;
+	double (*Gamma_tm1)[VMOPTS.N] = (double (*)[VMOPTS.N]) Gamma_tm1_Vec;
 	double (*LiftVector)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) LiftVector_Vec;
 	double (*Forces)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Forces_Vec;
 
@@ -401,9 +401,8 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 
 
 			// calculate local lift from Simpson (2013) plus external velocities
-			// (-ZetaDot+Uwake+Uext)
+			// (-ZetaDot+Uext+Uwake)
 			AddTriad(NormalWashCol,Uwake[i][j],LiftVel);
-			AddTriad(LiftVel,Uext[i][j],LiftVel);
 
 			// dot product with tangential vectors
 			TempC = DotTriad(LiftVel,Tau_c[i][j]);
@@ -433,22 +432,26 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 			DeltaP = (TempC * TempGamma_i / Del_c[i][j] + \
 					TempS * TempGamma_j / Del_s[i][j] + \
 					dGamma_dt[i][j]);
+//			printf("\tU.Tau_C:%f\tTempGamma_1:%f\tDel_c:%f\n",TempC,TempGamma_i,Del_c[i][j]);
 
 
 			// calculate local lift
 			LiftLocal = DeltaP * Area[i][j] * cos(alpha[i][j]);
+//			printf("\tDeltaP:%f\tArea:%f\talpha:%f\n",DeltaP,Area[i][j],alpha[i][j]);
+
 
 			// calculate local drag
-			printf("\tDownwash = %f\n",Downwash[i*VMOPTS.N + j]);
+//			printf("\tDownwash = %f\n",Downwash[i*VMOPTS.N + j]);
 			DragLocal1 = -Downwash[i*VMOPTS.N + j]*TempGamma_i*Del_s[i][j];
 			DragLocal2 = dGamma_dt[i][j]*Area[i][j] * sin(alpha[i][j]);
-			printf("\tdrag1:%f\tdrag2:%f\n",DragLocal1,DragLocal2);
+//			printf("\tdrag1:%f\tdrag2:%f\n",DragLocal1,DragLocal2);
 
 			// total force
 			//lift vector
 			MulTriad(LiftVector[i][j],LiftLocal,LiftTemp);
-			//PrintTriad(LiftVector[i][j]);
-			//PrintTriad(LiftTemp);
+//			PrintTriad(LiftVector[i][j]);
+//			PrintTriad(LiftTemp);
+//			printf("\n");
 
 			//drag vector
 			NormaliseTriad(NormalWashCol,NormNormalWashCol);
@@ -501,21 +504,21 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 
 	//Declare dynamic memory for local variables using boost multi_array...
 	/**@warning Once this function ends this data does not exist anymore */
-	BoostArray3D ZetaCol_(boost::extents[VMOPTS.M+1][VMOPTS.N+1][3]);
-	BoostArray3D ZetaDotCol_(boost::extents[VMOPTS.M+1][VMOPTS.N+1][3]);
-	BoostArray3D UextCol_(boost::extents[VMOPTS.M+1][VMOPTS.N+1][3]);
-	BoostArray3D Normal_(boost::extents[VMOPTS.M+1][VMOPTS.N+1][3]);
-	BoostArray3D NormalWashCol_(boost::extents[VMOPTS.M+1][VMOPTS.N+1][3]);
-	BoostArray3D LocalLift_(boost::extents[VMOPTS.M+1][VMOPTS.N+1][3]);
+	BoostArray3D ZetaCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
+	BoostArray3D ZetaDotCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
+	BoostArray3D UextCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
+	BoostArray3D Normal_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
+	BoostArray3D NormalWashCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
+	BoostArray3D LocalLift_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
 
 
 	// ... and useful array pointers to that memory.
-	double (*ZetaCol)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) ZetaCol_.data();
-	double (*ZetaDotCol)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) ZetaDotCol_.data();
-	double (*UextCol)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) UextCol_.data();
-	double (*Normal)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Normal_.data();
-	double (*NormalWashCol)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) NormalWashCol_.data();
-	double (*LocalLift)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) LocalLift_.data();
+	double (*ZetaCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) ZetaCol_.data();
+	double (*ZetaDotCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) ZetaDotCol_.data();
+	double (*UextCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) UextCol_.data();
+	double (*Normal)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) Normal_.data();
+	double (*NormalWashCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) NormalWashCol_.data();
+	double (*LocalLift)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) LocalLift_.data();
 
 
 	// Declare Eigen types for linear algebra
@@ -681,6 +684,10 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 					BIC(i*VMOPTS.N + j,ii*VMOPTS.N + jj) = \
 							DotTriad(Temp3,LocalLift[i][j]);
 
+//					printf("BIC velocity = ");
+//					PrintTriad(Temp3);
+//					printf("\n");
+
 
 					//calculate induced velocity for AIC calculation
 					// both spanwise-orientated segments must be added UNLESS
@@ -751,6 +758,12 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 
 	//calculate downwash
 	Downwash = BIC * (Gamma);
+
+//	std::cout << Gamma << std::endl;
+//
+//
+//	std::cout << AIC << std::endl << std::endl;
+//	std::cout << BIC << std::endl;
 
 	double* Downwash_ptr = Downwash.data();
 

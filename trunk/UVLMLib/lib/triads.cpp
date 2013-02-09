@@ -75,6 +75,32 @@ void BilinearMapTriad(const double* p1, const double* p2, \
 	pOut[2] = (p1[2] +p2[2] +p3[2] + p4[2])/4.0;
 }
 
+void BilinearInterpTriad( double* x00, double* x01, \
+					  	  double* x11, double* x10, \
+					  	  double* xP,\
+					  	  const double eta1, const double eta2,\
+					  	  const bool reverse) {
+	/** @brief Bilinear interpolation on aero surface.
+	 * @param x00 Value at corner point 1.
+	 * @param x01 Value at corner point 2.
+	 * @param x11 Value at corner point 3.
+	 * @param x10 Value at corner point 4.
+	 * @param xP Value at point P.
+	 * @param eta1 Non-dim ordinate along axis 1.
+	 * @param eta2 Non-dim ordinate along axis 2.
+	 * @param reverse If true, distribute xP to corners.
+	 * @details Maps corner values to point (eta1,eta2). If reverse == true
+	 * then value at xP is distributed to corners.
+	 */
+
+	//TODO:check etas are between zero and 1 inclusive
+	//TODO:calculate factors (combos of etas)
+	//TODO:either inerpolate or distribute.
+//	pOut[0] = (x00[0] +x01[0] +x11[0] + x10[0])/4.0;
+//	pOut[1] = (x00[1] +x01[1] +x11[1] + x10[1])/4.0;
+//	pOut[2] = (x00[2] +x01[2] +x11[2] + x10[2])/4.0;
+}
+
 void CopyTriad(double* pTarget, double* pSrc) {
 	pTarget[0] = pSrc[0];
 	pTarget[1] = pSrc[1];
