@@ -16,14 +16,17 @@ from XbeamLib import Psi2TransMat
 
 def Run_Cpp_Solver_VLM():
     "Create inputs"
-    VMOPTS = VMopts(1,1,True)
+    M = 1
+    N = 1
+    VMOPTS = VMopts(M,N,True)
     
     "define wing geom"
     c = 1
-    semi_b = 1000
-    area = 2* (c*semi_b)
+    semi_b = 8
+    area = c*semi_b
+    
     "Define AoA using CRV"
-    AoA = 1.0
+    AoA = 10.0
     Psi = np.zeros((3))
     Psi[0] = AoA*np.pi/180.0
     "get transformation matrix"
@@ -31,13 +34,14 @@ def Run_Cpp_Solver_VLM():
     
     
     "define grid nodes"
+    DeltaC = c/M
+    DeltaS = semi_b/N
     Zeta = np.zeros((VMOPTS.M.value+1,VMOPTS.N.value+1,3),ct.c_double,'C')
     for i in range(VMOPTS.M.value+1):
         for j in range(VMOPTS.N.value+1):
-            Zeta[i][j][:] = np.dot(R,[1000.0*j,-i,0.0]) #Aero grid defined differently
+            Zeta[i][j][:] = np.dot(R,[j*DeltaS,-i*DeltaC,0.0]) #Aero grid defined differently
         #END for j
     #END for i   
-    print(Zeta)
     
     "define free stream velocity"
     Uinfinity = np.array([0.0, -100.0, 0.0])
@@ -50,7 +54,6 @@ def Run_Cpp_Solver_VLM():
         ZetaStar[1,j] += 10000 * (Uinfinity/np.linalg.norm(Uinfinity)) * \
                                -(Zeta[VMOPTS.M.value][0][1] - Zeta[0][0][1])
     #END for j
-    print(ZetaStar)
     
     "define zeros for surface motion"
     ZetaDot = np.zeros((VMOPTS.M.value+1,VMOPTS.N.value+1,3),ct.c_double,'C')
