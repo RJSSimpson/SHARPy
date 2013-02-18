@@ -8,30 +8,47 @@
 #ifndef DATATYPESX_H_
 #define DATATYPESX_H_
 
-#include <vector>
-using std::vector;
+#include<boost/multi_array.hpp>
+#include<Eigen/Dense>
 
 class VMopts {
 public:
 	unsigned int M;
 	unsigned int N;
 	bool ImageMethod;
+	unsigned int Mstar;
+	bool Steady;
+	bool KJMeth;
 };
 
-class Array3D {
+typedef boost::multi_array<double, 2> BoostArray2D;
+typedef boost::multi_array<double, 3> BoostArray3D;
+typedef Eigen::Map<Eigen::VectorXd> EigenMapVectXd;
+
+class VortexSegment {
+	/**@brief Segment class for use with KJ method and fast rollup.
+	 * @details SegmentNo refers to the position of segment within panel
+	 *(Paneli,Panelj) ordered 1-2-3-4 which is i,j -> i,j+1 -> i+1,j+1 -> i+1,j.
+	 */
 public:
-	Array3D(const unsigned int M, const unsigned int N, const unsigned int O) {
-		/** initialise*/
-		Elem.resize(M);
-			for (unsigned int i = 0; i < M; i++) {
-				Elem[i].resize(N);
-				for (unsigned int j = 0; j < N; j++) {
-					Elem[i][j].resize(O);
-				}
-			}
-	}
-	vector<vector<vector<double> > > Elem;
-};
+	VortexSegment(double* p1_, double* p2_,\
+				  double* GammaMain_, double* GammaAdj_,\
+				  bool atTE_, bool atImage_,\
+				  unsigned int Paneli_, unsigned int Panelj_,\
+				  unsigned int SegmentNo_);
+	double* p1;
+	double* p2;
+	double* GammaMain;
+	double* GammaAdj;
+	bool atTE;
+	bool atImage;
+	unsigned int Paneli, Panelj;
+	unsigned int SegmentNo;
 
+	double Gamma(void);
+	void PanelEtas(double &eta1, double &eta2);
+	void BiotSavart(double* pX, double* Uind, bool ImageMethod);
+	void Force(double* Uinc, double* F);
+};
 
 #endif /* DATATYPESX_H_ */

@@ -115,6 +115,9 @@ void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 		unsigned int& VMOPTS_M, \
 		unsigned int& VMOPTS_N, \
 		bool& VMOPTS_ImageMethod,\
+		unsigned int& VMOPTS_Mstar,\
+		bool& VMOPTS_Steady,\
+		bool& VMOPTS_KJMeth,\
 		double* Forces_Vec, \
 		double* Gamma_Vec, \
 		double* GammaStar_Vec) {
@@ -127,6 +130,9 @@ void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	VMOPTS.M = VMOPTS_M;
 	VMOPTS.N = VMOPTS_N;
 	VMOPTS.ImageMethod = VMOPTS_ImageMethod;
+	VMOPTS.Mstar = VMOPTS_Mstar;
+	VMOPTS.Steady = VMOPTS_Steady;
+	VMOPTS.KJMeth = VMOPTS_KJMeth;
 
 	//call solver
 	cpp_solver_vlm(Zeta_Vec, ZetaDot_Vec, Uext_Vec, ZetaStar_Vec, \

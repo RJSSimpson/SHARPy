@@ -28,6 +28,12 @@ void BilinearMapTriad(const double* p1, const double* p2, \
 					  const double* p3, const double* p4, \
 					  double* pOut);
 
+void BilinearInterpTriad( double* x00, double* x01, \
+					  	  double* x11, double* x10, \
+					  	  double* xP,\
+					  	  const double eta1, const double eta2,\
+					  	  const bool reverse);
+
 void CopyTriad(double* pTarget, double* pSrc);
 
 void PrintTriad(double* x);

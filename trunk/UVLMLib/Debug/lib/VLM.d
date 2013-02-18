@@ -1,7 +1,5 @@
 lib/VLM.d lib/VLM.o: ../lib/VLM.cpp \
  /home/rjs10/SharPyProject/UVLMLib/include/datatypesx.hpp \
- /home/rjs10/SharPyProject/UVLMLib/include/triads.hpp \
- /home/rjs10/SharPyProject/UVLMLib/include/vorticity.hpp \
  /home/rjs10/Downloads/boost_1_50_0/boost/multi_array.hpp \
  /home/rjs10/Downloads/boost_1_50_0/boost/multi_array/base.hpp \
  /home/rjs10/Downloads/boost_1_50_0/boost/multi_array/extent_range.hpp \
@@ -389,13 +387,12 @@ lib/VLM.d lib/VLM.o: ../lib/VLM.cpp \
  /home/rjs10/Downloads/boost_1_50_0/boost/type_traits/remove_all_extents.hpp \
  /home/rjs10/Downloads/boost_1_50_0/boost/type_traits/remove_volatile.hpp \
  /home/rjs10/Downloads/boost_1_50_0/boost/type_traits/integral_promotion.hpp \
- /home/rjs10/Downloads/boost_1_50_0/boost/type_traits/promote.hpp
+ /home/rjs10/Downloads/boost_1_50_0/boost/type_traits/promote.hpp \
+ /home/rjs10/SharPyProject/UVLMLib/include/triads.hpp \
+ /home/rjs10/SharPyProject/UVLMLib/include/vorticity.hpp \
+ /home/rjs10/SharPyProject/UVLMLib/include/PanelTools.hpp
 
 /home/rjs10/SharPyProject/UVLMLib/include/datatypesx.hpp:
-
-/home/rjs10/SharPyProject/UVLMLib/include/triads.hpp:
-
-/home/rjs10/SharPyProject/UVLMLib/include/vorticity.hpp:
 
 /home/rjs10/Downloads/boost_1_50_0/boost/multi_array.hpp:
 
@@ -1172,3 +1169,9 @@ lib/VLM.d lib/VLM.o: ../lib/VLM.cpp \
 /home/rjs10/Downloads/boost_1_50_0/boost/type_traits/integral_promotion.hpp:
 
 /home/rjs10/Downloads/boost_1_50_0/boost/type_traits/promote.hpp:
+
+/home/rjs10/SharPyProject/UVLMLib/include/triads.hpp:
+
+/home/rjs10/SharPyProject/UVLMLib/include/vorticity.hpp:
+
+/home/rjs10/SharPyProject/UVLMLib/include/PanelTools.hpp:

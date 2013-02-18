@@ -4,6 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
+../lib/PanelTools.cpp \
 ../lib/VLM.cpp \
 ../lib/datatypesx.cpp \
 ../lib/triads.cpp \
@@ -11,6 +12,7 @@ CPP_SRCS += \
 ../lib/wrapper.cpp 
 
 OBJS += \
+./lib/PanelTools.o \
 ./lib/VLM.o \
 ./lib/datatypesx.o \
 ./lib/triads.o \
@@ -18,6 +20,7 @@ OBJS += \
 ./lib/wrapper.o 
 
 CPP_DEPS += \
+./lib/PanelTools.d \
 ./lib/VLM.d \
 ./lib/datatypesx.d \
 ./lib/triads.d \
@@ -29,7 +32,7 @@ CPP_DEPS += \
 lib/%.o: ../lib/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/home/rjs10/Downloads/Eigen -I/home/rjs10/Downloads/boost_1_50_0 -I/home/rjs10/SharPyProject/UVLMLib/include -O0 -g3 -Wall -c -fmessage-length=0 -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -I/home/rjs10/Downloads/Eigen -I/home/rjs10/Downloads/boost_1_50_0 -I/home/rjs10/SharPyProject/UVLMLib/include -O3 -g3 -Wall -c -fmessage-length=0 -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

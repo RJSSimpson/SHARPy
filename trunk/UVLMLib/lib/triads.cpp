@@ -93,12 +93,55 @@ void BilinearInterpTriad( double* x00, double* x01, \
 	 * then value at xP is distributed to corners.
 	 */
 
-	//TODO:check etas are between zero and 1 inclusive
-	//TODO:calculate factors (combos of etas)
-	//TODO:either inerpolate or distribute.
-//	pOut[0] = (x00[0] +x01[0] +x11[0] + x10[0])/4.0;
-//	pOut[1] = (x00[1] +x01[1] +x11[1] + x10[1])/4.0;
-//	pOut[2] = (x00[2] +x01[2] +x11[2] + x10[2])/4.0;
+	//declare temporary variables
+	double factor00 = 0.0;
+	double factor10 = 0.0;
+	double factor01 = 0.0;
+	double factor11 = 0.0;
+
+	//check etas are between zero and 1 inclusive
+	if (eta1 < 0.0 || eta1 > 1.0) {
+		fprintf(stderr, "Non-dim panel ordinate outside 0.0-1.0! Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (eta2 < 0.0 || eta2 > 1.0) {
+		fprintf(stderr, "Non-dim panel ordinate outside 0.0-1.0! Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
+
+	//calculate factors (combos of etas)
+	factor00 = (1.0 - eta2)*(1.0 - eta1);
+	factor10 = (1.0 - eta2)*eta1;
+	factor01 = eta2*(1.0 - eta1);
+	factor11 = eta2*eta1;
+
+	//either interpolate or distribute.
+	if (reverse == false) {
+		xP[0] = factor00 * x00[0] + factor10 * x10[0] + factor01 * x01[0] + \
+				factor11 * x11[0];
+		xP[1] = factor00 * x00[1] + factor10 * x10[1] + factor01 * x01[1] + \
+				factor11 * x11[1];
+		xP[2] = factor00 * x00[2] + factor10 * x10[2] + factor01 * x01[2] + \
+				factor11 * x11[2];
+	} else if (reverse == true) {
+		//point 00
+		x00[0] += factor00 * xP[0];
+		x00[1] += factor00 * xP[1];
+		x00[2] += factor00 * xP[2];
+		//point 10
+		x10[0] += factor10 * xP[0];
+		x10[1] += factor10 * xP[1];
+		x10[2] += factor10 * xP[2];
+		//point 01
+		x01[0] += factor01 * xP[0];
+		x01[1] += factor01 * xP[1];
+		x01[2] += factor01 * xP[2];
+		//point 11
+		x11[0] += factor11 * xP[0];
+		x11[1] += factor11 * xP[1];
+		x11[2] += factor11 * xP[2];
+	} // END if, else-if
 }
 
 void CopyTriad(double* pTarget, double* pSrc) {

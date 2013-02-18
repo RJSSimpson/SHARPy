@@ -10,254 +10,263 @@
 #include <stdio.h>
 #include <datatypesx.hpp>
 #include <triads.hpp>
-#include <Eigen/Dense>
 #include <vorticity.hpp>
-#include <boost/multi_array.hpp>
+#include <PanelTools.hpp>
+#include <vector>
+#include <assert.h>
 
-typedef boost::multi_array<double, 2> BoostArray2D;
-typedef boost::multi_array<double, 3> BoostArray3D;
-
-typedef Eigen::Map<Eigen::VectorXd> EigenMapVectXd;
-
-void PanelNormal(const double* p1, const double* p2, \
-				 const double* p3, const double* p4, \
-				 double* normal) {
-	/** @brief Calculate panel normal based on corner points
-	 *  @details Method from Katz and Plotkin.
+void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
+		const double* ZetaStar_Vec, const double* GammaStar_Vec,\
+		const double* ZetaDot_Vec, \
+		const double* Uext_Vec, \
+		VMopts VMOPTS,\
+		const double* Gamma_tm1_Vec,\
+		double* Forces_Vec) {
+	/**@brief calculate unsteady panel forces then segment forces
+	 * @param Zeta_Vec Grid points.
+	 * @param Gamma_Vec Bound vortex ring gammas.
+	 * @param ZetaStar_Vec Wake grid points.
+	 * @param GammaStar_Vec Wake vortex ring gammas.
+	 * @param VMOPTS Simulation options.
+	 * @param Gamma_tm1_Vec Bound vortex ring gammas from previous timestep.
+	 * @param Forces_Vec Unsteady Forces at grid points.
 	 */
 
-	// Initialise temp triads
-	double A[3];
-	double B[3];
-	double N[3];
+	// cast vectors into useful pointers
+	double (*Zeta)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Zeta_Vec;
+	double (*ZetaDot)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) ZetaDot_Vec;
+	double (*Uext)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Uext_Vec;
+	double (*Gamma)[VMOPTS.N] = (double (*)[VMOPTS.N]) Gamma_Vec;
+	double (*Gamma_tm1)[VMOPTS.N] = (double (*)[VMOPTS.N]) Gamma_tm1_Vec;
+	double (*Forces)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Forces_Vec;
 
-	// define A and B triads
-	SubTriad(p3,p4,A);
-	SubTriad(p2,p4,B);
+	// declare local, automatically-managed dynamic memory using boost ...
+	BoostArray2D Area_(boost::extents[VMOPTS.M][VMOPTS.N]);
+	BoostArray2D dGamma_dt_(boost::extents[VMOPTS.M][VMOPTS.N]);
 
-	// calculate cross product
-	CrossTriad(A,B,N);
+	// ... and get useful pointers to that data
+	double (*Area)[VMOPTS.N] = (double (*)[VMOPTS.N]) Area_.data();
+	double (*dGamma_dt)[VMOPTS.N] = (double (*)[VMOPTS.N]) dGamma_dt_.data();
 
-	//normalise and copy to normal
-	NormaliseTriad(N,normal);
-}
+	//Temporary variables
+	double Normal[3] = {0.0,0.0,0.0};
+	double DeltaP = 0.0;
+	double NormalForce = 0.0;
+	double UnstForceTemp[3] = {0.0,0.0,0.0};
+	double* NullDouble = NULL;
 
-void PanelTau_c(const double* p1, const double* p2, \
-				 const double* p3, const double* p4, \
-				 double* Tau_c) {
-	/** @brief Calculate panel chordwise unit vector
-	 */
+	//get unsteady component of pressure forces and map to nodes
+	//loop through collocation points i,j
+	for (unsigned int i = 0; i < VMOPTS.M; i++) {
+		for (unsigned int j = 0; j < VMOPTS.N; j++) {
 
-	double side1[3];
-	double side2[3];
-
-	// calculate panel side vectors
-	SubTriad(p3,p2,side1);
-	SubTriad(p4,p1,side2);
-
-	//combine
-	AddTriad(side1,side2,side1);
-
-	//normalise and write to Tau_c
-	NormaliseTriad(side1,Tau_c);
-}
-
-void PanelTau_s(const double* p1, const double* p2, \
-				 const double* p3, const double* p4, \
-				 double* Tau_s) {
-	/** @brief Calculate panel sppanwise unit vector
-	 */
-
-	double side1[3];
-	double side2[3];
-
-	// calculate panel side vectors
-	SubTriad(p2,p1,side1);
-	SubTriad(p3,p4,side2);
-
-	//combine
-	AddTriad(side1,side2,side1);
-
-	//normalise and write to Tau_c
-	NormaliseTriad(side1,Tau_s);
-}
+			//calculate panel normals
+			PanelNormal(Zeta[i][j], Zeta[i][j+1], \
+						Zeta[i+1][j+1], Zeta[i+1][j],
+									Normal);
 
 
-double PanelDeltaC(const double* p1, const double* p2, \
-				 const double* p3, const double* p4) {
-	/** @brief Calculate panel chordwise extent.
-	 */
-	double side1[3];
-	double side2[3];
-
-	// calculate panel side vectors
-	SubTriad(p4,p1,side1);
-	SubTriad(p3,p2,side2);
-
-	// combine to find mean
-	AddTriad(side1,side2,side1);
-	DivTriad(side1,2.0,side1);
-
-	return NormTriad(side1);
-}
-
-double PanelDeltaS(const double* p1, const double* p2, \
-				 const double* p3, const double* p4) {
-	/** @brief Calculate panel spanwise extent.
-	 */
-	double side1[3];
-	double side2[3];
-
-	// calculate panel side vectors
-	SubTriad(p2,p1,side1);
-	SubTriad(p3,p4,side2);
-
-	// combine to find mean
-	AddTriad(side1,side2,side1);
-	DivTriad(side1,2.0,side1);
-
-	return NormTriad(side1);
-}
+			// calculate panel areas
+			Area[i][j] = PanelArea(Zeta[i][j], Zeta[i][j+1],\
+								   Zeta[i+1][j+1], Zeta[i+1][j]);
 
 
-double PanelArea(const double* p1, const double* p2, \
-				 const double* p3, const double* p4) {
-	/** @brief Calculate panel area.
-	 */
-	double diag1[3];
-	double diag2[3];
-	double cross[3];
-
-	// calculate panel side vectors
-	SubTriad(p4,p2,diag1);
-	SubTriad(p3,p1,diag2);
-
-	// find cross product
-	CrossTriad(diag1,diag2,cross);
-
-	return 0.5*NormTriad(cross);
-}
-
-
-void C_BiotSegment_ImageYZ(const double* xP,\
-		  const double* x1,\
-		  const double* x2,\
-		  double& Gamma,\
-		  double* Uind) {
-	/** @brief calculate effect due to mirror of segment in YZ-plane.
-	 *  @details Uind is overwritten.
-	 */
-	// create target image location (reverse x ordinate)
-	double xImage[3] = {0.0,0.0,0.0};
-	xImage[0] = -xP[0];
-	xImage[1] = xP[1];
-	xImage[2] = xP[2];
-
-	//create result
-	double VelImage[3] = {0.0,0.0,0.0};
-
-	// segment 2 (point 2 -> point 3)
-	C_BiotSegment(xImage, \
-				  x1,x2, \
-				  Gamma, VelImage);
-
-	//reverse x velocity
-	VelImage[0] = -VelImage[0];
-
-	//copy to output
-	CopyTriad(Uind,VelImage);
-}
-
-
-void BiotSavartSurf(const double* Zeta_Vec, const double* Gamma_Vec, \
-					const double* TargetTriad,\
-					const unsigned int Mstart, const unsigned int Nstart,
-					const unsigned int Mend, const unsigned int Nend,
-					const unsigned int Mfull, const unsigned int Nfull, \
-					const bool ImageMethod, \
-					double* Uout) {
-	/**@brief Velocity induced by grid.
-	 * @param Zeta_Vec Aero grid - size (M+1)*(N+1)*3.
-	 * @param Gamma_Vec Vortex ring circulation strengths - size M*N.
-	 * @param TargetTriad Point at which velocity is required - size 3.
-	 */
-
-	//create some useful pointers
-	double (*Zeta)[Nfull+1][3] = (double (*)[Nfull+1][3]) Zeta_Vec;
-	double (*Gamma)[Nfull] = (double (*)[Nfull]) Gamma_Vec;
-
-	//slow method (every segment of every ring)
-	//TODO: differencing for individual segment strengths, required for KJ methods.
-
-	//set Uout to zero
-	Uout[0] = 0.0;
-	Uout[1] = 0.0;
-	Uout[2] = 0.0;
-
-	//define temp variables
-	double Temp1[3] = {0.0,0.0,0.0};
-	double Temp2[3] = {0.0,0.0,0.0};
-
-	//TODO: to make this parallel use locally defined variables NOT pointers
-	//to global data
-	for (unsigned int i = Mstart; i <= Mend; i++) {
-		for (unsigned int j = Nstart; j <= Nend; j++) {
-			// loop through each panel
-			// reset running total
-			Temp2[0] = 0.0;
-			Temp2[1] = 0.0;
-			Temp2[2] = 0.0;
-
-			// get effect of all segments
-			// segment 1 (point 1 -> point 2)
-			C_BiotSegment(TargetTriad,Zeta[i][j],Zeta[i][j+1],
-						  Gamma[i][j], Temp1);
-			AddTriad(Temp2,Temp1,Temp2);
-
-			// segment 2 (point 2 -> point 3)
-			C_BiotSegment(TargetTriad,Zeta[i][j+1],Zeta[i+1][j+1],
-						  Gamma[i][j], Temp1);
-			AddTriad(Temp2,Temp1,Temp2);
-
-			// segment 3 (point 3 -> point 4)
-			C_BiotSegment(TargetTriad,Zeta[i+1][j+1],Zeta[i+1][j],
-						  Gamma[i][j], Temp1);
-			AddTriad(Temp2,Temp1,Temp2);
-
-			// segment 3 (point 4 -> point 1)
-			C_BiotSegment(TargetTriad,Zeta[i+1][j],Zeta[i][j],
-						  Gamma[i][j], Temp1);
-			AddTriad(Temp2,Temp1,Temp2);
-
-			if (ImageMethod == 1) {
-				// get effect of all segments
-				// segment 1 (point 1 -> point 2) image
-				C_BiotSegment_ImageYZ(TargetTriad,Zeta[i][j],Zeta[i][j+1],
-							  Gamma[i][j], Temp1);
-				AddTriad(Temp2,Temp1,Temp2);
-
-				// segment 2 (point 2 -> point 3) image
-				C_BiotSegment_ImageYZ(TargetTriad,Zeta[i][j+1],Zeta[i+1][j+1],
-							  Gamma[i][j], Temp1);
-				AddTriad(Temp2,Temp1,Temp2);
-
-				// segment 3 (point 3 -> point 4) image
-				C_BiotSegment_ImageYZ(TargetTriad,Zeta[i+1][j+1],Zeta[i+1][j],
-							  Gamma[i][j], Temp1);
-				AddTriad(Temp2,Temp1,Temp2);
-
-				// segment 3 (point 4 -> point 1) image
-				C_BiotSegment_ImageYZ(TargetTriad,Zeta[i+1][j],Zeta[i][j],
-							  Gamma[i][j], Temp1);
-				AddTriad(Temp2,Temp1,Temp2);
+			// calculate panel d(Gamma)/dt
+			if (VMOPTS.Steady == true) {
+				dGamma_dt[i][j] = 0.0;
+			} else {
+				dGamma_dt[i][j] = Gamma[i][j] - Gamma_tm1[i][j];
 			}
 
-			//Add to Uout
-			AddTriad(Uout,Temp2,Uout);
-		} // END for j
-	} //END for i
-}
+			// pressure jump
+			DeltaP = dGamma_dt[i][j];
 
+
+			//calculate corresponding normal force
+			NormalForce = DeltaP*Area[i][j];
+
+
+			// apply along panel normal
+			MulTriad(Normal,DeltaP,UnstForceTemp);
+
+			// map to corner points
+			BilinearInterpTriad(Forces[i][j],Forces[i][j+1],\
+								Forces[i+1][j+1],Forces[i+1][j],\
+								UnstForceTemp,\
+								0.0,0.5,true);
+
+		} //END for j
+	}//END for i
+
+	//get vector of segments
+	std::vector<VortexSegment> Seg;
+
+	//calculate expected number of segements
+	unsigned int K = (VMOPTS.M+1)*VMOPTS.N + VMOPTS.M*(VMOPTS.N+1);
+
+	//initialise segment list
+	for (unsigned int i = 0; i < VMOPTS.M; i++) {
+		for (unsigned int j = 0; j < VMOPTS.N; j++) {
+
+			//segment 4 of panels (:,:)
+			if (VMOPTS.ImageMethod == 1 && j==0) {
+				Seg.push_back(VortexSegment(&Zeta[i+1][j][0],&Zeta[i][j][0],\
+								  	  	  	&Gamma[i][j], &Gamma[i][j],\
+								  	  	  	false,true,i,j,4));
+
+			} else if (VMOPTS.ImageMethod == 0 && j==0) {
+				Seg.push_back(VortexSegment(&Zeta[i+1][j][0],&Zeta[i][j][0],\
+											&Gamma[i][j], NullDouble,\
+											false,false,i,j,4));
+
+			} else if (j>0) {
+				Seg.push_back(VortexSegment(&Zeta[i+1][j][0],&Zeta[i][j][0],\
+											&Gamma[i][j], &Gamma[i][j-1],\
+											false,false,i,j,4));
+
+			} //end if, else-if, else-if
+
+			//segment 1 of panels (:,:)
+			if (i == 0) {
+				Seg.push_back(VortexSegment(&Zeta[i][j][0],&Zeta[i][j+1][0],\
+											&Gamma[i][j], NullDouble,\
+											false,false,i,j,1));
+
+			} else if (i > 0) {
+				Seg.push_back(VortexSegment(&Zeta[i][j][0],&Zeta[i][j+1][0],\
+											&Gamma[i][j], &Gamma[i-1][j],\
+											false,false,i,j,1));
+
+			} // end if, else-if
+
+			//segment 2 of panels(:,N-1)
+			if (j == VMOPTS.N - 1) {
+				Seg.push_back(VortexSegment(&Zeta[i][j+1][0],&Zeta[i+1][j+1][0],\
+											&Gamma[i][j], NullDouble,\
+											false,false,i,j,2));
+
+			} //end if
+
+			//add segment 3 if at the TE
+			if (i == VMOPTS.M - 1) {
+				Seg.push_back(VortexSegment(&Zeta[i+1][j+1][0],&Zeta[i+1][j][0],\
+											&Gamma[i][j], NullDouble,\
+											true,false,i,j,3));
+			} //end if
+		}
+	}
+
+	//check length
+	assert(Seg.size() == K);
+
+	//print segment info
+//	for (unsigned int k = 0; k < (VMOPTS.M+1)*VMOPTS.N + VMOPTS.M*(VMOPTS.N+1); k++) {
+//		printf("Seg %d : i=%d ,j=%d, No=%d, Gamma=%f p1,p2 = ",\
+//				k, Seg[k].Paneli,Seg[k].Panelj,Seg[k].SegmentNo,Seg[k].Gamma());
+//		PrintTriad(Seg[k].p1);
+//		PrintTriad(Seg[k].p2);
+//		printf("\n");
+//	}
+
+
+	//test segments v surface
+//	double Target[3] = {0.5,-0.5,1.0};
+//	double Surf[3] = {0.0,0.0,0.0};
+//	double Segs[3] = {0.0,0.0,0.0};
+//
+//	BiotSavartSurf(Zeta_Vec, Gamma_Vec, Target,\
+//				   0, 0, \
+//				   VMOPTS.M, VMOPTS.N,\
+//				   VMOPTS.M, VMOPTS.N,\
+//				   VMOPTS.ImageMethod,\
+//				   Surf);
+//
+//	PrintTriad(Surf);
+//
+//	BiotSurfaceSegments(Seg, VMOPTS.M, VMOPTS.N, VMOPTS.ImageMethod,\
+//						Target,Segs);
+//
+//	PrintTriad(Segs);
+
+
+	//loop through each segment and add force to Forces
+	for (unsigned int k = 0; k < K; k++) {
+		//get panel i,j
+		unsigned int i = Seg[k].Paneli;
+		unsigned int j = Seg[k].Panelj;
+
+		//declare local vars
+		double ZetaDotSeg[3] = {0.0,0.0,0.0};
+		double UextSeg[3] = {0.0,0.0,0.0};
+		double UwakeSeg[3] = {0.0,0.0,0.0};
+		double UsurfSeg[3] = {0.0,0.0,0.0};
+		double UincSeg[3] = {0.0,0.0,0.0};
+		double ForceSeg[3] = {0.0,0.0,0.0};
+
+		//get midpoint location in panel dimensionless coords
+		double Eta1 = 0.0;
+		double Eta2 = 0.0;
+		Seg[k].PanelEtas(Eta1,Eta2);
+
+		//calc incident veloc
+		// -ZetaDot + Uext + Uwake + Ubound
+
+		//ZetaDot at midpoint
+		BilinearInterpTriad(ZetaDot[i][j], ZetaDot[i][j+1], \
+						 	ZetaDot[i+1][j+1], ZetaDot[i+1][j], \
+						 	ZetaDotSeg,Eta1,Eta2,false);
+
+		//Uext at midpoint
+		BilinearInterpTriad(Uext[i][j], Uext[i][j+1], \
+							Uext[i+1][j+1], Uext[i+1][j], \
+							UextSeg,Eta1,Eta2,false);
+
+		//Uwake at midpoint using segment list
+		//get midpoint
+		double Midpoint[3] = {0.0,0.0,0.0};
+		BilinearInterpTriad(Zeta[i][j], Zeta[i][j+1], \
+							Zeta[i+1][j+1], Zeta[i+1][j], \
+							Midpoint,Eta1,Eta2,false);
+
+		//Uwake
+		BiotSavartSurf(ZetaStar_Vec,GammaStar_Vec,Midpoint,\
+					   0,0,\
+					   VMOPTS.Mstar,VMOPTS.N,\
+					   VMOPTS.Mstar,VMOPTS.N,\
+					   VMOPTS.ImageMethod, UwakeSeg);
+
+		//Usurf
+		BiotSurfaceSegments(Seg,VMOPTS.M,VMOPTS.N,\
+				   	   	   	VMOPTS.ImageMethod,Midpoint,\
+				   	   	   	UsurfSeg);
+
+		//Combine Uext - ZetaDot
+		SubTriad(UextSeg,ZetaDotSeg,UincSeg);
+		//Add on Uwake
+		AddTriad(UincSeg,UwakeSeg,UincSeg);
+		//Add on Usurf
+		AddTriad(UincSeg,UsurfSeg,UincSeg);
+
+
+		//Get force
+		Seg[k].Force(UincSeg,ForceSeg);
+
+
+//		printf("Seg %d : i=%d ,j=%d, No=%d, Gamma=%f Uinc,Force,Uwake = ",\
+//				k, Seg[k].Paneli,Seg[k].Panelj,Seg[k].SegmentNo,Seg[k].Gamma());
+//		PrintTriad(UincSeg);
+//		PrintTriad(ForceSeg);
+//		PrintTriad(UwakeSeg);
+////		printf("eta1=%f\teta2=%f",Eta1,Eta2);
+//		printf("\n");
+
+		//Map to corner points
+		BilinearInterpTriad(Forces[i][j], Forces[i][j+1], \
+							Forces[i+1][j+1], Forces[i+1][j], \
+							ForceSeg,Eta1,Eta2,true);
+	}
+
+}
 
 void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 				const double* ZetaStar_Vec, const double* GammaStar_Vec,\
@@ -275,7 +284,7 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 	 * @param GammaStar_Vec Wake vortex ring gammas.
 	 * @param VMOPTS Simulation options.
 	 * @param Gamma_tm1_Vec Bound vortex ring gammas from previous timestep.
-	 * @param ForcesCol Unsteady Forces at collocation points.
+	 * @param Forces_Vec Unsteady Forces at grid points.
 	 */
 
 	// cast vectors into useful pointers
@@ -296,7 +305,6 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 	BoostArray2D Area_(boost::extents[VMOPTS.M][VMOPTS.N]);
 	BoostArray2D dGamma_dt_(boost::extents[VMOPTS.M][VMOPTS.N]);
 	BoostArray3D Uwake_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
-	BoostArray3D ForcesCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
 
 	// ... and get useful pointers to that data
 	double (*alpha)[VMOPTS.N] = (double (*)[VMOPTS.N]) alpha_.data();
@@ -307,12 +315,11 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 	double (*Area)[VMOPTS.N] = (double (*)[VMOPTS.N]) Area_.data();
 	double (*dGamma_dt)[VMOPTS.N] = (double (*)[VMOPTS.N]) dGamma_dt_.data();
 	double (*Uwake)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) Uwake_.data();
-	double (*ForcesCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3])ForcesCol_.data();
 
 	//Temporary variables
 	double ZetaDotCol[3] = {0.0,0.0,0.0};
 	double UextCol[3] = {0.0,0.0,0.0};
-	double NormalWashCol[3] = {0.0,0.0,0.0};
+	double Uinc[3] = {0.0,0.0,0.0};
 	double Normal[3] = {0.0,0.0,0.0};
 	double Collocation[3] = {0.0,0.0,0.0};
 	double LiftVel[3] = {0.0,0.0,0.0};
@@ -326,7 +333,7 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 	double DragLocal2 = 0.0;
 	double LiftTemp[3] = {0.0,0.0,0.0};
 	double DragTemp[3] = {0.0,0.0,0.0};
-	double NormNormalWashCol[3] = {0.0,0.0,0.0};
+	double NormUinc[3] = {0.0,0.0,0.0};
 
 	//loop through collocation points i,j
 	for (unsigned int i = 0; i < VMOPTS.M; i++) {
@@ -343,9 +350,9 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 							 UextCol);
 
 			// set incident velocity
-			NormalWashCol[0] = -ZetaDotCol[0] + UextCol[0];
-			NormalWashCol[1] = -ZetaDotCol[1] + UextCol[1];
-			NormalWashCol[2] = -ZetaDotCol[2] + UextCol[2];
+			Uinc[0] = -ZetaDotCol[0] + UextCol[0];
+			Uinc[1] = -ZetaDotCol[1] + UextCol[1];
+			Uinc[2] = -ZetaDotCol[2] + UextCol[2];
 
 
 			//calculate panel collocation
@@ -371,8 +378,8 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 
 
 			// calculate local AoA
-			alpha[i][j] = atan2(DotTriad(NormalWashCol,Normal),\
-							    DotTriad(NormalWashCol,Tau_c[i][j]));
+			alpha[i][j] = atan2(DotTriad(Uinc,Normal),\
+							    DotTriad(Uinc,Tau_c[i][j]));
 
 
 			// calculate panel \Delta chord and \Delta span
@@ -389,20 +396,26 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 
 
 			// calculate panel d(Gamma)/dt
-			//dGamma_dt[i][j] = Gamma[i][j] - Gamma_tm1[i][j];
-			dGamma_dt[i][j] = 0.0;
+			if (VMOPTS.Steady == true) {
+				dGamma_dt[i][j] = 0.0;
+			} else {
+				dGamma_dt[i][j] = Gamma[i][j] - Gamma_tm1[i][j];
+			}
 
 
 			// calculate wake induced velocity
-			BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, Collocation, \
-					0, 0, 0, VMOPTS.N, \
-					1,VMOPTS.N, VMOPTS.ImageMethod,\
-					Uwake[i][j]);
+			if (VMOPTS.Steady == false) {
+				BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, Collocation, \
+						0, 0, \
+						VMOPTS.Mstar, VMOPTS.N, \
+						VMOPTS.Mstar,VMOPTS.N, VMOPTS.ImageMethod,\
+						Uwake[i][j]);
+			}
 
 
 			// calculate local lift from Simpson (2013) plus external velocities
 			// (-ZetaDot+Uext+Uwake)
-			AddTriad(NormalWashCol,Uwake[i][j],LiftVel);
+			AddTriad(Uinc,Uwake[i][j],LiftVel);
 
 			// dot product with tangential vectors
 			TempC = DotTriad(LiftVel,Tau_c[i][j]);
@@ -419,7 +432,7 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 			// firstly for if there is an image plane at wing root
 			if (VMOPTS.ImageMethod == 1) {
 				if (j == 0) {
-					TempGamma_j = 0.0;
+					TempGamma_j = Gamma[i][j];
 				} else if (j > 0) {
 					TempGamma_j = Gamma[i][j] - Gamma[i][j-1];
 					//if the whole wing is modelled then
@@ -441,7 +454,7 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 
 
 			// calculate local drag
-//			printf("\tDownwash = %f\n",Downwash[i*VMOPTS.N + j]);
+//		    printf("\tDownwash = %f\n",Downwash[i*VMOPTS.N + j]);
 			DragLocal1 = -Downwash[i*VMOPTS.N + j]*TempGamma_i*Del_s[i][j];
 			DragLocal2 = dGamma_dt[i][j]*Area[i][j] * sin(alpha[i][j]);
 //			printf("\tdrag1:%f\tdrag2:%f\n",DragLocal1,DragLocal2);
@@ -449,30 +462,34 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 			// total force
 			//lift vector
 			MulTriad(LiftVector[i][j],LiftLocal,LiftTemp);
+//			printf("lift vector = ");
 //			PrintTriad(LiftVector[i][j]);
 //			PrintTriad(LiftTemp);
 //			printf("\n");
 
 			//drag vector
-			NormaliseTriad(NormalWashCol,NormNormalWashCol);
-			if (NormTriad(NormalWashCol) == 0.0) {
+			NormaliseTriad(Uinc,NormUinc);
+			if (NormTriad(Uinc) == 0.0) {
 				std::cerr << "VLM: Warning incident velocity Zero!" \
 										  << std::endl;
 			}
-			MulTriad(NormNormalWashCol,DragLocal1+DragLocal2,DragTemp);
-			//PrintTriad(NormNormalWashCol);
-			//PrintTriad(DragTemp);
+			MulTriad(NormUinc,DragLocal1+DragLocal2,DragTemp);
+//			printf("drag vector = ");
+//			PrintTriad(NormUinc);
+//			PrintTriad(DragTemp);
 
 			//combine and save
 			AddTriad(LiftTemp,DragTemp,LiftTemp);
 
-//			printf("\tlift:%f\tdrag:%f\tVector:",LiftLocal,DragLocal);
+//			printf("\tlift:%f\tdrag:%f\tVector:",LiftLocal,DragLocal1+DragLocal2);
 //			PrintTriad(LiftTemp);
 //			printf("\n");
 
-			CopyTriad(ForcesCol[i][j],LiftTemp);
-
-			CopyTriad(Forces[i][j],ForcesCol[i][j]);
+			// map panel force (on LE segment) to nodes
+			BilinearInterpTriad(Forces[i][j],Forces[i][j+1],\
+								Forces[i+1][j+1],Forces[i+1][j],\
+								LiftTemp,\
+								0.0,0.5,true);
 		}
 	}
 
@@ -508,7 +525,7 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	BoostArray3D ZetaDotCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
 	BoostArray3D UextCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
 	BoostArray3D Normal_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
-	BoostArray3D NormalWashCol_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
+	BoostArray3D Uinc_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
 	BoostArray3D LocalLift_(boost::extents[VMOPTS.M][VMOPTS.N][3]);
 
 
@@ -517,14 +534,14 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	double (*ZetaDotCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) ZetaDotCol_.data();
 	double (*UextCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) UextCol_.data();
 	double (*Normal)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) Normal_.data();
-	double (*NormalWashCol)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) NormalWashCol_.data();
+	double (*Uinc)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) Uinc_.data();
 	double (*LocalLift)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) LocalLift_.data();
 
 
 	// Declare Eigen types for linear algebra
 	Eigen::VectorXd RHS(VMOPTS.M*VMOPTS.N);
 	EigenMapVectXd Gamma(Gamma_Vec,VMOPTS.M*VMOPTS.N);
-	EigenMapVectXd GammaStar(GammaStar_Vec,VMOPTS.N);
+	EigenMapVectXd GammaStar(GammaStar_Vec,VMOPTS.Mstar*VMOPTS.N);
 	Eigen::MatrixXd AIC(VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
 	Eigen::MatrixXd BIC(VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
 	Eigen::VectorXd Downwash(VMOPTS.M*VMOPTS.N);
@@ -541,7 +558,9 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	Eigen::Vector3d NormalEig(0.0,0.0,0.0);
 
 	//use Eigen to set GammaStar_Vec to 1.0 for all j
-	GammaStar.setOnes();
+	if (VMOPTS.Steady == true) {
+		GammaStar.setOnes();
+	}
 
 
 	//loop through collocation points i,j
@@ -569,10 +588,12 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 					    Normal[i][j]);
 
 			//Normal wash at Collocations points
-			SubTriad(UextCol[i][j],ZetaCol[i][j],NormalWashCol[i][j]);
+			SubTriad(UextCol[i][j],ZetaDotCol[i][j],Uinc[i][j]);
+//			printf("Uext - ZetaDot = ");
+//			PrintTriad(Uinc[i][j]);
 
 			// Fill RHS Vector
-			RHS(i*VMOPTS.N + j) = - DotTriad(NormalWashCol[i][j],
+			RHS(i*VMOPTS.N + j) = - DotTriad(Uinc[i][j],
 											 Normal[i][j]);
 
 
@@ -670,13 +691,15 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 						} // END if Image Method
 
 						// add wake effect
-						BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, \
-									   ZetaCol[i][j],\
-									   0, jj, \
-									   0, jj, \
-									   1, VMOPTS.N, VMOPTS.ImageMethod,\
-									   Temp1);
-						AddTriad(Temp3,Temp1,Temp3);
+						if (VMOPTS.Steady == true) {
+							BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, \
+										   ZetaCol[i][j],\
+										   0, jj, \
+										   VMOPTS.Mstar, jj+1, \
+										   VMOPTS.Mstar, VMOPTS.N, VMOPTS.ImageMethod,\
+										   Temp1);
+							AddTriad(Temp3,Temp1,Temp3);
+						}
 					} // END if VMOPTS.M-1
 
 
@@ -750,11 +773,36 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	} //END for i
 
 
+	// declare memory for Gamma_tm1_
+	BoostArray2D Gamma_tm1_(boost::extents[VMOPTS.M][VMOPTS.N]);
+
+	// copy Gamma_Vec to Gamma_tm1
+	unsigned int k = 0;
+	for (unsigned int i = 0; i < VMOPTS.M; i++) {
+		for (unsigned int j = 0; j < VMOPTS.N; j++) {
+			k = i*VMOPTS.N + j;
+			Gamma_tm1_[i][j] = Gamma(k);
+		}
+	}
+
+	//create pointer to Gamma_tm1
+	double* Gamma_tm1_vec = Gamma_tm1_.data();
+
 	//solve for gamma
 	Gamma = AIC.colPivHouseholderQr().solve(RHS);
 
 	//set GammaStar to TE velocities
-	GammaStar = Gamma.tail(VMOPTS.N);
+	//check if steady set all to TE gamma
+	if (VMOPTS.Steady == 1 && VMOPTS.Mstar == 1) {
+		//wake gamma set very easily
+		GammaStar = Gamma.tail(VMOPTS.N);
+	} else if (VMOPTS.Steady == 1 && VMOPTS.Mstar > 1) {
+		//each column must be set
+		for (unsigned int i = 0; i < VMOPTS.Mstar; i++) {
+			GammaStar.segment(i*VMOPTS.N,VMOPTS.N) = Gamma.tail(VMOPTS.N);
+		}
+	}
+
 
 	//calculate downwash
 	Downwash = BIC * (Gamma);
@@ -768,11 +816,18 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	double* Downwash_ptr = Downwash.data();
 
 	// Calculate forces
-	BoostArray2D FooGamma_tm1_(boost::extents[VMOPTS.M][VMOPTS.N]);
-	double* FooGamma_tm1_vec = FooGamma_tm1_.data();
-	KatzForces(Zeta_Vec, Gamma_Vec, ZetaStar_Vec, GammaStar_Vec,\
-			   ZetaDot_Vec, Uext_Vec, VMOPTS, FooGamma_tm1_vec, Downwash_ptr,\
-			   LocalLift_.data(), Forces_Vec);
+	double* LocalLift_Vec = LocalLift_.data();
+
+	if (VMOPTS.KJMeth == 0) {
+		KatzForces(Zeta_Vec, Gamma_Vec, ZetaStar_Vec, GammaStar_Vec,\
+				   ZetaDot_Vec, Uext_Vec, VMOPTS, Gamma_tm1_vec, Downwash_ptr,\
+				   LocalLift_Vec, Forces_Vec);
+
+	} else if (VMOPTS.KJMeth == 1) {
+		KJMethodForces(Zeta_Vec, Gamma_Vec, ZetaStar_Vec, GammaStar_Vec,\
+				   	   ZetaDot_Vec, Uext_Vec, VMOPTS, Gamma_tm1_vec,\
+				   	   Forces_Vec);
+	}
 }
 
 
