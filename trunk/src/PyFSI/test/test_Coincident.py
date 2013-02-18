@@ -20,53 +20,7 @@ import BeamLib
 import BeamInit
 import ctypes as ct
 import XbeamLib
-
-def WriteAeroTecHeader(FileName='AeroGrid.dat', Title='Default',\
-                       Variables=['X', 'Y', 'Z']):
-    """@brief Opens Filename and writes header for tecplot ascii format.
-    @return open file object for writing to."""
-    
-    FileObject = open(FileName,'w')
-    FileObject.write('TITLE="%s"\n' % (Title))
-    FileObject.write('VARIABLES=')
-    for Var in range(len(Variables)):
-        FileObject.write('"%s" ' % (Variables[Var]))
-        if Var == len(Variables):
-            FileObject.write('\n')
-    #END for Var
-    FileObject.write('\n')
-    
-    return FileObject
-
-
-def WriteAeroTecZone(FileObject, AeroGrid, TimeStep=-1, NumTimeSteps=0,\
-                     Time=0.0, Variables=['X', 'Y', 'Z'], Text=True):
-    """@brief Writes aero grid data to ascii file in tecplot ij format.
-    @param FileObject Must be an open file object.
-    @param Timestep -1 for static solution and >-1 thereafter."""
-    
-    FileObject.write('ZONE I=%d J=%d DATAPACKING=BLOCK T="Timestep %d of %d"\nSOLUTIONTIME=%f STRANDID=1\n' % \
-                     (AeroGrid.shape[0],AeroGrid.shape[1],TimeStep+1,\
-                      NumTimeSteps,Time))
-    
-    for Var in range(len(Variables)):
-        for j in range(AeroGrid.shape[1]):
-            for i in range(AeroGrid.shape[0]):
-                FileObject.write('%f\t' % (AeroGrid[i,j,Var]))
-            #END for j
-        #END for i
-        FileObject.write('\n')
-    #END for Var
-    
-    if Text==True and TimeStep > -1:
-        FileObject.write('TEXT T="time = %fs" CS=GRID3D AN=Headleft S=LOCAL ZN=%d X=0.0 Y=0.0 Z=-1.0\n' % (Time,TimeStep+1))
-    
-    return FileObject
-    
-
-def CloseAeroTecFile(FileObject):
-    """TODO: could whole file writing process be encapsulated in a class?"""
-    FileObject.close()
+import PyAero.UVLM.Utils.PostProcess as PostProcess
         
     
 def StaticDef():
@@ -115,9 +69,9 @@ def StaticDef():
                    VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
                    XBINPUT)
     
-    FileObject = WriteAeroTecHeader()
-    FileObject = WriteAeroTecZone(FileObject, AeroGrid)
-    CloseAeroTecFile(FileObject)
+    FileObject = PostProcess.WriteAeroTecHeader()
+    FileObject = PostProcess.WriteAeroTecZone(FileObject, AeroGrid)
+    PostProcess.CloseAeroTecFile(FileObject)
     
     
 def DynamicAnim():
@@ -215,8 +169,8 @@ def DynamicAnim():
                    XBINPUT)
     
     "Create output and plot initial deformed shape"
-    FileObject = WriteAeroTecHeader('AeroGridAnim.tec','Aerodynamic Grid')
-    FileObject = WriteAeroTecZone(FileObject, AeroGrid)
+    FileObject = PostProcess.WriteAeroTecHeader('AeroGridAnim.tec','Aerodynamic Grid')
+    FileObject = PostProcess.WriteAeroTecZone(FileObject, AeroGrid)
     
     
     "Write _force file"
@@ -486,7 +440,7 @@ def DynamicAnim():
                    XBINPUT)
     
         "Plot deformed shape"
-        FileObject = WriteAeroTecZone(FileObject, AeroGrid,\
+        FileObject = PostProcess.WriteAeroTecZone(FileObject, AeroGrid,\
                                        iStep, NumSteps.value, Time[iStep+1])
     
     "END Time loop"
@@ -504,7 +458,7 @@ def DynamicAnim():
     fp.close()
     
     "Close Tecplot ascii FileObject"
-    CloseAeroTecFile(FileObject)
+    PostProcess.CloseAeroTecFile(FileObject)
     
     if XBOPTS.PrintInfo.value==True:
         sys.stdout.write(' ... done\n')

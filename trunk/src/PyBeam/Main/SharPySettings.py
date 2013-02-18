@@ -26,7 +26,7 @@ OutputFileRoot = 'Foo'
 """Structural Code Constants"""
 
 MaxElNod = 3
-DimMat = 18
+DimMat = 24 #memory allocated for sparse matrix storage in fortran solver
 RotEpsilon = 0.001 #rotations below this are linearised
 
 if __name__ == '__main__':

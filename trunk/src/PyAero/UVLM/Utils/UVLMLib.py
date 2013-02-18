@@ -88,6 +88,9 @@ def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
                    ct.byref(VMOPTS.M),\
                    ct.byref(VMOPTS.N),\
                    ct.byref(VMOPTS.ImageMethod), \
+                   ct.byref(VMOPTS.Mstar),\
+                   ct.byref(VMOPTS.Steady),\
+                   ct.byref(VMOPTS.KJMeth),\
                    Forces.ctypes.data_as(ct.POINTER(ct.c_double)), \
                    Gamma.ctypes.data_as(ct.POINTER(ct.c_double)), \
                    GammaStar.ctypes.data_as(ct.POINTER(ct.c_double)) )
