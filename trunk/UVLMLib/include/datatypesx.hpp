@@ -19,11 +19,16 @@ public:
 	unsigned int Mstar;
 	bool Steady;
 	bool KJMeth;
+	bool NewAIC;
+	double DelTime;
+	bool Rollup;
+	unsigned int NumCores;
 };
 
 typedef boost::multi_array<double, 2> BoostArray2D;
 typedef boost::multi_array<double, 3> BoostArray3D;
 typedef Eigen::Map<Eigen::VectorXd> EigenMapVectXd;
+typedef Eigen::Map<Eigen::MatrixXd> EigenMapMatrixXd;
 
 class VortexSegment {
 	/**@brief Segment class for use with KJ method and fast rollup.

@@ -14,6 +14,8 @@ void cpp_solver_vlm(const double* Zeta, const double* ZetaDot, \
 				    double* ZetaStar, \
 				    VMopts VMOPTS, \
 				    double* Forces, \
-				    double* Gamma_Vec, double* GammaStar_Vec);
+				    double* Gamma_Vec, double* GammaStar_Vec, \
+				    double* AIC_Vec,\
+				    double* BIC_Vec);
 
 #endif /* VLM_HPP_ */

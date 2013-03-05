@@ -14,6 +14,7 @@
 #include <PanelTools.hpp>
 #include <vector>
 #include <assert.h>
+#include "omp.h"
 
 void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 		const double* ZetaStar_Vec, const double* GammaStar_Vec,\
@@ -74,20 +75,20 @@ void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 			// calculate panel d(Gamma)/dt
 			if (VMOPTS.Steady == true) {
 				dGamma_dt[i][j] = 0.0;
-			} else {
-				dGamma_dt[i][j] = Gamma[i][j] - Gamma_tm1[i][j];
+			} else if (VMOPTS.Steady == false) {
+				dGamma_dt[i][j] = (Gamma[i][j] - Gamma_tm1[i][j]) / \
+									VMOPTS.DelTime;
 			}
 
 			// pressure jump
 			DeltaP = dGamma_dt[i][j];
-
 
 			//calculate corresponding normal force
 			NormalForce = DeltaP*Area[i][j];
 
 
 			// apply along panel normal
-			MulTriad(Normal,DeltaP,UnstForceTemp);
+			MulTriad(Normal,NormalForce,UnstForceTemp);
 
 			// map to corner points
 			BilinearInterpTriad(Forces[i][j],Forces[i][j+1],\
@@ -190,6 +191,7 @@ void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 
 
 	//loop through each segment and add force to Forces
+	#pragma omp parallel for
 	for (unsigned int k = 0; k < K; k++) {
 		//get panel i,j
 		unsigned int i = Seg[k].Paneli;
@@ -261,6 +263,7 @@ void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 //		printf("\n");
 
 		//Map to corner points
+		#pragma omp critical
 		BilinearInterpTriad(Forces[i][j], Forces[i][j+1], \
 							Forces[i+1][j+1], Forces[i+1][j], \
 							ForceSeg,Eta1,Eta2,true);
@@ -316,28 +319,30 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 	double (*dGamma_dt)[VMOPTS.N] = (double (*)[VMOPTS.N]) dGamma_dt_.data();
 	double (*Uwake)[VMOPTS.N][3] = (double (*)[VMOPTS.N][3]) Uwake_.data();
 
-	//Temporary variables
-	double ZetaDotCol[3] = {0.0,0.0,0.0};
-	double UextCol[3] = {0.0,0.0,0.0};
-	double Uinc[3] = {0.0,0.0,0.0};
-	double Normal[3] = {0.0,0.0,0.0};
-	double Collocation[3] = {0.0,0.0,0.0};
-	double LiftVel[3] = {0.0,0.0,0.0};
-	double TempC = 0.0;
-	double TempS = 0.0;
-	double TempGamma_i = 0.0;
-	double TempGamma_j = 0.0;
-	double DeltaP = 0.0;
-	double LiftLocal = 0.0;
-	double DragLocal1 = 0.0;
-	double DragLocal2 = 0.0;
-	double LiftTemp[3] = {0.0,0.0,0.0};
-	double DragTemp[3] = {0.0,0.0,0.0};
-	double NormUinc[3] = {0.0,0.0,0.0};
-
 	//loop through collocation points i,j
+	#pragma omp parallel for
 	for (unsigned int i = 0; i < VMOPTS.M; i++) {
 		for (unsigned int j = 0; j < VMOPTS.N; j++) {
+
+			//Temporary variables
+			double ZetaDotCol[3] = {0.0,0.0,0.0};
+			double UextCol[3] = {0.0,0.0,0.0};
+			double Uinc[3] = {0.0,0.0,0.0};
+			double Normal[3] = {0.0,0.0,0.0};
+			double Collocation[3] = {0.0,0.0,0.0};
+			double LiftVel[3] = {0.0,0.0,0.0};
+			double TempC = 0.0;
+			double TempS = 0.0;
+			double TempGamma_i = 0.0;
+			double TempGamma_j = 0.0;
+			double DeltaP = 0.0;
+			double LiftLocal = 0.0;
+			double DragLocal1 = 0.0;
+			double DragLocalWakeDown = 0.0;
+			double DragLocal2 = 0.0;
+			double LiftTemp[3] = {0.0,0.0,0.0};
+			double DragTemp[3] = {0.0,0.0,0.0};
+			double NormUinc[3] = {0.0,0.0,0.0};
 
 			//calculate velocity of collocation
 			BilinearMapTriad(ZetaDot[i][j], ZetaDot[i][j+1], \
@@ -398,13 +403,18 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 			// calculate panel d(Gamma)/dt
 			if (VMOPTS.Steady == true) {
 				dGamma_dt[i][j] = 0.0;
-			} else {
-				dGamma_dt[i][j] = Gamma[i][j] - Gamma_tm1[i][j];
+			} else if (VMOPTS.Steady == false) {
+				dGamma_dt[i][j] = (Gamma[i][j] - Gamma_tm1[i][j]) / \
+										VMOPTS.DelTime;
 			}
 
 
 			// calculate wake induced velocity
-			if (VMOPTS.Steady == false) {
+			if (VMOPTS.Steady == true) {
+				Uwake[i][j][0] = 0.0;
+				Uwake[i][j][1] = 0.0;
+				Uwake[i][j][2] = 0.0;
+			} else if (VMOPTS.Steady == false) {
 				BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, Collocation, \
 						0, 0, \
 						VMOPTS.Mstar, VMOPTS.N, \
@@ -450,14 +460,21 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 
 			// calculate local lift
 			LiftLocal = DeltaP * Area[i][j] * cos(alpha[i][j]);
-//			printf("\tDeltaP:%f\tArea:%f\talpha:%f\n",DeltaP,Area[i][j],alpha[i][j]);
+//			printf("\tDeltaP:%f \tArea:%f\talpha:%f\n",DeltaP,Area[i][j],alpha[i][j]);
 
 
 			// calculate local drag
-//		    printf("\tDownwash = %f\n",Downwash[i*VMOPTS.N + j]);
-			DragLocal1 = -Downwash[i*VMOPTS.N + j]*TempGamma_i*Del_s[i][j];
-			DragLocal2 = dGamma_dt[i][j]*Area[i][j] * sin(alpha[i][j]);
-//			printf("\tdrag1:%f\tdrag2:%f\n",DragLocal1,DragLocal2);
+			if (VMOPTS.Steady == true) {
+				DragLocal1 = -Downwash[i*VMOPTS.N + j]*TempGamma_i*Del_s[i][j];
+			} else if (VMOPTS.Steady == false) {
+				//wake velocity down local lift must be added
+				DragLocalWakeDown = DotTriad(Uwake[i][j],LiftVector[i][j]);
+				DragLocal1 = -(Downwash[i*VMOPTS.N + j] + DragLocalWakeDown) * \
+							 TempGamma_i*Del_s[i][j];
+			}
+
+			DragLocal2 = dGamma_dt[i][j] * Area[i][j] * sin(alpha[i][j]);
+//			printf("\tdGamma_dt%f\tdrag1:%f\tdrag2:%f\n",dGamma_dt[i][j],DragLocal1,DragLocal2);
 
 			// total force
 			//lift vector
@@ -468,15 +485,18 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 //			printf("\n");
 
 			//drag vector
+			// subtract wake velocity (this is set to zero above for steady)
 			NormaliseTriad(Uinc,NormUinc);
 			if (NormTriad(Uinc) == 0.0) {
 				std::cerr << "VLM: Warning incident velocity Zero!" \
 										  << std::endl;
 			}
-			MulTriad(NormUinc,DragLocal1+DragLocal2,DragTemp);
+			double Foo = DragLocal1+DragLocal2;
+			MulTriad(NormUinc,Foo,DragTemp);
 //			printf("drag vector = ");
 //			PrintTriad(NormUinc);
 //			PrintTriad(DragTemp);
+//			printf("\n");
 
 			//combine and save
 			AddTriad(LiftTemp,DragTemp,LiftTemp);
@@ -486,6 +506,7 @@ void KatzForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 //			printf("\n");
 
 			// map panel force (on LE segment) to nodes
+			#pragma omp critical
 			BilinearInterpTriad(Forces[i][j],Forces[i][j+1],\
 								Forces[i+1][j+1],Forces[i+1][j],\
 								LiftTemp,\
@@ -500,11 +521,21 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 				    const double* Uext_Vec, double* ZetaStar_Vec, \
 				    VMopts VMOPTS, \
 				    double* Forces_Vec, \
-				    double* Gamma_Vec, double* GammaStar_Vec) {
+				    double* Gamma_Vec, double* GammaStar_Vec,\
+				    double* AIC_Vec,\
+				    double* BIC_Vec) {
+	/**@warning If VMOPTS.NewAIC == false and dynamic solutions are sought where
+	 * the local lift vector may be changing the Katz and Plotkin force method
+	 * may return wrong drag as new BIC is required.
+	 */
+
 	/* Calculate and save panel normal vectors, location of collocation point,
 	 * velocity at collocation point, and the External fluid velocity at
 	 * collocation points (using bilinear mapping on grid) and relative
-	 *  normal-wash at collocation points */
+	 *  normal-wash at collocation points.
+	 *  Use this to calculate BIC then AIC matrix if desired.
+	 *  Extract forces.
+	 *  Rollup if desired. */
 
 	/** Here the contiguous data provided by Python - 'const double* Zeta_Vec' -
 	 * needs to be accessed as if it were a 3D C-array -'double Zeta[M][N][3]'.
@@ -516,6 +547,7 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	 */
 	double (*Zeta)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Zeta_Vec;
 	double (*ZetaDot)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) ZetaDot_Vec;
+	double (*ZetaStar)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) ZetaStar_Vec;
 	double (*Uext)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Uext_Vec;
 	double (*Forces)[VMOPTS.N+1][3] = (double (*)[VMOPTS.N+1][3]) Forces_Vec;
 
@@ -542,20 +574,13 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	Eigen::VectorXd RHS(VMOPTS.M*VMOPTS.N);
 	EigenMapVectXd Gamma(Gamma_Vec,VMOPTS.M*VMOPTS.N);
 	EigenMapVectXd GammaStar(GammaStar_Vec,VMOPTS.Mstar*VMOPTS.N);
-	Eigen::MatrixXd AIC(VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
-	Eigen::MatrixXd BIC(VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
+	EigenMapMatrixXd AIC(AIC_Vec,VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
+	EigenMapMatrixXd BIC(BIC_Vec,VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
 	Eigen::VectorXd Downwash(VMOPTS.M*VMOPTS.N);
 
-	//temporary variables
-	double GammaOne = 1.0;
-	double Temp1[3] = {0.0,0.0,0.0};
-	double Temp2[3] = {0.0,0.0,0.0};
-	double Temp3[3] = {0.0,0.0,0.0};
-	Eigen::Matrix3d Proj;
-	Eigen::Matrix3d Eye = Eigen::Matrix3d::Identity();
-	Eigen::Vector3d Uincident(0.0,0.0,0.0);
-	Eigen::Vector3d LocalLiftEig(0.0,0.0,0.0);
-	Eigen::Vector3d NormalEig(0.0,0.0,0.0);
+
+	//set OMP environment
+	omp_set_num_threads(VMOPTS.NumCores);
 
 	//use Eigen to set GammaStar_Vec to 1.0 for all j
 	if (VMOPTS.Steady == true) {
@@ -564,8 +589,20 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 
 
 	//loop through collocation points i,j
+	#pragma omp parallel for
 	for (unsigned int i = 0; i < VMOPTS.M; i++) {
 		for (unsigned int j = 0; j < VMOPTS.N; j++) {
+
+			//temporary variables
+			double GammaOne = 1.0;
+			double Temp1[3] = {0.0,0.0,0.0};
+			double Temp2[3] = {0.0,0.0,0.0};
+			double Temp3[3] = {0.0,0.0,0.0};
+			Eigen::Matrix3d Proj;
+			Eigen::Matrix3d Eye = Eigen::Matrix3d::Identity();
+			Eigen::Vector3d Uincident(0.0,0.0,0.0);
+			Eigen::Vector3d LocalLiftEig(0.0,0.0,0.0);
+			Eigen::Vector3d NormalEig(0.0,0.0,0.0);
 
 			//collocation points
 			BilinearMapTriad(Zeta[i][j], Zeta[i][j+1], \
@@ -592,10 +629,18 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 //			printf("Uext - ZetaDot = ");
 //			PrintTriad(Uinc[i][j]);
 
+			if (VMOPTS.Steady == false) {
+				BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, ZetaCol[i][j],\
+								0,0,\
+								VMOPTS.Mstar,VMOPTS.N,\
+								VMOPTS.Mstar,VMOPTS.N,\
+								VMOPTS.ImageMethod, Temp1);
+				AddTriad(Uinc[i][j],Temp1,Uinc[i][j]);
+			}
+
 			// Fill RHS Vector
 			RHS(i*VMOPTS.N + j) = - DotTriad(Uinc[i][j],
-											 Normal[i][j]);
-
+									 	 	 Normal[i][j]);
 
 			// calc local lift vector for BIC calculation (as in Simpson, 2013)
 			// calc orthogonal project operator (Eigen types)
@@ -627,148 +672,151 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 			// Loop through each vortex ring (panel) ii, jj
 			// TODO: if this is to be parallelised write to variables local to
 			// the scope NOT the global pointers!
-			for (unsigned int ii = 0; ii < VMOPTS.M; ii++) {
-				for (unsigned int jj = 0; jj < VMOPTS.N; jj++) {
-					//Induced vel of ring ii,jj to panel i,j
 
-					// reset running total to zero
-					Temp3[0] = 0.0;
-					Temp3[1] = 0.0;
-					Temp3[2] = 0.0;
+			if (VMOPTS.NewAIC == true) {
+				for (unsigned int ii = 0; ii < VMOPTS.M; ii++) {
+					for (unsigned int jj = 0; jj < VMOPTS.N; jj++) {
+						//Induced vel of ring ii,jj to panel i,j
 
-
-					// chordwise orientated vorticity only (for BIC)
-
-					// segment 2 (point 2 -> point 3)
-					C_BiotSegment(ZetaCol[i][j],Zeta[ii][jj+1],Zeta[ii+1][jj+1],
-								  GammaOne, Temp1);
-
-					// segment 4 (point 4 -> point 1)
-					C_BiotSegment(ZetaCol[i][j],Zeta[ii+1][jj],Zeta[ii][jj],
-								  GammaOne, Temp2);
-
-					// sum of segments 2 and 4
-					AddTriad(Temp1,Temp2,Temp3); //Temp3 overwritten here
-
-					//image method
-					if (VMOPTS.ImageMethod == 1) {
-						// segment 2 (point 2 -> point 3) image
-						C_BiotSegment_ImageYZ(ZetaCol[i][j],\
-											  Zeta[ii][jj+1],Zeta[ii+1][jj+1], \
-											  GammaOne, Temp1);
-
-						AddTriad(Temp3,Temp1,Temp3);
+						// reset running total to zero
+						Temp3[0] = 0.0;
+						Temp3[1] = 0.0;
+						Temp3[2] = 0.0;
 
 
-						// segment 4 (point 4 -> point 1) image
-						C_BiotSegment_ImageYZ(ZetaCol[i][j],\
-											  Zeta[ii+1][jj],Zeta[ii][jj],\
-											  GammaOne, Temp1);
+						// chordwise orientated vorticity only (for BIC)
 
-						AddTriad(Temp3,Temp1,Temp3);
-					}
+						// segment 2 (point 2 -> point 3)
+						C_BiotSegment(ZetaCol[i][j],Zeta[ii][jj+1],Zeta[ii+1][jj+1],
+									  GammaOne, Temp1);
 
+						// segment 4 (point 4 -> point 1)
+						C_BiotSegment(ZetaCol[i][j],Zeta[ii+1][jj],Zeta[ii][jj],
+									  GammaOne, Temp2);
 
-					// if we're at the trailing edge then segment3 must be added
-					// also the wake effect is added here
-					if (ii == VMOPTS.M-1) {
-						// add TE segment
-						C_BiotSegment(ZetaCol[i][j],\
-									  Zeta[ii+1][jj+1],\
-									  Zeta[ii+1][jj],\
-									  GammaOne,\
-									  Temp1);
-
-						AddTriad(Temp3,Temp1,Temp3);
+						// sum of segments 2 and 4
+						AddTriad(Temp1,Temp2,Temp3); //Temp3 overwritten here
 
 						//image method
 						if (VMOPTS.ImageMethod == 1) {
+							// segment 2 (point 2 -> point 3) image
 							C_BiotSegment_ImageYZ(ZetaCol[i][j],\
-												  Zeta[ii+1][jj+1],\
-												  Zeta[ii+1][jj],\
+												  Zeta[ii][jj+1],Zeta[ii+1][jj+1], \
 												  GammaOne, Temp1);
-							AddTriad(Temp3,Temp1,Temp3);
-						} // END if Image Method
 
-						// add wake effect
-						if (VMOPTS.Steady == true) {
-							BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, \
-										   ZetaCol[i][j],\
-										   0, jj, \
-										   VMOPTS.Mstar, jj+1, \
-										   VMOPTS.Mstar, VMOPTS.N, VMOPTS.ImageMethod,\
-										   Temp1);
+							AddTriad(Temp3,Temp1,Temp3);
+
+
+							// segment 4 (point 4 -> point 1) image
+							C_BiotSegment_ImageYZ(ZetaCol[i][j],\
+												  Zeta[ii+1][jj],Zeta[ii][jj],\
+												  GammaOne, Temp1);
+
 							AddTriad(Temp3,Temp1,Temp3);
 						}
-					} // END if VMOPTS.M-1
 
 
-					// element of BIC matrix
-					BIC(i*VMOPTS.N + j,ii*VMOPTS.N + jj) = \
-							DotTriad(Temp3,LocalLift[i][j]);
+						// if we're at the trailing edge then segment3 must be added
+						// also the wake effect is added here
+						if (ii == VMOPTS.M-1) {
+							// add TE segment
+							C_BiotSegment(ZetaCol[i][j],\
+										  Zeta[ii+1][jj+1],\
+										  Zeta[ii+1][jj],\
+										  GammaOne,\
+										  Temp1);
 
-//					printf("BIC velocity = ");
-//					PrintTriad(Temp3);
-//					printf("\n");
+							AddTriad(Temp3,Temp1,Temp3);
+
+							//image method
+							if (VMOPTS.ImageMethod == 1) {
+								C_BiotSegment_ImageYZ(ZetaCol[i][j],\
+													  Zeta[ii+1][jj+1],\
+													  Zeta[ii+1][jj],\
+													  GammaOne, Temp1);
+								AddTriad(Temp3,Temp1,Temp3);
+							} // END if Image Method
+
+							// add wake effect
+							if (VMOPTS.Steady == true) {
+								BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, \
+											   ZetaCol[i][j],\
+											   0, jj, \
+											   VMOPTS.Mstar, jj+1, \
+											   VMOPTS.Mstar, VMOPTS.N, VMOPTS.ImageMethod,\
+											   Temp1);
+								AddTriad(Temp3,Temp1,Temp3);
+							}
+						} // END if VMOPTS.M-1
 
 
-					//calculate induced velocity for AIC calculation
-					// both spanwise-orientated segments must be added UNLESS
-					// we are at the trailing edge. At the TE we add the only
-					// remaining bound segment.
+						// element of BIC matrix
+						BIC(i*VMOPTS.N + j,ii*VMOPTS.N + jj) = \
+								DotTriad(Temp3,LocalLift[i][j]);
 
-					if (ii < VMOPTS.M-1) {
-						//add segments 1 and 3
-						C_BiotSegment(ZetaCol[i][j],Zeta[ii][jj],Zeta[ii][jj+1],
-													GammaOne, Temp1);
-						C_BiotSegment(ZetaCol[i][j],Zeta[ii+1][jj+1],Zeta[ii+1][jj],
-													GammaOne, Temp2);
-						AddTriad(Temp3,Temp1,Temp3);
-						AddTriad(Temp3,Temp2,Temp3);
+	//					printf("BIC velocity = ");
+	//					PrintTriad(Temp3);
+	//					printf("\n");
 
-						if (VMOPTS.ImageMethod == 1) {
-							//add segments 1 and 3 image
-							C_BiotSegment_ImageYZ(ZetaCol[i][j],\
-												  Zeta[ii][jj],\
-												  Zeta[ii][jj+1],\
-												  GammaOne,\
-												  Temp1);
 
-							C_BiotSegment_ImageYZ(ZetaCol[i][j],\
-												  Zeta[ii+1][jj+1],\
-												  Zeta[ii+1][jj],\
-												  GammaOne,\
-												  Temp2);
+						//calculate induced velocity for AIC calculation
+						// both spanwise-orientated segments must be added UNLESS
+						// we are at the trailing edge. At the TE we add the only
+						// remaining bound segment.
+
+						if (ii < VMOPTS.M-1) {
+							//add segments 1 and 3
+							C_BiotSegment(ZetaCol[i][j],Zeta[ii][jj],Zeta[ii][jj+1],
+														GammaOne, Temp1);
+							C_BiotSegment(ZetaCol[i][j],Zeta[ii+1][jj+1],Zeta[ii+1][jj],
+														GammaOne, Temp2);
 							AddTriad(Temp3,Temp1,Temp3);
 							AddTriad(Temp3,Temp2,Temp3);
 
-						} // END if Image Method
+							if (VMOPTS.ImageMethod == 1) {
+								//add segments 1 and 3 image
+								C_BiotSegment_ImageYZ(ZetaCol[i][j],\
+													  Zeta[ii][jj],\
+													  Zeta[ii][jj+1],\
+													  GammaOne,\
+													  Temp1);
 
-					} else if (ii == VMOPTS.M-1) {
-						//add segments 1 only
-						C_BiotSegment(ZetaCol[i][j],Zeta[ii][jj],Zeta[ii][jj+1],
-													GammaOne, Temp1);
+								C_BiotSegment_ImageYZ(ZetaCol[i][j],\
+													  Zeta[ii+1][jj+1],\
+													  Zeta[ii+1][jj],\
+													  GammaOne,\
+													  Temp2);
+								AddTriad(Temp3,Temp1,Temp3);
+								AddTriad(Temp3,Temp2,Temp3);
 
-						AddTriad(Temp3,Temp1,Temp3);
-						if (VMOPTS.ImageMethod == 1) {
-							//add segment 1 image
-							C_BiotSegment_ImageYZ(ZetaCol[i][j],\
-											      Zeta[ii][jj],\
-											      Zeta[ii][jj+1],
-												  GammaOne, Temp1);
+							} // END if Image Method
+
+						} else if (ii == VMOPTS.M-1) {
+							//add segments 1 only
+							C_BiotSegment(ZetaCol[i][j],Zeta[ii][jj],Zeta[ii][jj+1],
+														GammaOne, Temp1);
 
 							AddTriad(Temp3,Temp1,Temp3);
+							if (VMOPTS.ImageMethod == 1) {
+								//add segment 1 image
+								C_BiotSegment_ImageYZ(ZetaCol[i][j],\
+													  Zeta[ii][jj],\
+													  Zeta[ii][jj+1],
+													  GammaOne, Temp1);
 
-						} // END if Image Method
+								AddTriad(Temp3,Temp1,Temp3);
 
-					} //END if, else if VMOPTS.M-1
+							} // END if Image Method
 
-					// element of AIC matrix
-					AIC(i*VMOPTS.N + j,ii*VMOPTS.N + jj) = \
-												DotTriad(Temp3,Normal[i][j]);
+						} //END if, else if VMOPTS.M-1
 
-				} //END for jj
-			} //END for ii
+						// element of AIC matrix
+						AIC(i*VMOPTS.N + j,ii*VMOPTS.N + jj) = \
+													DotTriad(Temp3,Normal[i][j]);
+
+					} //END for jj
+				} //END for ii
+			} //END if New AIC
 		} //END for j
 	} //END for i
 
@@ -784,9 +832,6 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 			Gamma_tm1_[i][j] = Gamma(k);
 		}
 	}
-
-	//create pointer to Gamma_tm1
-	double* Gamma_tm1_vec = Gamma_tm1_.data();
 
 	//solve for gamma
 	Gamma = AIC.colPivHouseholderQr().solve(RHS);
@@ -813,10 +858,12 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 //	std::cout << AIC << std::endl << std::endl;
 //	std::cout << BIC << std::endl;
 
-	double* Downwash_ptr = Downwash.data();
+
 
 	// Calculate forces
 	double* LocalLift_Vec = LocalLift_.data();
+	double* Downwash_ptr = Downwash.data();
+	double* Gamma_tm1_vec = Gamma_tm1_.data();
 
 	if (VMOPTS.KJMeth == 0) {
 		KatzForces(Zeta_Vec, Gamma_Vec, ZetaStar_Vec, GammaStar_Vec,\
@@ -827,6 +874,47 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 		KJMethodForces(Zeta_Vec, Gamma_Vec, ZetaStar_Vec, GammaStar_Vec,\
 				   	   ZetaDot_Vec, Uext_Vec, VMOPTS, Gamma_tm1_vec,\
 				   	   Forces_Vec);
+	}
+
+
+
+	if (VMOPTS.Rollup == false) {
+		/* do nothing (external velocities at the wake corner points must be
+		 * accounted for outside cpp solver for now)
+		 */
+	} else if (VMOPTS.Rollup == true) {
+		/* calculate rollup at wake grid corner points*/
+
+		//loop through wake corner points
+		#pragma omp parallel for
+		for (unsigned int i = 0; i < VMOPTS.Mstar + 1; i++) {
+			for (unsigned int j = 0; j < VMOPTS.N + 1; j++) {
+				double Vel1[3] = {0.0,0.0,0.0};
+				double Vel2[3] = {0.0,0.0,0.0};
+
+				//surface contribution
+				BiotSavartSurf(Zeta_Vec, Gamma_Vec, ZetaStar[i][j],\
+							   0,0,\
+							   VMOPTS.M,VMOPTS.N,\
+							   VMOPTS.M,VMOPTS.N,\
+							   VMOPTS.ImageMethod,\
+							   Vel1);
+
+				//wake contribution
+				BiotSavartSurf(ZetaStar_Vec, GammaStar_Vec, ZetaStar[i][j],\
+							   0,0,\
+							   VMOPTS.Mstar,VMOPTS.N,\
+							   VMOPTS.Mstar,VMOPTS.N,\
+							   VMOPTS.ImageMethod,\
+							   Vel2);
+
+				//Add and multiply by timestep then add to existing ZetaStar
+				AddTriad(Vel1,Vel2,Vel1);
+				MulTriad(Vel1,VMOPTS.DelTime,Vel1);
+				AddTriad(ZetaStar[i][j],Vel1,ZetaStar[i][j]);
+			}
+		}
+
 	}
 }
 

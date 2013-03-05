@@ -118,9 +118,15 @@ void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 		unsigned int& VMOPTS_Mstar,\
 		bool& VMOPTS_Steady,\
 		bool& VMOPTS_KJMeth,\
+		bool& VMOPTS_NewAIC,\
+		double& VMOPTS_DelTime,\
+		bool& VMOPTS_Rollup,\
+		unsigned int& VMOPTS_NumCores,\
 		double* Forces_Vec, \
 		double* Gamma_Vec, \
-		double* GammaStar_Vec) {
+		double* GammaStar_Vec,\
+		double* AIC_Vec,\
+	    double* BIC_Vec) {
 	/** @brief wrapper for cpp_solver_vlm
 	 *  @details wrapped function takes c arguments only
 	 */
@@ -133,10 +139,16 @@ void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	VMOPTS.Mstar = VMOPTS_Mstar;
 	VMOPTS.Steady = VMOPTS_Steady;
 	VMOPTS.KJMeth = VMOPTS_KJMeth;
+	VMOPTS.NewAIC = VMOPTS_NewAIC;
+	VMOPTS.DelTime = VMOPTS_DelTime;
+	VMOPTS.Rollup = VMOPTS_Rollup;
+	VMOPTS.NumCores = VMOPTS_NumCores;
 
 	//call solver
 	cpp_solver_vlm(Zeta_Vec, ZetaDot_Vec, Uext_Vec, ZetaStar_Vec, \
-			VMOPTS, Forces_Vec, Gamma_Vec, GammaStar_Vec);
+			VMOPTS, Forces_Vec, Gamma_Vec, GammaStar_Vec, \
+			AIC_Vec,\
+			BIC_Vec);
 
 }
 

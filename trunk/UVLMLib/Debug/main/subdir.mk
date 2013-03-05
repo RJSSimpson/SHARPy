@@ -17,7 +17,7 @@ CPP_DEPS += \
 main/%.o: ../main/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/home/rjs10/Downloads/Eigen -I/home/rjs10/Downloads/boost_1_50_0 -I/home/rjs10/SharPyProject/UVLMLib/include -O3 -g3 -Wall -c -fmessage-length=0 -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -I/home/rjs10/Downloads/Eigen -I/home/rjs10/Downloads/boost_1_50_0 -I/home/rjs10/SharPyProject/UVLMLib/include -O3 -g3 -Wall -c -fmessage-length=0 -fopenmp -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
