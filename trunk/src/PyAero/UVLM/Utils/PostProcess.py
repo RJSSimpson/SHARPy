@@ -11,7 +11,7 @@
 import numpy as np
 from PyBeam.Utils.XbeamLib import Psi2TransMat
 
-def GetCoeffs(VMOPTS, Forces, VMINPUT):
+def GetCoeffs(VMOPTS, Forces, VMINPUT, VelA_G = None):
     """@brief Calculate force coefficients from UVLM solution."""
     
     "declare temp traids"
@@ -25,11 +25,13 @@ def GetCoeffs(VMOPTS, Forces, VMINPUT):
         #end for j
     #end for i
     
-    "divide by denom"
-    if VMINPUT.ZetaDotTest == 0.0:
-        denom = 0.5*np.linalg.norm(VMINPUT.U_infty)**2.0*VMINPUT.area
-    elif  VMINPUT.ZetaDotTest != 0.0:
+    "divide by denom"        
+    if  VMINPUT.ZetaDotTest != 0.0:
         denom = 0.5*(np.linalg.norm(VMINPUT.U_infty)+VMINPUT.ZetaDotTest)**2.0*VMINPUT.area
+    elif VelA_G != None:
+        denom = 0.5*(np.linalg.norm(VMINPUT.U_infty-VelA_G))**2.0*VMINPUT.area
+    else:
+        denom = 0.5*np.linalg.norm(VMINPUT.U_infty)**2.0*VMINPUT.area
     
     Coeff[:] = Coeff[:]/denom
     
@@ -74,7 +76,10 @@ def WriteAeroTecZone(FileObject, Name, AeroGrid, TimeStep=-1, NumTimeSteps=0,\
                      Time=0.0, Variables=['X', 'Y', 'Z'], Text=True, Gamma = 0.0):
     """@brief Writes aero grid data to ascii file in tecplot ij format.
     @param FileObject Must be an open file object.
-    @param Timestep -1 for static solution and >-1 thereafter."""
+    @param Timestep -1 for static solution and >-1 thereafter.
+    
+    @details Tecplot ascii reader has a per-line character limit before which
+     it looks for a new line."""
     
     STRANDID = 1 
     if Name == 'Wake':
@@ -87,12 +92,18 @@ def WriteAeroTecZone(FileObject, Name, AeroGrid, TimeStep=-1, NumTimeSteps=0,\
         FileObject.write('VARLOCATION = (4=CELLCENTERED)\n')
     
     for Var in range(len(Variables)):
+        charcounter = 0
         for j in range(AeroGrid.shape[1]):
             for i in range(AeroGrid.shape[0]):
                 if Var < 3:
                     FileObject.write('%f\t' % (AeroGrid[i,j,Var]))
+                    charcounter += 9
                 if (Var==3 and j<AeroGrid.shape[1]-1 and i<AeroGrid.shape[0]-1):
                     FileObject.write('%f\t' % (Gamma[i,j]))
+                    charcounter += 9
+                if charcounter > 900:
+                    FileObject.write('\n')
+                    charcounter = 0
             #END for j
         #END for i
         FileObject.write('\n')

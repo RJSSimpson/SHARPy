@@ -66,20 +66,22 @@ class Test_CantHALE_v_Murua2012_Smith2001(unittest.TestCase):
                                          N = XBINPUT.NumNodesTot - 1 ,\
                                          ImageMethod = True,\
                                          Steady = True,\
-                                         KJMeth = False)
+                                         KJMeth = True)
         
         "aero inputs"
         VMINPUT = DerivedTypesAero.VMinput(c = 1.0, b = XBINPUT.BeamLength,\
                                            U_mag = 25.0,\
                                            alpha = 4.0*np.pi/180.0,\
-                                           theta = 0.0)
+                                           theta = 0.0,\
+                                           WakeLength = 100.0)
         
         "aeroelastic opts"
         "Density and gravity due to US standard atmosphere at 20km"
         AELAOPTS = AeroelasticOps(0.0,0.0,0.08891)
         
                
-        PosDefor, PsiDefor = Solver.Solve_Py(XBINPUT,XBOPTS,\
+        PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep = \
+                            Solver.Solve_Py(XBINPUT,XBOPTS,\
                                              VMOPTS,VMINPUT,\
                                              AELAOPTS)
         

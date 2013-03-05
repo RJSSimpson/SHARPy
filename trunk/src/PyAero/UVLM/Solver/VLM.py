@@ -62,12 +62,11 @@ def InitSteadyGrid(VMOPTS,VMINPUT):
     return Zeta, ZetaDot, Gamma, Forces
 
 
-def InitSteadyWake(VMOPTS,VMINPUT,Zeta,FarField=10000.0):
+def InitSteadyWake(VMOPTS,VMINPUT,Zeta,VelA_G = None):
     """@brief Initialse steady wake.
     @param VMOPTS options.
     @param VMINPUT inputs.
     @param Zeta Surface grid.
-    @param FarField How far the wake should extend downstream.
     @param Mstar How many panels the wake should have"""
 
     "init wake grid array"
@@ -78,9 +77,13 @@ def InitSteadyWake(VMOPTS,VMINPUT,Zeta,FarField=10000.0):
     ZetaStar[0,:] = Zeta[VMOPTS.M.value,:]
     
     "calculate delta to farfield"
-    DeltaX = FarField * \
-             (VMINPUT.U_infty/np.linalg.norm(VMINPUT.U_infty)) * \
-             VMINPUT.c
+    if VelA_G == None:
+        DeltaX = VMINPUT.WakeLength * \
+             (VMINPUT.U_infty/np.linalg.norm(VMINPUT.U_infty))
+    elif VelA_G != None:
+        DeltaX = VMINPUT.WakeLength * \
+             ( (VMINPUT.U_infty-VelA_G) / \
+                np.linalg.norm(VMINPUT.U_infty-VelA_G))
     
              
     "divide by number of panels"
@@ -117,7 +120,7 @@ def Run_Cpp_Solver_VLM(VMOPTS,VMINPUT):
     Zeta, ZetaDot, Gamma, Forces = InitSteadyGrid(VMOPTS,VMINPUT)
     
     "init wake"
-    ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT, Zeta, 1000.0)
+    ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT, Zeta)
     
     "init external velocities"  
     Uext = InitSteadyExternalVels(VMOPTS,VMINPUT)
@@ -158,18 +161,18 @@ def Run_Cpp_Solver_VLM(VMOPTS,VMINPUT):
 
 if __name__ == '__main__':
     "Create inputs"
-    M = 4
-    N = 4
-    Mstar = 1
-    VMOPTS = VMopts(M,N,False,Mstar,True,False)
+    M = 1
+    N = 1
+    Mstar = 25
+    VMOPTS = VMopts(M,N,False,Mstar,True,True)
     
     "define wing geom"
     c = 1
-    b = 1 #semi-span
+    b = 1000 #semi-span
     
     "free stream conditions"
     U_mag = 25.0
-    alpha = 10.0*np.pi/180.0
+    alpha = 1.0*np.pi/180.0
     theta = 0.0*np.pi/180.0
     VMINPUT = VMinput(c, b, U_mag, alpha, theta)
     

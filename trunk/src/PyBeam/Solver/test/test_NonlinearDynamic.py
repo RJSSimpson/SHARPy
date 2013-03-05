@@ -12,6 +12,7 @@ import sys
 import SharPySettings as Settings
 import DerivedTypes
 import numpy as np
+import ctypes as ct
 import matplotlib.pyplot as plt
 
 TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyBeam/' \
@@ -170,7 +171,7 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
                
         """Set up Xbinput for nonlinear static analysis defined in 
         NonlinearStatic/testcases.pdf case 1.2."""
-        XBINPUT = DerivedTypes.Xbinput(2,20)
+        XBINPUT = DerivedTypes.Xbinput(3,10)
         XBINPUT.BeamLength = 5.0
         XBINPUT.BeamStiffness[0,0] = 4.8e+08
         XBINPUT.BeamStiffness[1,1] = 3.231e+08
@@ -415,6 +416,198 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
                                 'z-displacement does not match')
         self.assertAlmostEqual(Dyn[2000,3],DynSteps[2000,3], 3,\
                                 'z-displacement does not match')
+        
+
+class TestNonlinearDynamic_GolandFree(unittest.TestCase):
+    """@brief Free Vibration of Goland wing."""
+     
+    def setUp(self):
+        "Set SharPy output directory and file root"
+        Settings.OutputDir = TestDir
+        
+    
+    def tearDown(self):
+        pass
+    
+    
+    def test_DynTipDispRot_2v3noded(self):
+        """@brief Check free vibration frequencies of goland wing."""
+
+        import NonlinearDynamic # imported after clean/make process
+        
+        Settings.OutputFileRoot = 'PyBeamGolandFree2noded'
+        
+        "beam options"
+        XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),\
+                                     MaxIterations = ct.c_int(99),\
+                                     PrintInfo = ct.c_bool(True),\
+                                     NumLoadSteps = ct.c_int(25),\
+                                     Solution = ct.c_int(312),\
+                                     MinDelta = ct.c_double(1e-4),\
+                                     NewmarkDamp = ct.c_double(1e-2))
+        
+        "beam inputs"
+        XBINPUT = DerivedTypes.Xbinput(2,36)
+        XBINPUT.BeamLength = 6.096
+        XBINPUT.BeamStiffness[0,0] = 1.0e+09
+        XBINPUT.BeamStiffness[1,1] = 1.0e+09
+        XBINPUT.BeamStiffness[2,2] = 1.0e+09
+        XBINPUT.BeamStiffness[3,3] = 0.9875e+06
+        XBINPUT.BeamStiffness[4,4] = 9.77e+06
+        XBINPUT.BeamStiffness[5,5] = 9.77e+08
+        
+        XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
+        
+        XBINPUT.BeamMass[0,0] = 35.709121
+        XBINPUT.BeamMass[1,1] = 35.709121
+        XBINPUT.BeamMass[2,2] = 35.709121
+        XBINPUT.BeamMass[3,3] = 8.6405832
+        XBINPUT.BeamMass[4,4] = 0.001
+        XBINPUT.BeamMass[5,5] = 0.001
+        
+        "pitch-plunge coupling term"
+        "b-frame coordinates"
+        c = 1.8288
+        
+        "using skew-symmetric operator"
+        cg = np.array([0.0, -0.1, 0.0])*c
+        cgSkew = np.array([[   0.0, -cg[2], cg[1] ],\
+                           [ cg[2],    0.0, -cg[0]],\
+                           [-cg[1],  cg[0],   0.0] ])
+        
+        XBINPUT.BeamMass[:3,3:] = -XBINPUT.BeamMass[0,0]*cgSkew
+        XBINPUT.BeamMass[3:,:3] = XBINPUT.BeamMass[:3,3:].T
+        
+        "set (0,5) and (5,0) to zero"
+        XBINPUT.BeamMass[0,5] = 0.0
+        XBINPUT.BeamMass[5,0] = 0.0
+        
+        
+        "Dynamic parameters"
+        XBINPUT.t0 = 0.0
+        XBINPUT.tfin = 1.0
+        XBINPUT.dt = 0.001
+        XBINPUT.Omega = 0.0
+        XBINPUT.ForceDyn[-1,2] = 6e03
+        XBINPUT.ForcingType = '1-cos'
+    
+        NonlinearDynamic.Solve_Py(XBINPUT,XBOPTS)
+        
+        "Read from file"
+        Dyn2noded = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot+'_SOL'+str(XBOPTS.Solution.value) + '_dyn.dat', \
+                               skiprows=3)
+        
+        
+        "run with 3-noded"
+        Settings.OutputFileRoot = 'PyBeamGolandFree2noded'
+        "beam inputs"
+        XBINPUT = DerivedTypes.Xbinput(3,18)
+        XBINPUT.BeamLength = 6.096
+        XBINPUT.BeamStiffness[0,0] = 1.0e+09
+        XBINPUT.BeamStiffness[1,1] = 1.0e+09
+        XBINPUT.BeamStiffness[2,2] = 1.0e+09
+        XBINPUT.BeamStiffness[3,3] = 0.9875e+06
+        XBINPUT.BeamStiffness[4,4] = 9.77e+06
+        XBINPUT.BeamStiffness[5,5] = 9.77e+08
+        
+        XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
+        
+        XBINPUT.BeamMass[0,0] = 35.709121
+        XBINPUT.BeamMass[1,1] = 35.709121
+        XBINPUT.BeamMass[2,2] = 35.709121
+        XBINPUT.BeamMass[3,3] = 8.6405832
+        XBINPUT.BeamMass[4,4] = 0.001
+        XBINPUT.BeamMass[5,5] = 0.001
+        
+        "pitch-plunge coupling term"
+        "b-frame coordinates"
+        c = 1.8288
+        
+        "using skew-symmetric operator"
+        cg = np.array([0.0, -0.1, 0.0])*c
+        cgSkew = np.array([[   0.0, -cg[2], cg[1] ],\
+                           [ cg[2],    0.0, -cg[0]],\
+                           [-cg[1],  cg[0],   0.0] ])
+        
+        XBINPUT.BeamMass[:3,3:] = -XBINPUT.BeamMass[0,0]*cgSkew
+        XBINPUT.BeamMass[3:,:3] = XBINPUT.BeamMass[:3,3:].T
+        
+        "set (0,5) and (5,0) to zero"
+        XBINPUT.BeamMass[0,5] = 0.0
+        XBINPUT.BeamMass[5,0] = 0.0
+        
+        "Dynamic parameters"
+        XBINPUT.t0 = 0.0
+        XBINPUT.tfin = 1.0
+        XBINPUT.dt = 0.001
+        XBINPUT.Omega = 0.0
+        XBINPUT.ForceDyn[-1,2] = 6e03
+        XBINPUT.ForcingType = '1-cos'
+        
+        NonlinearDynamic.Solve_Py(XBINPUT,XBOPTS)
+        
+        "Read from file"
+        Dyn3noded = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot + '_SOL' + str(XBOPTS.Solution.value) + '_dyn.dat', \
+                               skiprows=3)
+        
+        PlotThings = True
+        if PlotThings == True:
+            "plot displacements"
+            "plot displacements"
+            plt.figure(1)
+            plt.subplot(311)
+            plt.plot(Dyn3noded[:,0],Dyn3noded[:,1])
+            plt.plot(Dyn2noded[:,0],Dyn2noded[:,1])
+            plt.grid()
+            plt.ylabel('R_1')
+            #plt.ylim(4.95,5.05)
+            plt.subplot(312)
+            plt.plot(Dyn3noded[:,0],Dyn3noded[:,2])
+            plt.plot(Dyn2noded[:,0],Dyn2noded[:,2])
+            plt.grid()
+            plt.ylabel('R_2')
+            plt.subplot(313)
+            plt.plot(Dyn3noded[:,0],Dyn3noded[:,3])
+            plt.plot(Dyn2noded[:,0],Dyn2noded[:,3])
+            plt.grid()
+            plt.ylabel('R_3')
+            plt.xlabel('time')
+            plt.legend(("3-noded","2-noded")\
+                       ,'lower left',\
+                       shadow=True,\
+                       prop={'size':12})
+            plt.figure(2)
+            plt.subplot(311)
+            plt.plot(Dyn3noded[:,0],Dyn3noded[:,4])
+            plt.plot(Dyn2noded[:,0],Dyn2noded[:,4])
+            plt.grid()
+            plt.ylabel('Psi_1')
+            #plt.ylim(4.95,5.05)
+            plt.subplot(312)
+            plt.plot(Dyn3noded[:,0],Dyn3noded[:,5])
+            plt.plot(Dyn2noded[:,0],Dyn2noded[:,5])
+            plt.grid()
+            plt.ylabel('Psi_2')
+            plt.subplot(313)
+            plt.plot(Dyn3noded[:,0],Dyn3noded[:,6])
+            plt.plot(Dyn2noded[:,0],Dyn2noded[:,6])
+            plt.grid()
+            plt.ylabel('Psi_3')
+            plt.xlabel('time')
+            plt.legend(("3-noded","2-noded")\
+                       ,'lower left',\
+                       shadow=True,\
+                       prop={'size':12})
+            plt.show()
+        
+        for iTime in range(Dyn3noded.shape[0]):
+            "Assert z-displacement"
+            Delz = 0.001*np.max(Dyn3noded[:,3])
+            self.assertAlmostEqual(Dyn2noded[iTime,3],Dyn3noded[iTime,3],\
+                                   places = None,\
+                                   msg = 'z-displacement does not match',\
+                                   delta=Delz)
+        
 
 
 if __name__ == "__main__":
@@ -424,8 +617,10 @@ if __name__ == "__main__":
                 TestNonlinearDynamic_v_Executable)
     suite2 = unittest.TestLoader().loadTestsFromTestCase(\
                 TestNonlinearDynamic_v_PalaciosCesnik)
-    alltests = unittest.TestSuite([suite1, suite2])
+    suite3 = unittest.TestLoader().loadTestsFromTestCase(\
+                TestNonlinearDynamic_GolandFree)
+    alltests = unittest.TestSuite([suite1, suite2, suite3])
     #alltests.run(unittest.defaultTestResult())
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    TestRunner.run(suite2) #run a single suite
+    TestRunner.run(suite3) #run a single suite
     #TestRunner.run(alltests) #run all tests

@@ -17,6 +17,7 @@ import BeamInit
 import numpy as np
 import ctypes as ct
 import XbeamLib
+from DerivedTypes import dump
 
 def Solve_F90(XBINPUT,XBOPTS):
     """@brief Nonlinear dynamic structural solver using f90 solve routine."""
@@ -41,9 +42,16 @@ def Solve_F90(XBINPUT,XBOPTS):
     
     
     "Solve static"
+    print(XBELEM.Mass[:6,:])
+    print(XBELEM.Stiff[:6,:])
+    dump(XBOPTS)
+    
     BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
                             PosIni, PsiIni, XBNODE, NumDof,\
                             PosDefor, PsiDefor)
+    
+    "Change solution code back to NonlinearDynamic"
+    XBOPTS.Solution.value = 312
     
     
     "Write deformed configuration to file"

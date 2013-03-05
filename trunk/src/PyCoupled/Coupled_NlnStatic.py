@@ -1,4 +1,4 @@
-'''@package PyCoupled.Coupled_NlStatic
+'''@package PyCoupled.Coupled_NlnStatic
 @brief      NonlinearStatic Beam + UVLM.
 @author     Rob Simpson
 @contact    r.simpson11@imperial.ac.uk 
@@ -58,6 +58,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         "Check correct solution code"
         assert XBOPTS.Solution.value == 112, ('NonlinearStatic requested' +\
                                                   ' with wrong solution code')
+
         
         "Initialise beam"
         XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
@@ -121,8 +122,6 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         FileObject = PostProcess.WriteAeroTecHeader(FileName, \
                                                     'Default',\
                                                     Variables)
-                
-        #TODO:test
     
         
         "Start Load Loop"
@@ -144,7 +143,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                        Zeta, ZetaDot)
           
             "init wake"
-            ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT, Zeta, 1000.0)
+            ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)
                  
             "solve for AeroForces"
             UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, \
@@ -307,7 +306,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
             
         
         "Return solution as optional output argument"
-        return PosDefor, PsiDefor
+        return PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep
 
 if __name__ == '__main__':
     "solve nlnstatic problem"
@@ -359,18 +358,6 @@ if __name__ == '__main__':
     
     
     Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
-    
-    "define dt for def file"
-    dt = np.dtype([('Elem', int),\
-                   ('Node', int),\
-                   ('Rx', float),\
-                   ('Ry', float),\
-                   ('Rz',float),\
-                   ('Psi1',float),\
-                   ('Psi2',float),\
-                   ('Psi3',float)])
-    
-    DefFile = np.fromfile('_SOL112_def.dat',dt,-1,"  ")
     
     
     

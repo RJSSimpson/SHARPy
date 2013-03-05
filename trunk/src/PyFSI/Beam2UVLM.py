@@ -22,19 +22,23 @@ def isodd(num):
 
 def CoincidentGrid(PosDefor, PsiDefor, Section,\
                    VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
-                   XBINPUT, AeroGrid, AeroVels):
+                   XBINPUT, AeroGrid, AeroVels,\
+                   OriginA_G = None,\
+                   PsiA_G = None):
     """@brief Creates aero grid and velocities 
     centred on beam nodes.
     @param PosDefor Array of beam nodal displacements.
     @param PsiDefor Array of beam nodal rotations.
     @param Section Array containing sectional camberline coordinates.
-    @param VelA_A Velocity of A-frame projected in A-frame.
-    @param OmegaA_A Angular vel of A-frame projected in A-frame.
+    @param VelA_A Velocity of a-frame projected in a-frame.
+    @param OmegaA_A Angular vel of a-frame projected in a-frame.
     @param PosDotDef Array of beam nodal velocities.
     @param PsiDotDef Array of beam nodal angular velocities.
     @param XBINPUT Beam input options.
     @param AeroGrid Aerodynamic grid to be updated.
-    @param AeroVels Aerodynamic grid velocities to be updated):
+    @param AeroVels Aerodynamic grid velocities to be updated
+    @param OriginA_G Origin of a-frame.
+    @param PsiA_G Attitude of a-frame w.r.t earth. 
     
     @details All displacements and velocities are projected in A-frame.
     All Omegas are 'inertial' angular velocities, so their magnitudes are not 
@@ -90,8 +94,24 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,\
                         Skew(Omega_B_B), Section[jSection,:] ))
             
         #END for jSection
-    #END for iNode 
+    #END for iNode
     
+    if ( (OriginA_G != None) and (PsiA_G != None) ):
+        "get transformation from a-frame to earth frame"
+        CGa = Psi2TransMat(PsiA_G)
+        
+        "add the origin to grids in earth frame and transform vels"
+        for iNode in range(PosDefor.shape[0]):
+            for jSection in range(Section.shape[0]):
+                AeroGrid[jSection,iNode,:] = OriginA_G + \
+                                             np.dot(CGa,\
+                                             AeroGrid[jSection,iNode,:])
+                                             
+                AeroVels[jSection,iNode,:] = np.dot(\
+                                             CGa,AeroVels[jSection,iNode,:])
+            #END for jSection
+        #END for iNode
+    #END if    
 
 def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
                         BeamForces):

@@ -78,8 +78,17 @@ def C_test_biotsegment(NumTests):
 
 
 def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
-                   Gamma, GammaStar):
+                   Gamma, GammaStar, AIC = None, BIC = None):
     """@details wrapper for cpp_solver_vlm."""
+    
+    "If memory for AIC and BIC is not allocated, allocate here."
+    if AIC == None or BIC == None:
+        AIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,\
+                        VMOPTS.M.value*VMOPTS.N.value), \
+                        ct.c_double,'C')
+        BIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,\
+                        VMOPTS.M.value*VMOPTS.N.value), \
+                        ct.c_double,'C')
     
     cpp_solver_vlm(Zeta.ctypes.data_as(ct.POINTER(ct.c_double)),\
                    ZetaDot.ctypes.data_as(ct.POINTER(ct.c_double)),\
@@ -91,9 +100,15 @@ def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
                    ct.byref(VMOPTS.Mstar),\
                    ct.byref(VMOPTS.Steady),\
                    ct.byref(VMOPTS.KJMeth),\
+                   ct.byref(VMOPTS.NewAIC),\
+                   ct.byref(VMOPTS.DelTime),\
+                   ct.byref(VMOPTS.Rollup),\
+                   ct.byref(VMOPTS.NumCores),\
                    Forces.ctypes.data_as(ct.POINTER(ct.c_double)), \
                    Gamma.ctypes.data_as(ct.POINTER(ct.c_double)), \
-                   GammaStar.ctypes.data_as(ct.POINTER(ct.c_double)) )
+                   GammaStar.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                   AIC.ctypes.data_as(ct.POINTER(ct.c_double)), \
+                   BIC.ctypes.data_as(ct.POINTER(ct.c_double)))
     
 
 if __name__ == '__main__':

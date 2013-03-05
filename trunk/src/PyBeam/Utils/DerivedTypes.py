@@ -192,7 +192,7 @@ class Xbopts:
     @param NewmarkDamp Numerical damping in Newmark integration scheme, double.
     """
 
-    def __init__(self, FollowerForce = ct.c_bool(True), \
+    def __init__(self, FollowerForce = ct.c_bool(False), \
                  FollowerForceRig = ct.c_bool(True), \
                  PrintInfo = ct.c_bool(False), OutInBframe = ct.c_bool(True), \
                  OutInaframe = ct.c_bool(False), ElemProj = ct.c_int(0), \

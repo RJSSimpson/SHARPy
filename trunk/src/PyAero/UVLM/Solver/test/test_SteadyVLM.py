@@ -34,7 +34,8 @@ class Test_SteadyVLM_v_TAT(unittest.TestCase):
         VMOPTS = DerivedTypesAero.VMopts(10, 1, True, 1, True, False)
         VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 1.0,\
                                            0.1*np.pi/180.0,\
-                                           0.0*np.pi/180.0)
+                                           0.0*np.pi/180.0,\
+                                           WakeLength = 10000.0)
         
         "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
@@ -69,7 +70,8 @@ class Test_SteadyVLM_v_UVLMpp(unittest.TestCase):
         VMOPTS = DerivedTypesAero.VMopts(5, 80, True, 1, True, False)
         VMINPUT = DerivedTypesAero.VMinput(1.0, 16.0, 1.0,\
                                            10.0*np.pi/180.0,\
-                                           0.0*np.pi/180.0)
+                                           0.0*np.pi/180.0,\
+                                           WakeLength = 10000.0)
         
         "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
@@ -110,7 +112,8 @@ class Test_SteadyVLM_v_TAT_KJMeth(unittest.TestCase):
         VMOPTS = DerivedTypesAero.VMopts(10, 1, True, 1, True, True)
         VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 1.0,\
                                            0.1*np.pi/180.0,\
-                                           0.0*np.pi/180.0)
+                                           0.0*np.pi/180.0,\
+                                           WakeLength = 10000.0)
         
         "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
@@ -141,7 +144,8 @@ class Test_SteadyVLM_ZetaDot(unittest.TestCase):
         VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 0.5,\
                                            0.0*np.pi/180.0,\
                                            0.1*np.pi/180.0,\
-                                           ZetaDotTest = 0.5)
+                                           ZetaDotTest = 0.5,\
+                                           WakeLength = 10000.0)
         
         "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)

@@ -9,10 +9,6 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     
-    "plot versus smith"
-    dt = np.dtype([('Span',float),\
-                   ('Vert',float)])
-    
     Sharp2 = np.loadtxt('Murua2012_Smith2001_SHARP2.dat',ndmin = 2)
     Sharp4 = np.loadtxt('Murua2012_Smith2001_SHARP4.dat',ndmin = 2)
     Smith2 = np.loadtxt('Murua2012_Smith2001_SMITH2.dat',ndmin = 2)

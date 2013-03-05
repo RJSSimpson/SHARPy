@@ -19,13 +19,18 @@ class VMopts:
     @param Mstar Number of wake panels."""
     
     def __init__(self, M, N, ImageMethod = False, Mstar = 1, Steady = True,\
-                 KJMeth = True):
+                 KJMeth = True, NewAIC = True, DelTime = 0.0, Rollup = False,\
+                 NumCores = 1):
         self.M = ct.c_uint(M)
         self.N = ct.c_uint(N)
         self.ImageMethod = ct.c_bool(ImageMethod)
         self.Mstar = ct.c_int(Mstar)
         self.Steady = ct.c_bool(Steady)
         self.KJMeth = ct.c_bool(KJMeth)
+        self.NewAIC = ct.c_bool(NewAIC)
+        self.DelTime = ct.c_double(DelTime)
+        self.Rollup = ct.c_bool(Rollup)
+        self.NumCores = ct.c_uint(NumCores)
         
 
 class VMinput:
@@ -38,7 +43,8 @@ class VMinput:
     @param theta root twist angle.
     """
     
-    def __init__(self, c, b, U_mag, alpha, theta,ZetaDotTest=0.0):
+    def __init__(self, c, b, U_mag, alpha, theta, ZetaDotTest=0.0, \
+                 WakeLength = 50.0):
         self.c = c
         self.b = b
         self.area = c*b
@@ -47,6 +53,7 @@ class VMinput:
         self.alpha = alpha
         self.theta = theta
         self.ZetaDotTest = ZetaDotTest
+        self.WakeLength = WakeLength
     
 
 if __name__ == '__main__':

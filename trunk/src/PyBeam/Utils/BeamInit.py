@@ -176,7 +176,23 @@ def Dynamic(XBINPUT,XBOPTS):
         "Combine"
         for i in np.arange(len(ForceTime)):
             ForceTime[i] = RampVect[i] * SinVect[i]
+            
+    elif XBINPUT.ForcingType == 'InitialLoad':
+        ForceTime[0] = 1.0
         
+    elif  XBINPUT.ForcingType == '1-cos':
+        """do i=1,NumSteps+1
+             if ((Time(i).ge.0.d0).and.(Time(i).le.1.d-2)) then
+             ForceTime(i)=(1.d0-cos(Pi*dble(Time(i)-0.d0)/dble(1.d-2)))/2.d0
+             end if
+           end do"""
+        GustTime = 0.01
+        for iStep in range(len(ForceTime)):
+            if (Time[iStep] > 0.0 and Time[iStep] < GustTime):
+                ForceTime[iStep] = 1.0 - np.cos(2*np.pi*Time[iStep]/GustTime)/2.0
+            #END if
+        #END iStep
+            
     else:
         assert False, 'ForcingType not recognised'
         
@@ -232,7 +248,7 @@ if __name__ == '__main__':
                 = Static(XBINPUT,XBOPTS)
     
     XBINPUT.Omega = 4*np.pi
-    XBINPUT.ForcingType = 'RampSin'
+    XBINPUT.ForcingType = '1-cos'
     XBINPUT.RampTime = 0.5
                 
-    Dynamic(XBINPUT,XBOPTS)            
+    Dynamic(XBINPUT,XBOPTS)        
