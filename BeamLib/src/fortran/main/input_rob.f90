@@ -70,7 +70,7 @@ module input
   real(8) :: E=0.d0,G=0.d0,rho=0.d0
   real(8) :: sigma
 
-  TestCase='TPY0'
+  TestCase='GOLD'
   Options%Solution=312     ! See xbeam_shared for options.
 
 ! Default values.
@@ -108,8 +108,8 @@ module input
 
   case ('GOLD')
   ! half Goland wing taken from Table 3 in Murua et al (2011), AIAA-2011-1915
-    NumElems    = 12
-    NumNodesElem= 2
+    NumElems    = 6
+    NumNodesElem= 3
     ThetaRoot   = 0.d0
     ThetaTip    = 0.d0
     BeamLength1 = 6.096d0
@@ -122,7 +122,7 @@ module input
     ExtForce=(/0.d0,0.d0,0.d0/)*1.d5
     ExtMomnt=(/0.d0,0.d0,0.d0/)*1.d0
 
-    Options%FollowerForce    = .true.
+    Options%FollowerForce    = .false.
     Options%FollowerForceRig = .true.
     Options%OutInaframe      = .false.
     Options%NumLoadSteps  = 10
@@ -169,9 +169,9 @@ module input
     BeamMass(3,3)=BeamMass(1,1)
     BeamMass(4,4)=8.6405832d0
     BeamMass(5,5)=1.d-3
-    BeamMass(6,6)=1.d-3+6.53048405d0**2.d0/35.709121d0
+    BeamMass(6,6)=1.d-3
 
-    BeamMass(1,6)= 6.53048405d0
+!    BeamMass(1,6)= 6.53048405d0
     BeamMass(3,4)=-BeamMass(1,6)
     BeamMass(4:6,1:3)=transpose(BeamMass(1:3,4:6))
 
@@ -409,8 +409,8 @@ subroutine input_elem (NumElems,NumNodes,Elem)
 
   case ('GOLD')
     t0  = 0.0d0   ! 0.d0
-    dt  = 5.0d-2
-    tfin= 2.0d0
+    dt  = 1.0d-3
+    tfin= 1.0d0
     NumSteps= ceiling((tfin-t0)/dt)
     Options%NewmarkDamp=0.01d0
     Omega=20.d0    ! rad/s
@@ -420,7 +420,7 @@ subroutine input_elem (NumElems,NumNodes,Elem)
     dt  = 1.0d-2
     tfin= 10.0d0
     NumSteps= ceiling((tfin-t0)/dt)
-    Options%NewmarkDamp=0.01d0
+    Options%NewmarkDamp=0.05d0
     Omega=20.d0    ! rad/s
 
   case ('TPY0')
@@ -468,8 +468,8 @@ subroutine input_elem (NumElems,NumNodes,Elem)
 
   case default
     !ForceDynAmp = 2.d0*ForceStatic
-    ForceTime   = 1.d0
-    ForceDynAmp(NumNodes,3) = 160.d0
+    !ForceTime   = 1.d0
+    !ForceDynAmp(NumNodes,2) = 160.d0
 
 ! Ramped harmonic load.
     if (.false.) then
@@ -481,11 +481,19 @@ subroutine input_elem (NumElems,NumNodes,Elem)
       end do
     end if
 
-! 1-Cos load.
+! Initial Load
     if (.false.) then
+      ForceTime(:) = 0.d0
+      ForceTime(1)= 1.d0
+      ForceDynAmp(NumNodes,3) = 100.d3
+    end if
+
+! 1-Cos load.
+    if (.true.) then
+     ForceDynAmp(NumNodes,3) = 1.d03
      do i=1,NumSteps+1
-         if ((Time(i).ge.0.d0).and.(Time(i).le.1.d1)) then
-             ForceTime(i)=(1.d0-cos(Pi*dble(Time(i)-0.d0)/dble(10.d0)))/2.d0
+         if ((Time(i).ge.0.d0).and.(Time(i).le.1.d-2)) then
+             ForceTime(i)=(1.d0-cos(2*Pi*dble(Time(i)-0.d0)/dble(1.d-2)))/2.d0
          end if
      end do
     end if

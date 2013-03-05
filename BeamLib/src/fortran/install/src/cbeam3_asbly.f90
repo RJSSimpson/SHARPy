@@ -361,11 +361,11 @@ module cbeam3_asbly
     call fem_glob2loc_extract (Elem(iElem)%Conn,Force,ForceElem,NumNE)
 
 ! Prevent singularities in mass matrices when using reduced integration.
-	if (NumNE.gt.Options%NumGauss) then
-		NumGaussMass=NumNE
-	else
+!	if (NumNE.gt.Options%NumGauss) then
+!		NumGaussMass=NumNE
+!	else
 		NumGaussMass=Options%NumGauss
-	end if
+!	end if
 
 ! Compute the element contribution to the mass and damping in the motion of the reference frame.
     call cbeam3_mvel (NumNE,rElem0,rElem,              Elem(iElem)%Mass,Mvelelem,Options%NumGauss)
