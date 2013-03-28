@@ -70,7 +70,7 @@ module input
   real(8) :: E=0.d0,G=0.d0,rho=0.d0
   real(8) :: sigma
 
-  TestCase='GOLD'
+  TestCase='TPY0'
   Options%Solution=312     ! See xbeam_shared for options.
 
 ! Default values.
@@ -148,7 +148,7 @@ module input
     ExtForce=(/0.d0,0.d0,80.d0/)*1.d0
     ExtMomnt=(/0.d0,0.d0,0.d0/)*1.d0
 
-    Options%FollowerForce    = .true.
+    Options%FollowerForce    = .false.
     Options%FollowerForceRig = .true.
     Options%OutInaframe      = .false.
     Options%NumLoadSteps  = 10
