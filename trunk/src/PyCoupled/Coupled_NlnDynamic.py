@@ -239,7 +239,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     """ Initialise Aero -----------------------------------------------------"""
     
     "set AoA to zero Foo"
-    VMINPUT.U_infty = np.array([0.0, -np.linalg.norm(VMINPUT.U_infty), 0.0])
+    if AELAOPTS.ImpStart == False:
+        VMINPUT.U_infty = np.array([0.0, -np.linalg.norm(VMINPUT.U_infty), 0.0])
+        
 #    "set density to zero for free vibration"
 #    AELAOPTS.AirDensity = 0.0
     

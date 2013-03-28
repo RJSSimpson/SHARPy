@@ -38,18 +38,18 @@ class Test_GolandFlutter(unittest.TestCase):
         NumNodesElemArr = [2]
         
 #        NumElemsArr = [12,24,36]
-        NumElemsArr = [12,24,36]
+        NumElemsArr = [36]
 
         #iMArr = [6, 12, 18]
         iMArr = [6]
         
 #       U = [160.0, 161.0, 162.0, 163.0, 164.0, 165.0, 166.0, 167.0, 168.0, 169.0, \
 #             170.0]
-        U = [164.0]
+        U = [160.0]
         
         Tights = [False]
         Rollup = False
-        KJMeth = True
+        KJMeth = False
         ImpStart = False
         
         

@@ -29,5 +29,8 @@ MaxElNod = 3
 DimMat = 24 #memory allocated for sparse matrix storage in fortran solver
 RotEpsilon = 0.001 #rotations below this are linearised
 
+"""Tecplot"""
+PlotTec = True
+
 if __name__ == '__main__':
     pass

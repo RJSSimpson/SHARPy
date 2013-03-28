@@ -23,7 +23,7 @@ class Test_CantHALE_v_Murua2012_Smith2001(unittest.TestCase):
     def setUp(self):
         "Set SharPy output directory and file root"
         Settings.OutputDir = TestDir
-        Settings.OutputFileRoot = 'CantHALE4'
+        Settings.OutputFileRoot = 'CantHALE4g'
 
 
     def tearDown(self):

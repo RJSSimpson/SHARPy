@@ -1,7 +1,7 @@
 #!MC 1200
 # Created by Tecplot 360 build 12.0.0.3454
 $!VarSet |MFBD| = '/home/rjs10/SharPyProject/SharPy/src/PyCoupled/test/NlnDynamic'
-$!READDATASET  '"|MFBD|/GolandFlutter/Convergence/Goland_NumNE2_NumEl12_M12_U100.0AeroGrid.dat" '
+$!READDATASET  '"|MFBD|/GolandFlutter/Convergence/Goland_NumNE2_NumEl36_M16_U169.0_RollupAeroGrid.dat"'
   READDATAOPTION = NEW
   RESETSTYLE = YES
   INCLUDEGEOM = NO

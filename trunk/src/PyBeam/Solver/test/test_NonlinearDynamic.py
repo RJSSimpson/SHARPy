@@ -550,7 +550,7 @@ class TestNonlinearDynamic_GolandFree(unittest.TestCase):
         Dyn3noded = np.loadtxt(Settings.OutputDir + Settings.OutputFileRoot + '_SOL' + str(XBOPTS.Solution.value) + '_dyn.dat', \
                                skiprows=3)
         
-        PlotThings = True
+        PlotThings = False
         if PlotThings == True:
             "plot displacements"
             "plot displacements"
@@ -622,5 +622,6 @@ if __name__ == "__main__":
     alltests = unittest.TestSuite([suite1, suite2, suite3])
     #alltests.run(unittest.defaultTestResult())
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    TestRunner.run(suite3) #run a single suite
+    TestRunner.run(suite1) #run a single suite
+    TestRunner.run(suite2)
     #TestRunner.run(alltests) #run all tests
