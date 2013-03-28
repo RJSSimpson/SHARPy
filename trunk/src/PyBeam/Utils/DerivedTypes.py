@@ -10,160 +10,8 @@ xbeam_shared.f90 plus extras.
 @warning    Stiffness parameter Sigma not implemented.'''
 
 import sys
-import ctypes
 import numpy as np #http://docs.scipy.org/doc/numpy/reference/
 import ctypes as ct
-
-def init_XBELEM(NumElems,MaxElNod):
-    """@brief Initialize XBELEM dictionary
-    @author A.Da Ronch
-    20121001 creation
-    """
-    
-    XBELEM = {'NumNodes': (ctypes.c_int *NumElems)(),
-              'MemNo'   : (ctypes.c_int *NumElems)(),
-              'Conn'    : (ctypes.c_int *(NumElems*MaxElNod))(),
-              'Master'  : (ctypes.c_int *(NumElems*MaxElNod*2))(),
-              'Length'  : np.zeros(NumElems, dtype=np.double, order="Fortran"), #order doesn't matter it's 1-D!
-              'PreCurv' : np.zeros(3*NumElems, dtype=np.double, order="Fortran"),
-              'Psi'     : np.zeros(3*NumElems, dtype=np.double, order="Fortran"),
-              'Vector'  : np.zeros(3*NumElems, dtype=np.double, order="Fortran"),
-              'Mass'    : np.zeros((6*NumElems,6), dtype=np.double, order="Fortran"),
-              'Stiff'   : np.zeros((6*NumElems,6), dtype=np.double, order="Fortran"),
-              'InvStiff': np.zeros((6*NumElems,6), dtype=np.double, order="Fortran"),
-              'RBMass'  : np.zeros((MaxElNod*NumElems,6,6), dtype=np.double, \
-                                                               order="Fortran")
-              }
-    
-    return XBELEM
-
-
-
-def init_XBNODE(NumNodes_tot):
-    """
-    Function   : init_XBNODE
-    Description: Initialize XBNODE dictionary
-    Input      :
-    
-    Date        Author      Note
-    20121001    A.Da Ronch  Creation
-    """
-    
-    XBNODE = {'Nod_Master': (ctypes.c_int *(2*NumNodes_tot.value))(),
-              'Nod_Vdof'  : (ctypes.c_int *NumNodes_tot.value)(),
-              'Nod_Fdof'  : (ctypes.c_int *NumNodes_tot.value)()
-             }
-
-    return XBNODE
-
-
-
-def pack_XBELEM(NumNodes,MemNo,Conn,Master,Length,PreCurv,Psi,Vector,Mass,
-        Stiff,InvStiff,RBMass,INFO):
-    """
-    Function   : pack_XBELEM
-    Description: Update XBELEM dictionary
-    Input      : 
-    
-    Date        Author      Note
-    20121001    A.Da Ronch  Creation
-    """
-    
-    if( (INFO.lower() != 'f') and
-        (INFO.lower() != 'fortran') and
-        (INFO.lower() != 'c') ):
-        sys.stderr.write('\n\n  **** \n')
-        exit(-1)
-
-    XBELEM = {'NumNodes': NumNodes,
-              'MemNo'   : MemNo,
-              'Conn'    : Conn,
-              'Master'  : Master,
-              'Length'  : Length.copy(order=INFO),
-              'PreCurv' : PreCurv.copy(order=INFO),
-              'Psi'     : Psi.copy(order=INFO),
-              'Vector'  : Vector.copy(order=INFO),
-              'Mass'    : Mass.copy(order=INFO),
-              'Stiff'   : Stiff.copy(order=INFO),
-              'InvStiff': InvStiff.copy(order=INFO),
-              'RBMass'  : RBMass.copy(order=INFO)
-              }
-    
-    return XBELEM
-
-
-
-def pack_XBNODE(Nod_Master,Nod_Vdof,Nod_Fdof):
-    """
-    Function   : pack_XBNODE
-    Description: Update XBELEM dictionary
-    Input      : 
-    
-    Date        Author      Note
-    20121001    A.Da Ronch  Creation
-    """
-    
-    XBNODE = {'Nod_Master': Nod_Master,
-              'Nod_Vdof'  : Nod_Vdof,
-              'Nod_Fdof'  : Nod_Fdof
-             }
-    
-    return XBNODE
-
-
-
-def unpack_XBELEM(XBELEM,INFO):
-    """
-    Function   : unpack_XBELEM
-    Description: Update XBELEM dictionary
-    Input      : 
-    
-    Date        Author      Note
-    20121001    A.Da Ronch  Creation
-    """
-    
-    if( (INFO.lower() != 'f') and
-        (INFO.lower() != 'fortran') and
-        (INFO.lower() != 'c') ):
-        sys.stderr.write('\n\n  **** \n')
-        exit(-1)
-    
-    NumNodes = XBELEM['NumNodes']
-    MemNo    = XBELEM['MemNo']
-    Conn     = XBELEM['Conn']
-    Master   = XBELEM['Master']
-    Length   = XBELEM['Length'].copy(order=INFO)
-    PreCurv  = XBELEM['PreCurv'].copy(order=INFO)
-    Psi      = XBELEM['Psi'].copy(order=INFO)
-    Vector   = XBELEM['Vector'].copy(order=INFO)
-    Mass     = XBELEM['Mass'].copy(order=INFO)
-    Stiff    = XBELEM['Stiff'].copy(order=INFO)
-    InvStiff = XBELEM['InvStiff'].copy(order=INFO)
-    RBMass   = XBELEM['RBMass'].copy(order=INFO)
-    
-    #http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.copy.html
-
-    return NumNodes,MemNo,Conn,Master,Length,PreCurv,Psi,Vector,Mass,Stiff, \
-        InvStiff,RBMass
-
-
-
-
-def unpack_XBNODE(XBNODE):
-    """
-    Function   : unpack_XBNODE
-    Description: Update XBNODE dictionary
-    Input      : 
-    
-    Date        Author      Note
-    20121001    A.Da Ronch  Creation
-    """
-    
-    Nod_Master = XBNODE['Nod_Master']
-    Nod_Vdof   = XBNODE['Nod_Vdof']
-    Nod_Fdof   = XBNODE['Nod_Fdof']
-    
-    return Nod_Master,Nod_Vdof,Nod_Fdof
 
 class Xbopts:
     """@brief Simple struct-like class containing xbeam options from 
@@ -365,14 +213,8 @@ if(__name__ == '__main__'):
     print('FINISHED')
     
     print('Test: Xbinput class (see script)...')
-    XBINPUT = Xbinput()
+    XBINPUT = Xbinput(3,8)
     print(XBINPUT.__dict__)
-    print('FINISHED')
-    
-    print('Test init_XBELEM...')
-    NumElems = 3
-    MaxElNod = 3
-    init_XBELEM(NumElems,MaxElNod)
     print('FINISHED')
     
     print('Test Xbelem class memory')
