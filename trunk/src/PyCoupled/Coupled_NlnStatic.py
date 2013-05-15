@@ -22,7 +22,6 @@ from PyAero.UVLM.Utils import UVLMLib
 from PyFSI.Beam2UVLM import CoincidentGridForce
 from PyAero.UVLM.Utils import DerivedTypesAero
 from PyAero.UVLM.Utils import PostProcess
-from PyBeam.Utils.XbeamLib import Psi2TransMat
 from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels
 from PyAero.UVLM.Solver.VLM import InitSteadyWake
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps

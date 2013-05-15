@@ -63,51 +63,52 @@ def InitSteadyGrid(VMOPTS,VMINPUT):
 
 
 def InitSteadyWake(VMOPTS,VMINPUT,Zeta,VelA_G = None):
-    """@brief Initialse steady wake.
+    """@brief Initialise steady wake.
     @param VMOPTS options.
     @param VMINPUT inputs.
     @param Zeta Surface grid.
-    @param Mstar How many panels the wake should have"""
+    @param VelA_G Velocity of surface FoR in G-frame."""
+    
+    #TODO: Wake length is a function of inputs delta_tprime & Mstar
 
-    "init wake grid array"
-    ZetaStar = np.zeros((VMOPTS.Mstar.value+1,VMOPTS.N.value+1,3),\
+    # Create empty array for wake grid."
+    ZetaStar = np.zeros((VMOPTS.Mstar.value+1,VMOPTS.N.value+1,3),
                         ct.c_double,'C');
     
-    "set first row to TE"
+    # Set first row equal to trailing-edge."
     ZetaStar[0,:] = Zeta[VMOPTS.M.value,:]
     
-    "calculate delta to farfield"
+    # Calculate incremental distance vector from trailing-edge to far-field."
     if VelA_G == None:
-        DeltaX = VMINPUT.WakeLength * \
-             (VMINPUT.U_infty/np.linalg.norm(VMINPUT.U_infty))
+        DeltaX = (VMINPUT.WakeLength * 
+                 (VMINPUT.U_infty / np.linalg.norm(VMINPUT.U_infty)))
     elif VelA_G != None:
-        DeltaX = VMINPUT.WakeLength * \
-             ( (VMINPUT.U_infty-VelA_G) / \
-                np.linalg.norm(VMINPUT.U_infty-VelA_G))
-    
-             
-    "divide by number of panels"
+        DeltaX = (VMINPUT.WakeLength * 
+                 ((VMINPUT.U_infty - VelA_G) / 
+                 np.linalg.norm(VMINPUT.U_infty - VelA_G)))
+            
+    # Divide total distance by number of wake panels."
     DeltaX = DeltaX/float(VMOPTS.Mstar.value)
     
-    for i in range(1,VMOPTS.Mstar.value+1):         
+    # Populate wake grid according to increment from trailing-edge.
+    for i in range(1, VMOPTS.Mstar.value+1):         
         for j in range(VMOPTS.N.value+1):
-            ZetaStar[i,j] = Zeta[VMOPTS.M.value,j]+i*DeltaX
+            ZetaStar[i,j] = Zeta[VMOPTS.M.value, j] + i*DeltaX
         #END for j
     #END for i
     
-    "define wake gamma"
+    # Declare empty array for wake gamma."
     GammaStar = np.zeros((VMOPTS.Mstar.value,VMOPTS.N.value),ct.c_double,'C')
     
     return ZetaStar, GammaStar
 
 
 def InitSteadyExternalVels(VMOPTS,VMINPUT):
-    "@brief Initialse external velocities (free-stream + gusts)"
+    "@brief Initialse external velocities (free-stream only)"
     Uext = np.zeros((VMOPTS.M.value+1,VMOPTS.N.value+1,3),ct.c_double,'C')
     for i in range(VMOPTS.M.value+1):
         for j in range(VMOPTS.N.value+1):
             Uext[i,j,:] = VMINPUT.U_infty[:]
-            #Uext[i,j,:] = [0.0,0.0,0.0]
         #END for j
     #END for i
     

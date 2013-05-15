@@ -45,22 +45,22 @@ def GetCoeffs(VMOPTS, Forces, VMINPUT, VelA_G = None):
 
 
 
-def WriteAeroTecHeader(FileName='AeroGrid.dat', Title='Default',\
-                       Variables=['X', 'Y', 'Z']):
+def WriteAeroTecHeader(FileName='AeroGrid.dat', Title='Default',
+                          Variables=['X', 'Y', 'Z']):
     """@brief Opens Filename and writes header for tecplot ascii format.
-    @return open file object for writing to."""
+    @return Open file object for writing to."""
     
-    "write title"
+    # Write title.
     FileObject = open(FileName,'w')
     FileObject.write('TITLE="%s"\n' % (Title))
     
-    "if Variables is less than 3, write as grid"
+    # If Variables are less than 3, write as grid file.
     if len(Variables) < 4:
         FileObject.write('FILETYPE=GRID ')
     elif len(Variables) >= 4:
         FileObject.write('FILETYPE=FULL ')
     
-    "write variables"
+    # Write variables to the file.
     FileObject.write('VARIABLES=')
     for Var in range(len(Variables)):
         FileObject.write('"%s" ' % (Variables[Var]))

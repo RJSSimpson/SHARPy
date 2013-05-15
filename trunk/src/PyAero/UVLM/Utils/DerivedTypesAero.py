@@ -16,7 +16,15 @@ class VMopts:
     @param M Chordwise panels.
     @param N Spanwise panels.
     @param ImageMethod Use image method across y-z plane if True.
-    @param Mstar Number of wake panels."""
+    @param Mstar Number of wake panels.
+    @param Steady Flag for specifying Steady(True) or Unsteady(False) solution.
+    @param KJMeth If True use Joukowski force calculation method, if false use
+           generalised Katz and Plotkin.
+    @param NewAIC Calculate a new AIC matrix, required if the aerodynamic 
+           surface has deformed significantly.
+    @param DelTime Desired time step.
+    @param Rollup Flag to specify wake roll-up due to induced velocities.
+    @param NumCores Number of cores for parallel computation using openMP."""
     
     def __init__(self, M, N, ImageMethod = False, Mstar = 1, Steady = True,\
                  KJMeth = True, NewAIC = True, DelTime = 0.0, Rollup = False,\

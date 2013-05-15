@@ -14,8 +14,10 @@ import PyCoupled.Coupled_NlnStatic as Solver
 from _pyio import open
 from PyCoupled.Coupled_NlnDynamic import VMCoupledUnstInput, Solve_Py
 
-TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyCoupled/' \
-           + 'test/NlnDynamic/'
+#TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyCoupled/' \
+#           + 'test/NlnDynamic/'
+
+TestDir = Settings.SharPyProjectDir + 'Output/Stretched_Goland/'
 
 Settings.PlotTec = True
 
@@ -24,32 +26,32 @@ class Test_GolandFlutter(unittest.TestCase):
 
     def setUp(self):
         "Set SharPy output directory"
-        Settings.OutputDir = TestDir + 'GolandFlutter/Convergence/'
+        Settings.OutputDir = TestDir #+ 'GolandFlutter/Convergence/'
 
 
     def tearDown(self):
         pass
 
 
-    def test_U_160_165_170(self):
+    def test_Custom(self):
         
         
 #        NumNodesElemArr = [3, 2]
-        NumNodesElemArr = [2]
+        NumNodesElemArr = [3]
         
 #        NumElemsArr = [12,24,36]
-        NumElemsArr = [36]
+        NumElemsArr = [30]
 
         #iMArr = [6, 12, 18]
-        iMArr = [6]
+        iMArr = [10]
         
 #       U = [160.0, 161.0, 162.0, 163.0, 164.0, 165.0, 166.0, 167.0, 168.0, 169.0, \
 #             170.0]
-        U = [160.0]
+        U = [60.0]
         
         Tights = [False]
         Rollup = False
-        KJMeth = False
+        KJMeth = True
         ImpStart = False
         
         
@@ -77,7 +79,7 @@ class Test_GolandFlutter(unittest.TestCase):
                         
                         "beam inputs"
                         XBINPUT = DerivedTypes.Xbinput(NumNodesElem,NumElemsHere)
-                        XBINPUT.BeamLength = 6.096
+                        XBINPUT.BeamLength = 5 * 6.096
                         XBINPUT.BeamStiffness[0,0] = 1.0e+09
                         XBINPUT.BeamStiffness[1,1] = 1.0e+09
                         XBINPUT.BeamStiffness[2,2] = 1.0e+09
@@ -85,7 +87,7 @@ class Test_GolandFlutter(unittest.TestCase):
                         XBINPUT.BeamStiffness[4,4] = 9.77e+06
                         XBINPUT.BeamStiffness[5,5] = 9.77e+08
                         
-                        XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
+                        XBINPUT.BeamStiffness[:,:] = 3*XBINPUT.BeamStiffness[:,:]
                         
                         XBINPUT.BeamMass[0,0] = 35.71
                         XBINPUT.BeamMass[1,1] = 35.71
@@ -115,7 +117,7 @@ class Test_GolandFlutter(unittest.TestCase):
                         XBINPUT.BeamMass[5,0] = 0.0
                         
                         "unsteady parameters"
-                        OmegaF = 70.0 #approx flutter freq
+                        OmegaF = 20.0 #approx flutter freq
                         
                         
                         "loop through U"
@@ -128,7 +130,7 @@ class Test_GolandFlutter(unittest.TestCase):
                             "beam"
                             XBINPUT.dt = DelTime
                             XBINPUT.t0 = 0.0
-                            XBINPUT.tfin = 1.0
+                            XBINPUT.tfin = 2.0
                             
                             "aero"
                             WakeLength = 15.0*c
@@ -150,7 +152,7 @@ class Test_GolandFlutter(unittest.TestCase):
                             "aero inputs"
                             VMINPUT = DerivedTypesAero.VMinput(c = c, b = XBINPUT.BeamLength,\
                                                                U_mag = U_mag,\
-                                                               alpha = 0.05*np.pi/180.0,\
+                                                               alpha = 2.0*np.pi/180.0,\
                                                                theta = 0.0,\
                                                                ZetaDotTest = 0.0,\
                                                                WakeLength = WakeLength)
@@ -191,6 +193,7 @@ class Test_GolandFlutter(unittest.TestCase):
                             
                             "solve"
                             Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS)
+                            pass
                     
                     # END for iU
         

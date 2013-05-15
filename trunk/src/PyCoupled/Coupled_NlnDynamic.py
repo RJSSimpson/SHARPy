@@ -582,6 +582,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     
     if XBOPTS.PrintInfo.value==True:
         sys.stdout.write(' ... done\n')
+        
+    "for interactive analysis at end of simulation set breakpoint"
+    pass
 
 if __name__ == '__main__':
     "solve nlnstatic problem"

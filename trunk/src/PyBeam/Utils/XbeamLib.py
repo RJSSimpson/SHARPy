@@ -11,6 +11,7 @@
 import numpy as np
 import ctypes as ct
 import SharPySettings as Settings
+from scipy import linalg
 
 def QuadSkew(Omega):
     """@brief Calculate incremental update operator for Quaternion based on Omega.
@@ -95,6 +96,13 @@ def Skew(Vector):
     
     return SkewMat
 
+def VectofSkew(Skew):
+    """@brief Returns the vector defining skew-symmetric matrix Skew."""
+    
+    Vect = np.array([Skew[2,1],Skew[0,2],Skew[1,0]])
+    
+    return Vect
+
 
 def Tangential(Psi):
     """@brief Calculates the tangential operator related to Psi, a cartesian
@@ -115,6 +123,42 @@ def Tangential(Psi):
 
 
 if __name__ == '__main__':
-    Psi = np.zeros(3,ct.c_double,'F')
-    Psi[0] = np.pi
-    Psi2TransMat(Psi)
+    
+    "create matrices that correspond to Psi of nodes 1 and 2"
+    Psi1 = np.array([0.1, 0.1, 0.1])
+    Psi2 = np.array([0.11, 0.12, 0.13])
+
+    CaB1 = Psi2TransMat(Psi1)
+    CaB2 = Psi2TransMat(Psi2)
+    
+    "Calc local rotation in frame B1"
+    CB1B2 = np.dot(CaB1.T,CaB2)
+    
+    "Get skew-symmetric matrix"
+    phitilda12 = linalg.logm(CB1B2)
+    
+    "get vector"
+    phi12 = VectofSkew(phitilda12)
+    
+    "get C matrix at midpoint"
+    CaBh = np.dot(CaB1,linalg.expm(0.5 * phitilda12))
+    print('Objectively interpolated matrix = \n',CaBh,'\n')
+    
+    "now try by direct interp of CRV"
+    Psih_err = 0.5*(Psi2 + Psi1)
+    CaBh_err = Psi2TransMat(Psih_err)
+    print('Non-objective matrix = \n',CaBh_err,'\n')
+    
+    "diff"
+    print('diff = \n',CaBh_err - CaBh,'\n')
+    
+    "get objectively interped Psi"
+    Psih = VectofSkew(linalg.logm(CaBh))
+    print('Objectively interpolated Psi = \n',Psih,'\n')
+    
+    "diff"
+    print('diff = \n',Psih_err - Psih,'\n')
+    
+    
+    
+    
