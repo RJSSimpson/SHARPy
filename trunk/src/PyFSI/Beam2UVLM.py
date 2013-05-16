@@ -20,11 +20,12 @@ def isodd(num):
     """@brief returns True if Num is odd"""
     return bool(num & 1)
 
-def CoincidentGrid(PosDefor, PsiDefor, Section,\
+def CoincidentGrid(PosDefor, PsiDefor, Section,
                    VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
-                   XBINPUT, AeroGrid, AeroVels,\
-                   OriginA_G = None,\
-                   PsiA_G = None):
+                   XBINPUT, AeroGrid, AeroVels,
+                   OriginA_G = None,
+                   PsiA_G = None,
+                   ctrlSurf = None):
     """@brief Creates aero grid and velocities 
     centred on beam nodes.
     @param PosDefor Array of beam nodal displacements.
@@ -38,19 +39,16 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,\
     @param AeroGrid Aerodynamic grid to be updated.
     @param AeroVels Aerodynamic grid velocities to be updated
     @param OriginA_G Origin of a-frame.
-    @param PsiA_G Attitude of a-frame w.r.t earth. 
+    @param PsiA_G Attitude of a-frame w.r.t earth.
+    @param ctrlSurf Control surface definition. 
     
     @details All displacements and velocities are projected in A-frame.
-    All Omegas are 'inertial' angular velocities, so their magnitudes are not 
-    affected by what frame they are projected in (objectivity).
-    @warning TODO: take into account orientation of a-frame so that aero
-    grid is projected in G-frame.
     """
     
     NumNodesElem = XBINPUT.NumNodesElem
             
     for iNode in range(PosDefor.shape[0]):
-        "Work out what element we are in (works for 2 and 3-noded)"
+        # Work out what element we are in.
         if iNode == 0:
             iElem = 0
         elif iNode < PosDefor.shape[0]-1:
@@ -58,13 +56,12 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,\
         elif iNode == PosDefor.shape[0]-1:
             iElem = int((iNode-1)/(NumNodesElem-1))
             
-        "Work out what sub-element node we are in"
+        # Work out what sub-element node we are in.
         if NumNodesElem == 2:
             if iNode < PosDefor.shape[0]-1:
                 iiElem = 0
             elif iNode == PosDefor.shape[0]-1:
                 iiElem = 1
-                
         elif NumNodesElem == 3:
             iiElem = 0
             if iNode == PosDefor.shape[0]-1:
@@ -72,35 +69,83 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,\
             elif isodd(iNode):
                 iiElem = 1
         
-        "Calculate transformation matrix for each node"
+        # Calculate transformation matrix for each node.
         CaB = Psi2TransMat(PsiDefor[iElem,iiElem,:])
         
-        "loop through section coordinates"
+        # Loop through section coordinates.
         for jSection in range(Section.shape[0]):
-            "Calculate instantaneous aero grid points"
+            # Calculate instantaneous aero grid points
             AeroGrid[jSection,iNode,:] = PosDefor[iNode,:] \
                                          + np.dot(CaB,Section[jSection,:])
                                          
-            "Calc inertial angular velocity of B-frame projected in B-frame"
-            Omega_B_B = np.dot( Tangential(PsiDefor[iElem,iiElem,:]) \
-                        , PsiDotDef[iElem,iiElem,:] ) \
-                        + np.dot(CaB.T, OmegaA_A)
+            # Calculate inertial angular velocity of B-frame projected in 
+            # the B-frame.
+            Omega_B_B = (np.dot(Tangential(PsiDefor[iElem,iiElem,:]),
+                                PsiDotDef[iElem,iiElem,:])
+                         + np.dot(CaB.T, OmegaA_A))
                         
-            "Calc inertial velocity at grid points (projected in A-frame.)"                             
-            AeroVels[jSection,iNode,:] = VelA_A \
-                        + np.dot(Skew(OmegaA_A),PosDefor[iNode,:]) \
-                        + PosDotDef[iNode,:] \
-                        + np.dot(CaB, np.dot(\
-                        Skew(Omega_B_B), Section[jSection,:] ))
+            # Calculate inertial velocity at grid points (projected in A-frame).                             
+            AeroVels[jSection,iNode,:] = (VelA_A
+                        + np.dot(Skew(OmegaA_A),PosDefor[iNode,:])
+                        + PosDotDef[iNode,:]
+                        + np.dot(CaB, np.dot(
+                        Skew(Omega_B_B), Section[jSection,:])))
             
+            if (ctrlSurf != None and 
+                jSection > ctrlSurf.iMin and jSection <= ctrlSurf.iMax and
+                iNode >= ctrlSurf.jMin and iNode <= ctrlSurf.jMax):
+                # Apply changes to Zeta and ZetaDot in a-frame due to control
+                # surface movement.
+                
+                # Check if control surface indices are within range of grid
+                assert (ctrlSurf.iMin >= 0), 'CtrlSurf iMin less then zero'
+                assert (ctrlSurf.iMax < Section.shape[0]), ('CtrlSurf iMax '
+                        + 'greater than section iMax')
+                assert (ctrlSurf.jMin >= 0), 'CtrlSurf jMin less then zero'
+                assert (ctrlSurf.jMax < PosDefor.shape[0]), ('CtrlSurf jMax '
+                        + 'greater than section jMax')
+                
+                # Determine hinge point
+                hingePoint = Section[ctrlSurf.iMin,:]
+                
+                # Use a CRV to define rotation in sectional frame
+                hingeRot = np.array([ctrlSurf.beta, 0.0, 0.0])
+                hingeRotDot = np.array([ctrlSurf.betaDot, 0.0, 0.0])
+                
+                # Find lever arm from hinge point
+                leverArm = Section[jSection,:] - hingePoint
+                
+                # Deformed position of node in B-frame
+                CBBnew = Psi2TransMat(hingeRot)
+                newSectionPoint = hingePoint + np.dot(CBBnew,leverArm)
+                
+                # Overwrite corresponding element in Aerogrid
+                AeroGrid[jSection,iNode,:] = (PosDefor[iNode,:]
+                                              + np.dot(CaB,newSectionPoint))
+                
+                # Overwrite corresponding element in AeroVels
+                # There is an extra velocity contribution due to the rotation 
+                # of the hinge, with reference frame Bnew. Hence, 
+                # CBBnew * ( Omega_Bnew_Bnew X Point__Bnew), which is the
+                # velocity at a point on the hinge due to the rotation
+                # of the hinge projected in the B-frame. is added. 
+                AeroVels[jSection,iNode,:] = (VelA_A
+                        + np.dot(Skew(OmegaA_A),PosDefor[iNode,:])
+                        + PosDotDef[iNode,:]
+                        + np.dot(CaB, 
+                                 np.dot(Skew(Omega_B_B), newSectionPoint)
+                                 + np.dot(CBBnew,
+                                          np.dot(Skew(hingeRotDot),
+                                                 leverArm))))
+                
         #END for jSection
     #END for iNode
     
     if ( (OriginA_G != None) and (PsiA_G != None) ):
-        "get transformation from a-frame to earth frame"
+        # Get transformation from a-frame to earth frame.
         CGa = Psi2TransMat(PsiA_G)
         
-        "add the origin to grids in earth frame and transform vels"
+        # Add the origin to grids in earth frame and transform velocities.
         for iNode in range(PosDefor.shape[0]):
             for jSection in range(Section.shape[0]):
                 AeroGrid[jSection,iNode,:] = OriginA_G + \

@@ -11,7 +11,7 @@
 
 import UVLMLib
 import numpy as np
-from DerivedTypesAero import VMopts, VMinput
+from DerivedTypesAero import VMopts, VMinput, ControlSurf
 import ctypes as ct
 from XbeamLib import Psi2TransMat
 import DerivedTypes
@@ -109,7 +109,9 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     # Initialise aerodynamic grid and velocities.
     CoincidentGrid(PosDefor, PsiDefor, Section,
                    VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
-                   XBINPUT, Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G)
+                   XBINPUT, Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
+                   VMINPUT.ctrlSurf)
+    
     
 #    print("Section=\n",Section,"\n")
 #    print("Zeta=\n",Zeta,"\n")
@@ -207,48 +209,6 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     PostProcess.CloseAeroTecFile(FileObject)
     
     return CoeffHistory
-
-
-class ControlSurf:
-    """@brief Control surface data and member functions.
-    @param iMin index at which control surface starts in chordwise sense.
-    @param iMax index at which control surface ends in chordwise sense.
-    @param jMin index at which control surface starts in spanwise sense.
-    @param jMax index at which control surface ends in spanwise sense.
-    @param typeMotion string describing type of prescribed, or other, motion.
-    @param beta Control surface angle.
-    @param omega Angular rate of control surface oscillations [rad/s].
-    @details Control surface rates are calculated using backward difference
-             in update and init routines.
-    """
-    
-    def __init__(self, iMin, iMax, jMin, jMax,
-                  typeMotion, beta,
-                  omega = 0.0):
-        """@brief Initialise control surface based on typeMotion."""
-        
-        self.iMin = iMin
-        self.iMax = iMax
-        self.jMin = jMin
-        self.jMax = jMax
-        self.typeMotion = typeMotion
-        
-        if typeMotion == 'asInput':
-            self.beta = beta
-            self.betaDot = 0.0
-        elif typeMotion == 'sin':
-            self.beta = 0.0
-            self.betaDot = omega * beta
-        elif typeMotion == 'cos':
-            self.beta = beta
-            self.betaDot = 0.0
-        else:
-            raise Exception('Control Surface typeMotion not recognised')
-        
-    def update(self, time):
-        """@brief Calculate new beta and betaDot."""
-        pass
-        #TODO
         
 
 if __name__ == '__main__':
@@ -266,7 +226,11 @@ if __name__ == '__main__':
     U_mag = 1.0
     alpha = 0.0*np.pi/180.0
     theta = 10.0*np.pi/180.0
-    VMINPUT = VMinput(c, b, U_mag, alpha, theta)
+    
+    # Define Control Surface
+    ctrlSurf = ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
+    
+    VMINPUT = VMinput(c, b, U_mag, alpha, theta, 0.0, 15.0,  ctrlSurf)
     
     # Define unsteady solver parameters.
     WakeLength = 10.0
@@ -284,10 +248,6 @@ if __name__ == '__main__':
     AELOPTS = AeroelasticOps(ElasticAxis = -0.5,
                              gForce =  0.0,
                              AirDensity = 1.0)
-    
-    # Define Control Surface
-    ctrlSurf = ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
-    
     
     # Run C++ solver
     Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
