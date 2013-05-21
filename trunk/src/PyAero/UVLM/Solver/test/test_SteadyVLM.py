@@ -10,15 +10,15 @@ import numpy as np
 import ctypes as ct
 from VLM import Run_Cpp_Solver_VLM
 
-TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyAero/UVLM/' \
-           + 'Solver/test/SteadyVLM/'
+TestDir = (Settings.SharPyProjectDir + 'Output/Tests/PyAero/UVLM/' 
+           + 'SteadyVLM/')
 
 
 class Test_SteadyVLM_v_TAT(unittest.TestCase):
     """@brief Test lift and drag for very large aspect ratio problem."""
 
     def setUp(self):
-        "Set SharPy output directory and file root"
+        """@brief Set SharPy output directory and file root."""
         Settings.OutputDir = TestDir
         Settings.OutputFileRoot = ''    
         
@@ -28,24 +28,21 @@ class Test_SteadyVLM_v_TAT(unittest.TestCase):
 
 
     def test_2D_Lift_and_Drag(self):
-        """check lift equals 2*pi*alpha and drag is zero"""
+        """ Check lift equals 2*pi*alpha and drag is zero."""
         
-        "set up baseline options"
+        # Set up baseline options
         VMOPTS = DerivedTypesAero.VMopts(10, 1, True, 1, True, False)
         VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 1.0,\
                                            0.1*np.pi/180.0,\
                                            0.0*np.pi/180.0,\
                                            WakeLength = 10000.0)
         
-        "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
         print(Coeffs)
         
-        
-        "check lift then drag"
-        """Note: increasing alpha causes geometrical nonlinear effect of wake 
-        position to cause discrepancy with TAT.
-        TODO: discrepancy between PyUVLM and UVLM++ here in 3rd digit lift."""
+        # Check lift then drag.
+        # Note: increasing alpha causes geometrically nonlinear effect of wake 
+        # position to cause discrepancy with TAT.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.alpha,4)
         self.assertAlmostEqual(-Coeffs[1],0,5)
         
@@ -55,7 +52,7 @@ class Test_SteadyVLM_v_UVLMpp(unittest.TestCase):
     """@brief Test lift and drag for very large aspect ratio problem."""
 
     def setUp(self):
-        "Set SharPy output directory and file root"
+        """ Set SharPy output directory and file root."""
         Settings.OutputDir = TestDir
         Settings.OutputFileRoot = ''    
         
@@ -64,31 +61,28 @@ class Test_SteadyVLM_v_UVLMpp(unittest.TestCase):
         pass
         
     def test_3D_Lift_and_Drag_Katz_then_KJ(self):
-        """check converged lift and drag matches trusted result from UVLM++"""
+        """ Check converged lift and drag matches trusted result from UVLM++."""
         
-        "set up baseline options"
+        # Set up baseline options.
         VMOPTS = DerivedTypesAero.VMopts(5, 80, True, 1, True, False)
         VMINPUT = DerivedTypesAero.VMinput(1.0, 16.0, 1.0,\
                                            10.0*np.pi/180.0,\
                                            0.0*np.pi/180.0,\
                                            WakeLength = 10000.0)
         
-        "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
         print(Coeffs)
         
-        "check lift then drag"
+        # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],0.965402,2)
         self.assertAlmostEqual(-Coeffs[1],0.0118845,3)
         
-        
-        "check KJ method"
+        # Now simulate using KJ method.
         VMOPTS.KJMeth = ct.c_bool(True)
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
         print(Coeffs)
         
-        
-        "check lift then drag"
+        # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],0.993501,5)
         self.assertAlmostEqual(-Coeffs[1],0.0113952,5)
         
@@ -97,7 +91,7 @@ class Test_SteadyVLM_v_TAT_KJMeth(unittest.TestCase):
     """@brief Test lift and drag for very large aspect ratio problem."""
 
     def setUp(self):
-        "Set SharPy output directory and file root"
+        """Set SharPy output directory and file root."""
         Settings.OutputDir = TestDir
         Settings.OutputFileRoot = ''    
         
@@ -106,20 +100,19 @@ class Test_SteadyVLM_v_TAT_KJMeth(unittest.TestCase):
         pass
         
     def test_2D_Lift_and_Drag(self):
-        """check converged lift and drag."""
+        """ Check converged lift and drag."""
         
-        "set up baseline options"
+        # Set up baseline options.
         VMOPTS = DerivedTypesAero.VMopts(10, 1, True, 1, True, True)
         VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 1.0,\
                                            0.1*np.pi/180.0,\
                                            0.0*np.pi/180.0,\
                                            WakeLength = 10000.0)
         
-        "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
         print(Coeffs)
         
-        "check lift then drag"
+        # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.alpha,4)
         self.assertAlmostEqual(-Coeffs[1],0.0,5)
         
@@ -128,7 +121,7 @@ class Test_SteadyVLM_ZetaDot(unittest.TestCase):
     """@brief Test lift and drag for very large aspect ratio problem."""
 
     def setUp(self):
-        "Set SharPy output directory and file root"
+        """Set SharPy output directory and file root."""
         Settings.OutputDir = TestDir
         Settings.OutputFileRoot = ''    
         
@@ -137,9 +130,9 @@ class Test_SteadyVLM_ZetaDot(unittest.TestCase):
         pass
         
     def test_2D_Lift_and_Drag(self):
-        """check lift and drag."""
+        """ Check lift and drag."""
         
-        "set up baseline options"
+        # Set up baseline options.
         VMOPTS = DerivedTypesAero.VMopts(10, 1, True, 1, True, False)
         VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 0.5,\
                                            0.0*np.pi/180.0,\
@@ -147,23 +140,21 @@ class Test_SteadyVLM_ZetaDot(unittest.TestCase):
                                            ZetaDotTest = 0.5,\
                                            WakeLength = 10000.0)
         
-        "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
         print(Coeffs)
         
-        "check lift then drag"
+        # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.theta,4)
         self.assertAlmostEqual(-Coeffs[1],0.0,5)
         
         
-        "set up with KJ meth"
+        # Set up with KJ meth.
         VMOPTS.KJMeth = ct.c_bool(True)
         
-        "solve"
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
         print(Coeffs)
         
-        "check lift then drag"
+        # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.theta,4)
         self.assertAlmostEqual(-Coeffs[1],0.0,5)
         

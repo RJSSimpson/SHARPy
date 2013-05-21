@@ -13,7 +13,6 @@ import numpy as np
 from DerivedTypesAero import VMopts, VMinput
 import ctypes as ct
 from XbeamLib import Psi2TransMat
-import DerivedTypes
 import PostProcess
 import SharPySettings as Settings
 import os

@@ -6,14 +6,13 @@ Created on 20 Feb 2013
 import unittest
 import SharPySettings as Settings
 import numpy as np
-import ctypes as ct
 from DerivedTypesAero import VMopts, VMinput
 from PyAero.UVLM.Solver.UVLM import Run_Cpp_Solver_UVLM, VMUnsteadyInput
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 import matplotlib.pyplot as plt
 
-TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyAero/UVLM/' \
-           + 'Solver/test/UVLM/'
+TestDir = (Settings.SharPyProjectDir + 'Output/Tests/PyAero/UVLM/' 
+           + 'UVLM/')
 #/home/rjs10/Documents/MATLAB/UVLM++/Comparisons
 
 class Test_v_TAT(unittest.TestCase):
@@ -224,7 +223,7 @@ class Test_v_TheoGarrick(unittest.TestCase):
     
     def test_KatzPlotkin(self):
         """Test Katz and Plotkin method unsteady lift and drag."""
-        pass
+        pass # TODO: Write this test
         
 
 if __name__ == "__main__":
