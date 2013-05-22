@@ -44,26 +44,21 @@ def TheoGarrAerofoil(alphaBar,betaBar,hBar,phi0,phi1,phi2,a,e,k,nT):
     @param k Reduced frequency, k = omega*b/U.
     @param nT Number of periods in output."""
     
-    # Define dummy variables for dimensionality.
-    U = 1.0
-    b = 1.0
-    
     # Time parameters.
-    omega = k * U / b
-    tFinal = 2 * pi * nT / omega
-    t = np.linspace(0.0, tFinal, nT * 100, True)
+    sFinal = 2 * pi * nT / k
+    s = np.linspace(0.0, sFinal, nT * 100, True)
     
     # Kinematic Parameters
     # Sinusoidal variations, take imaginary part of Theodorsen's equations.
-    alpha = alphaBar * sin(omega*t + phi0)
-    alphaDot = omega * alphaBar * cos(omega*t + phi0)
-    alphaDotDot = - pow(omega,2.0) * alphaBar * sin(omega*t + phi0)
-    h = hBar * sin(omega*t + phi1)
-    hDot = omega * hBar * cos(omega*t + phi1)
-    hDotDot = - pow(omega,2.0) * hBar * sin(omega*t + phi1)
-    beta = betaBar * sin(omega*t + phi2)
-    betaDot = omega * betaBar * cos(omega*t + phi2)
-    betaDotDot = - pow(omega,2.0) * betaBar * sin(omega*t + phi2)
+    alpha = alphaBar * sin(k*s + phi0)
+    alphaDot = k * alphaBar * cos(k*s + phi0)
+    alphaDotDot = - pow(k,2.0) * alphaBar * sin(k*s + phi0)
+    h = hBar * sin(k*s + phi1)
+    hDot = k * hBar * cos(k*s + phi1)
+    hDotDot = - pow(k,2.0) * hBar * sin(k*s + phi1)
+    beta = betaBar * sin(k*s + phi2)
+    betaDot = k * betaBar * cos(k*s + phi2)
+    betaDotDot = - pow(k,2.0) * betaBar * sin(k*s + phi2)
     
     # Theodorsen's constants
     F1 = e * arccos(e) - 1.0/3.0 * (2 + pow(e, 2.0)) * np.sqrt(1 - pow(e, 2.0))
@@ -100,24 +95,40 @@ def TheoGarrAerofoil(alphaBar,betaBar,hBar,phi0,phi1,phi2,a,e,k,nT):
     F19 = F4 * F11
     F20 = -np.sqrt(1 - pow(e, 2.0)) + arccos(e)
     
-    M = (  2 * real(C(k)) * (U * alphaBar * cos(phi0) - hBar * omega * sin(phi2)
-                             - b * (0.5 - a) * alphaBar * omega * sin(phi0))
-         - 2 * imag(C(k)) * (U * alphaBar * sin(phi0) + hBar * omega * cos(phi2)
-                             + b * (0.5 - a) * alphaBar * omega * cos(phi0))
-         + b * alphaBar * omega * sin(phi0)  )
+    M = (  2 * real(C(k)) * (alphaBar * cos(phi0)
+                             - hBar * k * sin(phi2)
+                             - (0.5 - a) * alphaBar * k * sin(phi0)
+                             + F10/pi * betaBar * cos(phi1)
+                             - F11/(2*pi) * betaBar * k * sin(phi1))
+         - 2 * imag(C(k)) * (alphaBar * sin(phi0)
+                             + hBar * k * cos(phi2)
+                             + (0.5 - a) * alphaBar * k * cos(phi0)
+                             + F10/pi * betaBar * sin(phi1)
+                             + F11/(2*pi) * betaBar * k * cos(phi1))
+         + alphaBar * k * sin(phi0)
+         - 2.0/pi * np.sqrt(1 - pow(e, 2.0)) * betaBar * cos(phi1)
+         - F4/pi * betaBar * k * sin(phi1)  )
     
-    N = (  2 * real(C(k)) * (U * alphaBar * sin(phi0) + hBar * omega * cos(phi2)
-                             + b * (0.5 - a) * alphaBar * omega * cos(phi0))
-         + 2 * imag(C(k)) * (U * alphaBar * cos(phi0) - hBar * omega * sin(phi2)
-                             - b * (0.5 - a) * alphaBar * omega * sin(phi0))
-         - b * alphaBar * omega * cos(phi0)  )
+    N = (  2 * real(C(k)) * (alphaBar * sin(phi0) 
+                             + hBar * k * cos(phi2)
+                             + (0.5 - a) * alphaBar * k * cos(phi0)
+                             + F10/pi * betaBar * sin(phi1)
+                             + F11/(2*pi) * betaBar * k * cos(phi1) )
+         + 2 * imag(C(k)) * (alphaBar * cos(phi0) 
+                             - hBar * k * sin(phi2)
+                             - (0.5 - a) * alphaBar * k * sin(phi0)
+                             + F10/pi * betaBar * cos(phi1)
+                             - F11/(2*pi) * betaBar * k * sin(phi1))
+         - alphaBar * k * cos(phi0)
+         - 2.0/pi * np.sqrt(1 - pow(e, 2.0)) * betaBar * sin(phi1)
+         - F4/pi * betaBar * k * cos(phi1) )
     
     # Loop through time steps
     p = ( -(pi*alphaDot + pi*hDotDot - pi*a*alphaDotDot 
             - F4*betaDot - F1*betaDotDot)
           - 2*pi*real(C(k)) * (alpha + hDot + (0.5 - a)*alphaDot + F10/pi*beta
                                + F11/(2*pi)*betaDot) 
-          - 2*pi*imag(C(k))/omega * (alphaDot + hDotDot + alphaDotDot 
+          - 2*pi*imag(C(k))/k * (alphaDot + hDotDot + alphaDotDot 
                                      + F10/pi*betaDot + F11/(2*pi)*betaDotDot) )
     
     pBeta = ( -(-F4*alphaDot - F4*hDotDot + F9*alphaDotDot - F5/(2*pi)*betaDot
@@ -127,20 +138,20 @@ def TheoGarrAerofoil(alphaBar,betaBar,hBar,phi0,phi1,phi2,a,e,k,nT):
                                              + F10/(2*pi)*(1 - e)*betaDot)
               - 2*F20*real(C(k))*(alpha + hDot + (0.5 - a)*alphaDot
                                   + F10/pi*beta + F11/(2*pi)*betaDot)
-              - 2*F20*imag(C(k))/omega*(alphaDot + hDotDot
+              - 2*F20*imag(C(k))/k*(alphaDot + hDotDot
                                         + (0.5 - a)*alphaDotDot
                                         + F10/pi*betaDot
                                         + F11/(2*pi)*betaDotDot) )
     
-    S = (np.sqrt(2.0 * b) / 2.0) * (M * sin(omega * t) + 
-                                    N * cos(omega * t)  )
+    S = (np.sqrt(2.0) / 2.0) * (M * sin(k * s) + 
+                                N * cos(k * s)  )
 
     d = - alpha*p - pi*pow(S, 2.0) - beta*pBeta
     
-    Cl = - p/(pow(U,2.0)*b)
-    Cd = d/(pow(U,2.0)*b)
+    Cl = - p
+    Cd = d
         
-    return Cl, Cd, alpha, beta, hDot
+    return Cl, Cd, alpha, beta, hDot, s
 
 
 if __name__ == '__main__':

@@ -54,20 +54,20 @@ class VMUnsteadyInput:
         self.OriginA_G = OriginA_G
         self.PsiA_G = PsiA_G
         
-        "physical timestep info"
+        # Physical time step information."
         self.NumSteps = NumChordLengths/DelS 
         self.FinalTime = NumChordLengths*VMINPUT.c / \
                     np.linalg.norm(VMINPUT.U_infty-VelA_G)
         self.DelTime = self.FinalTime/self.NumSteps
         
-        "check Mstar is big enough for simulation"
+        # Check Mstar is high enough to discretize wake.
         if self.DelTime != self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value:
             print("DelTime requested is ",self.DelTime,\
                   "\nDelWakePanel is ",self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value,\
                   "\nChanging Mstar to ", self.WakeLength*VMINPUT.c/self.DelTime)
             VMOPTS.Mstar.value = int(self.WakeLength*VMINPUT.c/self.DelTime)
             
-        "Set DelTime for VMOPTS"
+        # Set DelTime for VMOPTS
         VMOPTS.DelTime = ct.c_double(self.DelTime)
         
 
@@ -146,7 +146,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     # Create Array for storing time and coefficient data.
     CoeffHistory = np.zeros((len(Time),4))
     
-    # Loop through timesteps.
+    # Loop through time steps.
     for iTimeStep in range(len(Time)):
         
         # Set forces array to zero (+= operator used in C++ library).
@@ -156,13 +156,17 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
             
             # Update geometry.
             VMUNST.OriginA_G[:] += VMUNST.VelA_G[:]*VMUNST.DelTime
-            
             # TODO: update OmegaA_A in pitching problem.
+            
+            # Update control surface defintion.
+            if VMINPUT.ctrlSurf != None:
+                VMINPUT.ctrlSurf.update(Time[iTimeStep])
             
             # Update aerodynamic surface.
             CoincidentGrid(PosDefor, PsiDefor, Section,\
                        VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
-                       XBINPUT, Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G)
+                       XBINPUT, Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
+                       VMINPUT.ctrlSurf)
             
             # Convect wake downstream.        
             ZetaStar = np.roll(ZetaStar,1,axis = 0)
@@ -222,13 +226,13 @@ if __name__ == '__main__':
     c = 1
     b = 4 #semi-span
     
+    # Define Control Surface
+    ctrlSurf = ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
+    
     # Define free stream conditions.
     U_mag = 1.0
     alpha = 0.0*np.pi/180.0
     theta = 10.0*np.pi/180.0
-    
-    # Define Control Surface
-    ctrlSurf = ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
     
     VMINPUT = VMinput(c, b, U_mag, alpha, theta, 0.0, 15.0,  ctrlSurf)
     
