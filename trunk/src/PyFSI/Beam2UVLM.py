@@ -143,7 +143,8 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
     
     if ( (OriginA_G != None) and (PsiA_G != None) ):
         # Get transformation from a-frame to earth frame.
-        CGa = Psi2TransMat(PsiA_G)
+        CaG = Psi2TransMat(PsiA_G)
+        CGa = CaG.T
         
         # Add the origin to grids in earth frame and transform velocities.
         for iNode in range(PosDefor.shape[0]):
@@ -158,8 +159,8 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
         #END for iNode
     #END if    
 
-def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
-                        BeamForces):
+def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
+                           BeamForces):
     """@brief Creates aero grid and velocities 
     centred on beam nodes.
     @param XBINPUT Beam input options.
@@ -169,20 +170,22 @@ def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
     @param BeamForces BeamForces to overwrite.
     
     @details All Beam forces calculated in in a-frame, while aero forces 
-    are defined in earth frame. 
-    @warning TODO: take into account orientation of a-frame."""
+    are defined in earth frame."""
     
-    "zero beam forces"
+    # Zero beam forces.
     BeamForces[:,:] = 0.0
     
-    "NumNodes per element"
+    # Get transformation matrix between a-frame and earth.
+    CGa = Psi2TransMat(XBINPUT.PsiA_G)
+    CaG = CGa.T
+    
+    # Get number of nodes per beam element.
     NumNodesElem = XBINPUT.NumNodesElem
     
-    
-    "loop along beam length"
+    # Loop along beam length.
     for iNode in range(XBINPUT.NumNodesTot):
         
-        "Work out what element we are in (works for 2 and 3-noded)"
+        # Work out what element we are in (works for 2 and 3-noded).
         if iNode == 0:
             iElem = 0
         elif iNode < XBINPUT.NumNodesTot-1:
@@ -190,7 +193,7 @@ def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
         elif iNode == XBINPUT.NumNodesTot-1:
             iElem = int((iNode-1)/(NumNodesElem-1))
             
-        "Work out what sub-element node we are in"
+        # Work out what sub-element node (iiElem) we are in.
         if NumNodesElem == 2:
             if iNode < XBINPUT.NumNodesTot-1:
                 iiElem = 0
@@ -204,22 +207,22 @@ def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
             elif isodd(iNode):
                 iiElem = 1
         
-        "Calculate transformation matrix for each node"
+        # Calculate transformation matrix for each node.
         CaB = Psi2TransMat(PsiDefor[iElem,iiElem,:])
         
-        
-        "loop through each sectional coordinate"
+        # Loop through each sectional coordinate.
         for jSection in range(Section.shape[0]):
             
-            "Get Section coord in a-frame"
+            # Get Section coord and AeroForce in a-frame.
             Section_A = np.dot(CaB,Section[jSection,:])
+            AeroForce_A = np.dot(CaG,AeroForces[jSection][iNode][:])
             
-            "Calc moment"
-            BeamForces[iNode,3:] += np.cross(Section_A,\
-                                         AeroForces[jSection][iNode][:])
+            # Calc moment.
+            BeamForces[iNode,3:] += np.cross(Section_A,
+                                             AeroForce_A)
             
-            "Calc force"
-            BeamForces[iNode,:3] += AeroForces[jSection][iNode][:]
+            # Calc force.
+            BeamForces[iNode,:3] += AeroForce_A
         
         # END for jSection
     #END for iNode

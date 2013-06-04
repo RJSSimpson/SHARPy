@@ -11,8 +11,7 @@ import getpass
 import sys
 
 
-"""Directories"""
-
+# Directories.
 userid = getpass.getuser()
 
 SharPyProjectDir = '/home/' + userid + '/SharPyProject/'
@@ -27,7 +26,7 @@ OutputDir =  SharPyProjectDir + 'Output/Temp/'
 OutputFileRoot = 'Foo'
 
 
-""" Python path """
+# Python path.
 sys.path.append(SharPyProjectDir + 'SharPy/src')
 sys.path.append(SharPyProjectDir + 'SharPy/src/PyBeam')
 sys.path.append(SharPyProjectDir + 'SharPy/src/PyBeam/Utils')
@@ -39,16 +38,16 @@ sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero')
 sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero/UVLM')
 sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero/UVLM/Utils')
 sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero/UVLM/Solver')
+sys.path.append(SharPyProjectDir + 'SharPy/src/PyCoupled/')
+sys.path.append(SharPyProjectDir + 'SharPy/src/PyCoupled/Utils')
 
-
-"""Structural Code Constants"""
-
+# Structural Code Constants.
 MaxElNod = 3
-DimMat = 24 #memory allocated for sparse matrix storage in fortran solver
-RotEpsilon = 0.001 #rotations below this are linearised
+DimMat = 24 # Memory allocated for sparse matrix storage in fortran solver.
+RotEpsilon = 0.001 # Rotations below this are linearised.
 
 
-"""Tecplot"""
+# Tecplot.
 PlotTec = True
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@
 '''
 from scipy.constants.constants import pi
 import numpy as np
-from numpy import sin, cos, arccos, arctan2
+from numpy import sin, cos, arccos
 from scipy.special import kv
 import matplotlib.pyplot as plt
 from numpy.lib.type_check import real, imag
@@ -42,7 +42,9 @@ def TheoGarrAerofoil(alphaBar,betaBar,hBar,phi0,phi1,phi2,a,e,k,nT):
     @param a Non-dim offset of pitching axis aft of mid-chord.
     @param e Non-dim offset of flap hinge aft of mid-chord.
     @param k Reduced frequency, k = omega*b/U.
-    @param nT Number of periods in output."""
+    @param nT Number of periods in output.
+    @details As this will likely be extended to also calculate moments there are
+    many commented variables which may be of use later on - don't remove them."""
     
     # Time parameters.
     sFinal = 2 * pi * nT / k
@@ -53,7 +55,7 @@ def TheoGarrAerofoil(alphaBar,betaBar,hBar,phi0,phi1,phi2,a,e,k,nT):
     alpha = alphaBar * sin(k*s + phi0)
     alphaDot = k * alphaBar * cos(k*s + phi0)
     alphaDotDot = - pow(k,2.0) * alphaBar * sin(k*s + phi0)
-    h = hBar * sin(k*s + phi1)
+    # h = hBar * sin(k*s + phi1)
     hDot = k * hBar * cos(k*s + phi1)
     hDotDot = - pow(k,2.0) * hBar * sin(k*s + phi1)
     beta = betaBar * sin(k*s + phi2)
@@ -65,34 +67,34 @@ def TheoGarrAerofoil(alphaBar,betaBar,hBar,phi0,phi1,phi2,a,e,k,nT):
     F2 = (e * (1 - pow(e, 2.0)) - 
           (1 + pow(e, 2.0)) * np.sqrt(1 - pow(e, 2.0)) * arccos(e) +
           e*pow(arccos(e), 2.0))
-    F3 = (- (1.0/8.0 + pow(e, 2.0)) * pow(arccos(e),2.0) +
-            1.0/4.0 * e * np.sqrt(1 - pow(e, 2.0)) * arccos(e)
-                    * (7 + 2*pow(e, 2.0))
-          - 1.0/8.0 * (1 - pow(e, 2.0)) * (5 * pow(e, 2.0) + 4))
+#    F3 = (- (1.0/8.0 + pow(e, 2.0)) * pow(arccos(e),2.0) +
+#            1.0/4.0 * e * np.sqrt(1 - pow(e, 2.0)) * arccos(e)
+#                    * (7 + 2*pow(e, 2.0))
+#          - 1.0/8.0 * (1 - pow(e, 2.0)) * (5 * pow(e, 2.0) + 4))
     F4 = e * np.sqrt(1 - pow(e, 2.0)) - arccos(e)
     F5 = (-(1 - pow(e, 2.0)) - pow(arccos(e),2.0) 
            + 2 * e * np.sqrt(1 - pow(e, 2.0)) * arccos(e))
-    F6 = F2
-    F7 = (-(1.0/8.0 + pow(e, 2.0)) * arccos(e) 
-          + 1.0/8.0 * e * np.sqrt(1 - pow(e, 2.0)) * (7 + 2 * pow(e, 2.0)))
-    F8 = (-1.0/3.0 * np.sqrt(1 - pow(e, 2.0)) * (2 * pow(e, 2.0) + 1) 
-          + e * arccos(e))
+#    F6 = F2
+#    F7 = (-(1.0/8.0 + pow(e, 2.0)) * arccos(e) 
+#          + 1.0/8.0 * e * np.sqrt(1 - pow(e, 2.0)) * (7 + 2 * pow(e, 2.0)))
+#    F8 = (-1.0/3.0 * np.sqrt(1 - pow(e, 2.0)) * (2 * pow(e, 2.0) + 1) 
+#          + e * arccos(e))
     F9 = 1.0/2.0 * (1.0/3.0 * pow(np.sqrt(1 - pow(e, 2.0)),3) + a * F4)
     F10 = np.sqrt(1 - pow(e, 2.0)) + arccos(e)
     F11 = (1 - 2 * e) * arccos(e) + (2 - e) * np.sqrt(1 - pow(e, 2.0))
-    F12 = np.sqrt(1 - pow(e, 2.0)) * (2 + e) - arccos(e) * (2 * e + 1)
-    F13 = 1.0/2.0 * (-F7 - (e - a) * F1)
+#    F12 = np.sqrt(1 - pow(e, 2.0)) * (2 + e) - arccos(e) * (2 * e + 1)
+#    F13 = 1.0/2.0 * (-F7 - (e - a) * F1)
     # F14 = -arccos(e) + e*np.sqrt(1-pow(e, 2.0)) 
-    F14 = 1.0/16.0 + 1.0/2.0 * a * e
+#    F14 = 1.0/16.0 + 1.0/2.0 * a * e
     
-    F6 = F2
+#    F6 = F2
 
     # Garrick's constants
-    F15 = F4 + F10
-    F16 = F1 - F8 - (e - a) * F4 + 1.0/2.0 * F11
-    F17 = -2 * F9 - F1 + (a - 0.5) * F4
-    F18 = F5 - F4 * F10
-    F19 = F4 * F11
+#    F15 = F4 + F10
+#    F16 = F1 - F8 - (e - a) * F4 + 1.0/2.0 * F11
+#    F17 = -2 * F9 - F1 + (a - 0.5) * F4
+#    F18 = F5 - F4 * F10
+#    F19 = F4 * F11
     F20 = -np.sqrt(1 - pow(e, 2.0)) + arccos(e)
     
     M = (  2 * real(C(k)) * (alphaBar * cos(phi0)

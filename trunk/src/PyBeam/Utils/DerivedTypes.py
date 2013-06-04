@@ -87,26 +87,30 @@ class Xbinput:
     @param NumNodesTot total number of nodes in the model.
     @param ForceStatic NumNodes-6 static force vector at nodes.
     @param ForceDyn Numnodes-6 dynamic forces at nodes.
-    @param ForcingType Type of dynamic forcing."""
+    @param ForcingType Type of dynamic forcing.
+    @param g acceleration due to gravity.
+    """
 
-    def __init__(self, NumNodesElem, NumElems,\
-                 BeamLength = 1.0,\
-                 BeamStiffness = np.zeros((6,6),ct.c_double,'F'),\
-                 BeamMass = np.zeros((6,6),ct.c_double,'F'),\
-                 BConds = 'CF',\
-                 Sigma = 1.0,\
-                 iOut = 1,\
-                 t0 = 0.0,\
-                 tfin = 0.0,\
-                 dt = 0.0,\
-                 Omega = 0.0,\
+    def __init__(self, NumNodesElem, NumElems,
+                 BeamLength = 1.0,
+                 BeamStiffness = np.zeros((6,6),ct.c_double,'F'),
+                 BeamMass = np.zeros((6,6),ct.c_double,'F'),
+                 BConds = 'CF',
+                 Sigma = 1.0,
+                 iOut = 1,
+                 t0 = 0.0,
+                 tfin = 0.0,
+                 dt = 0.0,
+                 Omega = 0.0,
                  ForcingType = 'Const',
-                 RampTime = 0.0):
+                 RampTime = 0.0,
+                 g = 0.0,
+                 PsiA_G = np.array([0.0,0.0,0.0])):
         """@brief NumNodesElem and NumElems must be specified for initialisation
-        of force arrays.
+                  of force arrays.
         
         @param NumNodes Local variable storing number of nodes in model for
-         array init.
+               array init.
         """
         self.NumNodesElem = NumNodesElem
         self.NumElems = NumElems
@@ -122,8 +126,10 @@ class Xbinput:
         self.Omega = Omega
         self.ForcingType = ForcingType
         self.RampTime = RampTime
+        self.g = g
+        self.PsiA_G = PsiA_G
         
-        "Check number of nodes per element"
+        # Check number of nodes per element.
         if self.NumNodesElem != 2 and self.NumNodesElem != 3:
             sys.stderr.write('Invalid number of nodes per element\n')
         elif self.NumNodesElem == 2:
@@ -133,7 +139,7 @@ class Xbinput:
             
         self.NumNodesTot = NumNodesTot
         
-        "Init nodal arrays"
+        # Initialise nodal arrays.
         self.ForceStatic = np.zeros((NumNodesTot,6),ct.c_double,'F')
         self.ForceDyn = np.zeros((NumNodesTot,6),ct.c_double,'F')
         

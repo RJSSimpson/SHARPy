@@ -13,7 +13,6 @@ import DerivedTypes
 import NonlinearStatic
 import numpy as np
 import SharPySettings as Settings
-import subprocess
 import sys
 import BeamIO
 import BeamLib
@@ -24,16 +23,16 @@ import PyAero.UVLM.Utils.PostProcess as PostProcess
         
     
 def StaticDef():
-    """Set up Xbopts for nonlinear static analysis defined in 
-    NonlinearStatic/testcases.pdf case 1.1"""
+    # Set up Xbopts for nonlinear static analysis defined in 
+    # NonlinearStatic/testcases.pdf case 1.1.
     XBOPTS = DerivedTypes.Xbopts()
     XBOPTS.Solution.value = 112 
     XBOPTS.NumLoadSteps.value = 10
     XBOPTS.MinDelta.value = 1e-05
     XBOPTS.FollowerForce.value = False
          
-    """Set up Xbinput for nonlinear static analysis defined in 
-    NonlinearStatic/testcases.pdf case 1.1 with extra out-of plane loads."""
+    # Set up Xbinput for nonlinear static analysis defined in 
+    # NonlinearStatic/testcases.pdf case 1.1 with extra out-of plane loads.
     XBINPUT = DerivedTypes.Xbinput(2,20)
     XBINPUT.BeamLength = 5.0
     XBINPUT.BeamStiffness[0,0] = 4.8e+08
@@ -54,7 +53,7 @@ def StaticDef():
     
     PosDefor, PsiDefor = NonlinearStatic.Solve_Py(XBINPUT, XBOPTS)
     
-    "Initialise PyFSI variables"
+    # Initialise PyFSI variables.
     M = 10
     LeadingEdge = np.array([0.0, 0.5, 0.0])
     TrailingEdge = np.array([0.0, -0.5, 0.0])
@@ -69,14 +68,17 @@ def StaticDef():
                    VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
                    XBINPUT)
     
+    # Delete currently unused objects.
+    del AeroVels
+    
     FileObject = PostProcess.WriteAeroTecHeader()
     FileObject = PostProcess.WriteAeroTecZone(FileObject, AeroGrid)
     PostProcess.CloseAeroTecFile(FileObject)
     
     
 def DynamicAnim():
-    """Set up Xbopts for nonlinear static analysis defined in 
-    NonlinearStatic/testcases.pdf case 1.2."""
+    # Set up Xbopts for nonlinear static analysis defined in 
+    # NonlinearStatic/testcases.pdf case 1.2.
     XBOPTS = DerivedTypes.Xbopts()
     XBOPTS.Solution.value = 312 
     XBOPTS.NumLoadSteps.value = 10
@@ -84,8 +86,8 @@ def DynamicAnim():
     XBOPTS.FollowerForce.value = False
     XBOPTS.NumGauss.value = 1
            
-    """Set up Xbinput for nonlinear static analysis defined in 
-    NonlinearStatic/testcases.pdf case 1.2."""
+    # Set up Xbinput for nonlinear static analysis defined in 
+    # NonlinearStatic/testcases.pdf case 1.2.
     XBINPUT = DerivedTypes.Xbinput(2,20)
     XBINPUT.BeamLength = 5.0
     XBINPUT.BeamStiffness[0,0] = 4.8e+08
@@ -101,7 +103,7 @@ def DynamicAnim():
     XBINPUT.BeamMass[4,4] = 0.0001
     XBINPUT.BeamMass[5,5] = 0.0001
     
-    "Dynamic parameters"
+    # Dynamic parameters.
     XBINPUT.t0 = 0.0
     XBINPUT.tfin = 1.0
     XBINPUT.dt = 0.001
@@ -112,30 +114,30 @@ def DynamicAnim():
     XBINPUT.ForcingType = 'RampSin'
     XBINPUT.RampTime = 1.0
     
-    """Nonlinear dynamic structural solver in Python. Assembly of matrices 
-    is carried out with Fortran subroutines."""
+    #Nonlinear dynamic structural solver in Python. Assembly of matrices 
+    # is carried out with Fortran subroutines.
     
-    "Check correct solution code"
+    # Check correct solution code.
     assert XBOPTS.Solution.value == 312, ('NonlinearDynamic requested' +\
                                               ' with wrong solution code')
     
-    "Initialise beam"
+    # Initialise beam.
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
                 = BeamInit.Static(XBINPUT,XBOPTS)
     
     
-    "Set initial conditions as undef config"
+    # Set initial conditions as undef config.
     PosDefor = PosIni.copy(order='F')
     PsiDefor = PsiIni.copy(order='F')
     
     
-    "Solve static"
+    # Solve static.
     BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
                             PosIni, PsiIni, XBNODE, NumDof,\
                             PosDefor, PsiDefor)
     
     
-    "Write deformed configuration to file"
+    # Write deformed configuration to file.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_def.dat'
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Writing file %s ... ' %(ofile))
@@ -150,15 +152,18 @@ def DynamicAnim():
     BeamIO.OutputElems(XBINPUT.NumElems, NumNodes_tot.value, XBELEM, \
                        PosDefor, PsiDefor, ofile, WriteMode)
     
-    "Initialise variables for dynamic analysis"
+    # Initialise variables for dynamic analysis.
     Time, NumSteps, ForceTime, ForcedVel, ForcedVelDot,\
     PosDotDef, PsiDotDef,\
     OutGrids, PosPsiTime, VelocTime, DynOut\
         = BeamInit.Dynamic(XBINPUT,XBOPTS)
         
+    # Delete currently unused objects.
+    del OutGrids, VelocTime
         
-    "Calculate Aerodynamic grid"
-    "Init Variables"
+        
+    # Calculate Aerodynamic grid.
+    # Init Variables.
     M = 10
     LeadingEdge = np.array([0.0, 0.5, 0.0])
     TrailingEdge = np.array([0.0, -0.5, 0.0])
@@ -168,23 +173,26 @@ def DynamicAnim():
                    ForcedVel[0,0:3], ForcedVel[0,3:], PosDotDef, PsiDotDef,
                    XBINPUT)
     
-    "Create output and plot initial deformed shape"
+    # Delete currently unused objects.
+    del AeroVels
+    
+    # Create output and plot initial deformed shape.
     FileObject = PostProcess.WriteAeroTecHeader('AeroGridAnim.tec','Aerodynamic Grid')
     FileObject = PostProcess.WriteAeroTecZone(FileObject, AeroGrid)
     
     
-    "Write _force file"
+    # Write _force file.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_force.dat'
     fp = open(ofile,'w')
     BeamIO.Write_force_File(fp, Time, ForceTime, ForcedVel, ForcedVelDot)
     fp.close() 
     
     
-    "Write _vel file"   
+    # Write _vel file.   
     #TODO: write _vel file
     
     
-    "Write .mrb file"
+    #Write .mrb file.
     #TODO: write .mrb file
     
     
@@ -192,7 +200,7 @@ def DynamicAnim():
         sys.stdout.write('Solve nonlinear dynamic case in Python ... \n')
     
     
-    "Initialise structural system tensors"
+    # Initialise structural system tensors.
     MglobalFull = np.zeros((NumDof.value,NumDof.value), ct.c_double, 'F')
     CglobalFull = np.zeros((NumDof.value,NumDof.value), ct.c_double, 'F') 
     KglobalFull = np.zeros((NumDof.value,NumDof.value), ct.c_double, 'F') 
@@ -207,7 +215,7 @@ def DynamicAnim():
     Mvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     Cvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     
-    X0    = np.zeros(NumDof.value, ct.c_double, 'F')
+#    X0    = np.zeros(NumDof.value, ct.c_double, 'F')
     X     = np.zeros(NumDof.value, ct.c_double, 'F')
     DX    = np.zeros(NumDof.value, ct.c_double, 'F')
     dXdt  = np.zeros(NumDof.value, ct.c_double, 'F')
@@ -217,7 +225,7 @@ def DynamicAnim():
     Qglobal = np.zeros(NumDof.value, ct.c_double, 'F')
     
     
-    "Initialise rotation operators"
+    # Initialise rotation operators.
     Unit = np.zeros((3,3), ct.c_double, 'F')
     for i in range(3):
         Unit[i,i] = 1.0
@@ -233,24 +241,23 @@ def DynamicAnim():
     Quat[0] = 1.0
     
     
-    "Extract initial displacements and velocities"
+    # Extract initial displacements and velocities.
     BeamLib.Cbeam_Solv_Disp2State(NumNodes_tot, NumDof, XBINPUT, XBNODE,\
                           PosDefor, PsiDefor, PosDotDef, PsiDotDef,
                           X, dXdt)
     
     
-    "Approximate initial accelerations"
-    
-    "Initialise accelerations as zero arrays"
+    # Approximate initial accelerations.
+    # Initialise accelerations as zero arrays.
     PosDotDotDef = np.zeros((NumNodes_tot.value,3),ct.c_double,'F')
     PsiDotDotDef = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),\
                            ct.c_double, 'F')
     
-    "Force at the first time-step"
+    # Force at the first time-step.
     Force = (XBINPUT.ForceStatic + XBINPUT.ForceDyn*ForceTime[0]).copy('F')
     
 
-    "Assemble matrices for dynamic analysis"
+    # Assemble matrices for dynamic analysis.
     BeamLib.Cbeam3_Asbly_Dynamic(XBINPUT, NumNodes_tot, XBELEM, XBNODE,\
                          PosIni, PsiIni, PosDefor, PsiDefor,\
                          PosDotDef, PsiDotDef, PosDotDotDef, PsiDotDotDef,\
@@ -262,7 +269,7 @@ def DynamicAnim():
                          Qglobal, XBOPTS, Cao)
     
        
-    "Get force vector for unconstrained nodes (Force_Dof)"
+    # Get force vector for unconstrained nodes (Force_Dof).
     BeamLib.f_fem_m2v(ct.byref(NumNodes_tot),\
                               ct.byref(ct.c_int(6)),\
                               Force.ctypes.data_as(ct.POINTER(ct.c_double)),\
@@ -271,28 +278,28 @@ def DynamicAnim():
                               XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)) )
     
     
-    "Get RHS at initial condition"
+    # Get RHS at initial condition.
     Qglobal += -np.dot(FglobalFull, Force_Dof)
     
     
-    "Initial Accel"
+    # Initial Accel.
     dXddt[:] = np.dot(np.linalg.inv(MglobalFull), -Qglobal)
     
     
-    "Record position of all grid points in global FoR at initial time step"
+    # Record position of all grid points in global FoR at initial time step.
     DynOut[0:NumNodes_tot.value,:] = PosDefor
     
-    "Position/rotation of the selected node in initial deformed configuration"
+    # Position/rotation of the selected node in initial deformed configuration.
     PosPsiTime[0,:3] = PosDefor[-1,:]
     PosPsiTime[0,3:] = PsiDefor[-1,XBELEM.NumNodes[-1]-1,:]
     
     
-    "Get gamma and beta for Newmark scheme"
+    # Get gamma and beta for Newmark scheme.
     gamma = 0.5 + XBOPTS.NewmarkDamp.value
     beta = 0.25*(gamma + 0.5)**2
     
     
-    "Time loop"
+    # Time loop.
     for iStep in range(NumSteps.value):
         
         if XBOPTS.PrintInfo.value==True:
@@ -300,38 +307,38 @@ def DynamicAnim():
             sys.stdout.write('   SubIter DeltaF     DeltaX     ResLog10\n')
         
         
-        "calculate dt"
+        # calculate dt.
         dt = Time[iStep+1] - Time[iStep]
         
         
-        "Update transformation matrix for given angular velocity"
+        # Update transformation matrix for given angular velocity.
         Temp = np.linalg.inv(Unit4 + 0.25*XbeamLib.QuadSkew(ForcedVel[iStep+1,3:])*dt)
         Quat = np.dot(Temp, np.dot(Unit4 - 0.25*XbeamLib.QuadSkew(ForcedVel[iStep,3:])*dt, Quat))
         Quat = Quat/np.linalg.norm(Quat)
         Cao  = XbeamLib.Rot(Quat)
         
         
-        "Predictor step"
+        # Predictor step.
         X += dt*dXdt + (0.5-beta)*dXddt*dt**2
         dXdt += (1.0-gamma)*dXddt*dt
         dXddt[:] = 0.0
         
         
-        "Force at current time-step"
+        # Force at current time-step.
         Force = (XBINPUT.ForceStatic + \
                  XBINPUT.ForceDyn*ForceTime[iStep+1]).copy('F')
         
     
-        "Reset convergence parameters"
+        # Reset convergence parameters.
         Iter = 0
         ResLog10 = 0.0
         
         
-        "Newton-Raphson loop"        
+        # Newton-Raphson loop.        
         while ( (ResLog10 > np.log10(XBOPTS.MinDelta.value)) \
                 & (Iter < XBOPTS.MaxIterations.value) ):
             
-            "set tensors to zero"
+            # Set tensors to zero.
             Qglobal[:] = 0.0 
             Mvel[:,:] = 0.0
             Cvel[:,:] = 0.0
@@ -340,20 +347,20 @@ def DynamicAnim():
             KglobalFull[:,:] = 0.0
             FglobalFull[:,:] = 0.0
             
-            "Update counter"
+            # Update counter.
             Iter += 1
             
             if XBOPTS.PrintInfo.value==True:
                 sys.stdout.write('   %-7d ' %(Iter))
                 
             
-            "nodal diplacements and velocities from state vector"
+            # Nodal diplacements and velocities from state vector.
             BeamLib.Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
                            PosIni, PsiIni, NumDof, X, dXdt,\
                            PosDefor, PsiDefor, PosDotDef, PsiDotDef)
             
             
-            "update matrices"
+            # Update matrices.
             BeamLib.Cbeam3_Asbly_Dynamic(XBINPUT, NumNodes_tot, XBELEM, XBNODE,\
                          PosIni, PsiIni, PosDefor, PsiDefor,\
                          PosDotDef, PsiDotDef, PosDotDotDef, PsiDotDotDef,\
@@ -365,7 +372,7 @@ def DynamicAnim():
                          Qglobal, XBOPTS, Cao)
             
             
-            "Get force vector for unconstrained nodes (Force_Dof)"
+            # Get force vector for unconstrained nodes (Force_Dof).
             BeamLib.f_fem_m2v(ct.byref(NumNodes_tot),\
                               ct.byref(ct.c_int(6)),\
                               Force.ctypes.data_as(ct.POINTER(ct.c_double)),\
@@ -374,8 +381,8 @@ def DynamicAnim():
                               XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)) )
             
             
-            "Solve for update vector"
-            "Residual"
+            # Solve for update vector.
+            # Residual.
             Qglobal += np.dot(MglobalFull, dXddt) \
                         + np.dot(Mvel,ForcedVelDot[iStep+1,:]) \
                      - np.dot(FglobalFull, Force_Dof)
@@ -386,28 +393,28 @@ def DynamicAnim():
                 sys.stdout.write('%-10.4e ' %(max(abs(Qglobal))))
             
             
-            "Calculate system matrix for update calculation"
+            # Calculate system matrix for update calculation.
             Asys = KglobalFull + \
                       CglobalFull*gamma/(beta*dt) + \
                       MglobalFull/(beta*dt**2)
                       
             
-            "Solve for update"
+            # Solve for update.
             DX[:] = np.dot(np.linalg.inv(Asys), -Qglobal)
             
             
-            "Corrector step"
+            # Corrector step.
             X += DX
             dXdt += DX*gamma/(beta*dt)
             dXddt += DX/(beta*dt**2)
             
             
-            "Residual at first iteration"
+            # Residual at first iteration.
             if(Iter == 1):
                 Res0_Qglobal = max(abs(Qglobal)) + 1.e-16
                 Res0_DeltaX  = max(abs(DX)) + 1.e-16
             
-            "Update residual and compute log10"
+            # Update residual and compute log10.
             Res_Qglobal = max(abs(Qglobal)) + 1.e-16
             Res_DeltaX  = max(abs(DX)) + 1.e-16
             
@@ -417,10 +424,10 @@ def DynamicAnim():
             if XBOPTS.PrintInfo.value==True:
                 sys.stdout.write('%-10.4e %8.4f\n' %(max(abs(DX)),ResLog10))
                 
-        "END Netwon-Raphson"
+        # END Netwon-Raphson.
         
         
-        "update to converged nodal displacements and velocities"
+        # update to converged nodal displacements and velocities.
         BeamLib.Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
                            PosIni, PsiIni, NumDof, X, dXdt,\
                            PosDefor, PsiDefor, PosDotDef, PsiDotDef)
@@ -429,44 +436,44 @@ def DynamicAnim():
         PosPsiTime[iStep+1,:3] = PosDefor[-1,:]
         PosPsiTime[iStep+1,3:] = PsiDefor[-1,XBELEM.NumNodes[-1]-1,:]
         
-        "Position of all grid points in global FoR"
+        # Position of all grid points in global FoR.
         i1 = (iStep+1)*NumNodes_tot.value
         i2 = (iStep+2)*NumNodes_tot.value
         DynOut[i1:i2,:] = PosDefor
         
-        "Create aero grid"
+        # Create aero grid.
         AeroGrid, AeroVels = Beam2UVLM.CoincidentGrid(PosDefor, PsiDefor, Section,\
                    ForcedVel[iStep,0:3], ForcedVel[iStep,3:], PosDotDef, PsiDotDef,
                    XBINPUT)
     
-        "Plot deformed shape"
+        # Plot deformed shape.
         FileObject = PostProcess.WriteAeroTecZone(FileObject, AeroGrid,\
                                        iStep, NumSteps.value, Time[iStep+1])
     
-    "END Time loop"
+    # END Time loop.
     
-    "Write _dyn file"
+    # Write _dyn file.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_dyn.dat'
     fp = open(ofile,'w')
     BeamIO.Write_dyn_File(fp, Time, PosPsiTime)
     fp.close()
     
-    "Write _shape file"
+    # Write _shape file.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_shape.dat'
     fp = open(ofile,'w')
     BeamIO.Write_shape_File(fp, len(Time), NumNodes_tot.value, Time, DynOut)
     fp.close()
     
-    "Close Tecplot ascii FileObject"
+    # Close Tecplot ascii FileObject.
     PostProcess.CloseAeroTecFile(FileObject)
     
     if XBOPTS.PrintInfo.value==True:
         sys.stdout.write(' ... done\n')
 
 if __name__ == '__main__':
-    "Print Aero grid after static solution"
+    # Print Aero grid after static solution.
     StaticDef()
-    "Create Dynamic Animation"
+    # Create Dynamic Animation.
     DynamicAnim()
     
     

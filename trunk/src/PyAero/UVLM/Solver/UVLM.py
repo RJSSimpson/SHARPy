@@ -22,7 +22,6 @@ from VLM import InitSteadyExternalVels, InitSteadyWake
 import BeamInit
 from PyFSI.Beam2UVLM import InitSection, CoincidentGrid
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
-from PyBeam.Utils.DerivedTypes import dump
 
 Settings.OutputDir = os.getcwd() + '/'
 Settings.OutputFileRoot = ''
@@ -83,6 +82,8 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     # Use PyBeam to define reference beam (elastic axis).
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
             XBNODE, NumDof = BeamInit.Static(XBINPUT, XBOPTS)
+    # Delete unnecessary variables.
+    del XBELEM, XBNODE, NumDof  
     # Copy reference beam to current (deformed) variables.
     PosDefor = PosIni.copy(order = 'F')
     PsiDefor = PsiIni.copy(order = 'F')

@@ -10,8 +10,6 @@ import ctypes as ct
 import DerivedTypes
 import DerivedTypesAero
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
-import PyCoupled.Coupled_NlnStatic as Solver
-from _pyio import open
 from PyCoupled.Coupled_NlnDynamic import VMCoupledUnstInput, Solve_Py
 
 #TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyCoupled/' \
@@ -60,7 +58,7 @@ class Test_GolandFlutter(unittest.TestCase):
                 for iM in iMArr:
                     for Tight in Tights:
                         
-                        "beam options"
+                        # Beam solver options.
                         XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),\
                                                      MaxIterations = ct.c_int(50),\
                                                      PrintInfo = ct.c_bool(True),\
@@ -77,9 +75,9 @@ class Test_GolandFlutter(unittest.TestCase):
                             print("How many nodes per elem!!?")
                             return
                         
-                        "beam inputs"
+                        # Beam inputs.
                         XBINPUT = DerivedTypes.Xbinput(NumNodesElem,NumElemsHere)
-                        XBINPUT.BeamLength = 5 * 6.096
+                        XBINPUT.BeamLength = 6.096
                         XBINPUT.BeamStiffness[0,0] = 1.0e+09
                         XBINPUT.BeamStiffness[1,1] = 1.0e+09
                         XBINPUT.BeamStiffness[2,2] = 1.0e+09
@@ -87,7 +85,7 @@ class Test_GolandFlutter(unittest.TestCase):
                         XBINPUT.BeamStiffness[4,4] = 9.77e+06
                         XBINPUT.BeamStiffness[5,5] = 9.77e+08
                         
-                        XBINPUT.BeamStiffness[:,:] = 3*XBINPUT.BeamStiffness[:,:]
+                        XBINPUT.BeamStiffness[:,:] = XBINPUT.BeamStiffness[:,:]
                         
                         XBINPUT.BeamMass[0,0] = 35.71
                         XBINPUT.BeamMass[1,1] = 35.71
@@ -96,14 +94,13 @@ class Test_GolandFlutter(unittest.TestCase):
                         XBINPUT.BeamMass[4,4] = 0.0001
                         XBINPUT.BeamMass[5,5] = 0.0001
                         
-                        "pitch-plunge coupling term"
-                        "b-frame coordinates"
+                        # Calculate off-diagonal mass terms.
                         c = 1.8288
                         
-                        "EA position in Theo sectional coords"
+                        # EA position in Theo sectional coords.
                         ElasticAxis = -0.34
                         
-                        "or using skew-symmetric operator"
+                        # Using skew-symmetric operator.
                         cg = np.array([0.0, -0.1, 0.0])*c
                         cgSkew = np.array([[   0.0, -cg[2], cg[1] ],\
                                            [ cg[2],    0.0, -cg[0]],\
@@ -112,18 +109,18 @@ class Test_GolandFlutter(unittest.TestCase):
                         XBINPUT.BeamMass[:3,3:] = -XBINPUT.BeamMass[0,0]*cgSkew
                         XBINPUT.BeamMass[3:,:3] = XBINPUT.BeamMass[:3,3:].T
                         
-                        "set (0,5) and (5,0) to zero"
+                        # Set (0,5) and (5,0) to zero.
                         XBINPUT.BeamMass[0,5] = 0.0
                         XBINPUT.BeamMass[5,0] = 0.0
                         
-                        "unsteady parameters"
-                        OmegaF = 20.0 #approx flutter freq
+                        # unsteady parameters.
+                        #OmegaF = 20.0 #approx flutter freq
                         
                         
                         "loop through U"
                         for iU in range(len(U)):
                             U_mag = U[iU]
-                            k = OmegaF*c/(2*U_mag) #get expected reduced freq
+                            #k = OmegaF*c/(2*U_mag) #get expected reduced freq
                             M = iM#int(50.0*k/np.pi) + 1#iM #get adequate panelling
                             DelTime = c/(U_mag*M) #get resulting DelTime
                             
