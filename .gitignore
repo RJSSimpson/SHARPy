@@ -5,4 +5,5 @@
 cmpc/
 
 # Ignore compiled python code
+__pycache__/
 *.pyc

@@ -30,7 +30,6 @@ if __name__ == '__main__':
     setPoint = np.zeros([mpc.size.states,1])
     # setPoint[3] = 400.0
     setPoint[3::5] = 400.0
-    print(setPoint)
     
     for i in range(mpc.N):
         ctl.x_ref[mpc.size.states*i:mpc.size.states*(i+1)] = setPoint
