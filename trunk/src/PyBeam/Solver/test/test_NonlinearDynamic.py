@@ -15,8 +15,7 @@ import numpy as np
 import ctypes as ct
 import matplotlib.pyplot as plt
 
-TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyBeam/' \
-           + 'Solver/test/NonlinearDynamic/'
+TestDir = Settings.SharPyProjectDir + 'output/tests/PyBeam/NlnDynamic/'
            
 class TestNonlinearDynamic_v_Executable(unittest.TestCase):
     """@brief Test Python NonlinearDynamic_F90 v F90 Executable for 'TPY0' case
@@ -89,7 +88,7 @@ class TestNonlinearDynamic_v_Executable(unittest.TestCase):
         XBOPTS.MinDelta.value = 1e-04   
         XBOPTS.NumGauss.value = 2
         XBOPTS.NewmarkDamp.value = 0.01
-        XBOPTS.PrintInfo.value = False
+        XBOPTS.PrintInfo.value = True #False
          
         """Set up Xbinput for nonlinear analysis defined in input_rob.f90
         TPY0 test case"""
@@ -156,7 +155,7 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
     
     
     def test_DynTipDispRot(self):
-        """@brief Compare values of F90 to those in reference (above)."""
+        """@brief Compare values of F90 to those in Palacios and Cesnik."""
 
         import NonlinearDynamic # imported after clean/make process
         
@@ -208,8 +207,7 @@ class TestNonlinearDynamic_v_PalaciosCesnik(unittest.TestCase):
         "Assert z-displacement at 1, 1.5 & 2 secs"
         """Without the original data set the precision of the Figure data is
         limited by jpeg resolution and human error."""
-        FigureData = np.loadtxt(Settings.OutputDir + \
-                                'PalaciosCesnikFigure_R3.dat')
+        FigureData = np.loadtxt('testData/PalaciosCesnikFigure_R3.dat')
         self.assertAlmostEqual(Dyn[1000,3],FigureData[0,1], 1,\
                                 'z-displacement does not match')
         self.assertAlmostEqual(Dyn[1500,3],FigureData[1,1], 1,\
@@ -447,7 +445,7 @@ class TestNonlinearDynamic_GolandFree(unittest.TestCase):
                                      NewmarkDamp = ct.c_double(1e-2))
         
         "beam inputs"
-        XBINPUT = DerivedTypes.Xbinput(2,36)
+        XBINPUT = DerivedTypes.Xbinput(2,24)
         XBINPUT.BeamLength = 6.096
         XBINPUT.BeamStiffness[0,0] = 1.0e+09
         XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -486,7 +484,7 @@ class TestNonlinearDynamic_GolandFree(unittest.TestCase):
         "Dynamic parameters"
         XBINPUT.t0 = 0.0
         XBINPUT.tfin = 1.0
-        XBINPUT.dt = 0.001
+        XBINPUT.dt = 0.01
         XBINPUT.Omega = 0.0
         XBINPUT.ForceDyn[-1,2] = 6e03
         XBINPUT.ForcingType = '1-cos'
@@ -501,7 +499,7 @@ class TestNonlinearDynamic_GolandFree(unittest.TestCase):
         "run with 3-noded"
         Settings.OutputFileRoot = 'PyBeamGolandFree2noded'
         "beam inputs"
-        XBINPUT = DerivedTypes.Xbinput(3,18)
+        XBINPUT = DerivedTypes.Xbinput(3,12)
         XBINPUT.BeamLength = 6.096
         XBINPUT.BeamStiffness[0,0] = 1.0e+09
         XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -622,6 +620,5 @@ if __name__ == "__main__":
     alltests = unittest.TestSuite([suite1, suite2, suite3])
     #alltests.run(unittest.defaultTestResult())
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    TestRunner.run(suite1) #run a single suite
-    TestRunner.run(suite2)
-    #TestRunner.run(alltests) #run all tests
+    #TestRunner.run(suite2) #run a single suite
+    TestRunner.run(alltests) #run all tests

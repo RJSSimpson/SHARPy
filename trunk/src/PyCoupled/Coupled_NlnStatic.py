@@ -31,6 +31,7 @@ def isodd(num):
     """@brief returns True if Num is odd"""
     return bool(num & 1)
 
+#TODO: Move to Beam Utils.
 def AddGravityLoads(BeamForces,XBINPUT,XBELEM,AELAOPTS,PsiDefor,
                       chord = 1.0):
     """@brief Apply nodal gravity loads.
@@ -58,7 +59,7 @@ def AddGravityLoads(BeamForces,XBINPUT,XBELEM,AELAOPTS,PsiDefor,
     elif XBINPUT.NumNodesElem == 3:
         NodeSpacing = 0.5*XBELEM.Length[0]
         
-    ForcePerNode = NodeSpacing * MassPerLength * XBINPUT.g 
+    ForcePerNode = -NodeSpacing * MassPerLength * XBINPUT.g 
     
     # Obtain transformation from Earth to a-frame.
     CGa = Psi2TransMat(XBINPUT.PsiA_G)
@@ -239,12 +240,12 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
 
             
             # Map AeroForces to beam.
-            CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
-                        XBINPUT.ForceStatic)
+            CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
+                                XBINPUT.ForceStatic)
             
             # Add gravity loads.
             AddGravityLoads(XBINPUT.ForceStatic,XBINPUT,XBELEM,AELAOPTS,
-                            PsiDefor)
+                            PsiDefor,VMINPUT.c)
 
             
             "apply factor corresponding to force step"

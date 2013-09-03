@@ -14,7 +14,7 @@ import PyCoupled.Coupled_NlnStatic as Solver
 from _pyio import open
 
 
-TestDir = Settings.SharPyProjectDir + 'Output/Tests/' \
+TestDir = Settings.SharPyProjectDir + 'output/tests/' \
            + 'PyCoupled/NlnStatic/'
 
 class Test_CantHALE_v_Murua2012_Smith2001(unittest.TestCase):
@@ -36,7 +36,7 @@ class Test_CantHALE_v_Murua2012_Smith2001(unittest.TestCase):
         # Beam solver options.
         XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
                                      MaxIterations = ct.c_int(50),
-                                     PrintInfo = ct.c_bool(True),
+                                     PrintInfo = ct.c_bool(False),
                                      NumLoadSteps = ct.c_int(25),
                                      Solution = ct.c_int(112),
                                      MinDelta = ct.c_double(1e-4)     )

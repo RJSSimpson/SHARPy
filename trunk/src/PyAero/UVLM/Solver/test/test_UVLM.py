@@ -62,10 +62,10 @@ class Test_v_TAT(unittest.TestCase):
                                  VelA_A, OmegaA_A)
         
         # Define 'aeroelastic' options."
-        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,\
-                                gForce =  0.0,\
+        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,InertialAxis=0.0,
                                 AirDensity = 1.0)
         
+                
         # Run Cpp-solver."
         CoeffHistory = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
         
@@ -106,9 +106,8 @@ class Test_v_TAT(unittest.TestCase):
                                  NumChordLengths,\
                                  VelA_A, OmegaA_A)
         
-        # Define 'aeroelastic' parameters"
-        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,\
-                                gForce =  0.0,\
+        # Define 'aeroelastic' parameters
+        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,InertialAxis=0.0,
                                 AirDensity = 1.0)
         
         # Run C++ solver."
@@ -163,8 +162,7 @@ class Test_v_AR8_inKatzAndPlotkin(unittest.TestCase):
                                  VelA_A, OmegaA_A)
         
         # Define 'aeroelastic' options.
-        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,
-                                gForce =  0.0,
+        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,InertialAxis=0.0,
                                 AirDensity = 1.0)
         
         # Run C++ solver.
@@ -173,8 +171,8 @@ class Test_v_AR8_inKatzAndPlotkin(unittest.TestCase):
         
         # Check force for Katz and Plotkin method against textbook at final 
         # time.
-        CD = np.loadtxt('UVLM/Katz1p492_AR8_CD.dat',ndmin = 2)
-        CL = np.loadtxt('UVLM/Katz1p492_AR8_CL.dat',ndmin = 2)
+        CD = np.loadtxt('testData/Katz1p492_AR8_CD.dat',ndmin = 2)
+        CL = np.loadtxt('testData/Katz1p492_AR8_CL.dat',ndmin = 2)
         
         self.assertAlmostEqual(CoeffHistory[-1,3],CL[-1,1],delta=1e-3)
         self.assertAlmostEqual(-CoeffHistory[-1,2],CD[-1,1],delta=1e-3)
@@ -266,8 +264,7 @@ class Test_v_TheoGarrick(unittest.TestCase):
                                  VelA_A, OmegaA_A)
         
         # Define 'aeroelastic' options.
-        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,
-                                gForce =  0.0,
+        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,InertialAxis=0.0,
                                 AirDensity = 1.0)
         
         # Run C++ solver.
@@ -276,6 +273,8 @@ class Test_v_TheoGarrick(unittest.TestCase):
         # Run from Joukowski method.
         VMOPTS.KJMeth.value = True
         CoeffHistoryJouk = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
+        
+        print(CoeffHistoryJouk)
         
         # Get analytical result.
         alphaBar = 0.0
@@ -310,9 +309,7 @@ class Test_v_TheoGarrick(unittest.TestCase):
         rmsCdJouk = ( np.sqrt(np.mean(pow(CdErrJouk,2.0)))
                       / max(-CoeffHistoryJouk[:,2]) )
         
-        print(rmsClJouk,'\t',rmsCdJouk)
-        
-        # Check RMS is lower than on 23/05/13
+        # Check RMS is same as on 23/05/13
         self.assertAlmostEqual(rmsCl, 0.0241589106969,6,'RMS error in lift.')
         self.assertAlmostEqual(rmsCd, 0.136290106597,5,'RMS error in drag.')
     
@@ -345,5 +342,5 @@ if __name__ == "__main__":
               .loadTestsFromTestCase(Test_v_TheoGarrick))
     alltests = unittest.TestSuite([suite1, suite2, suite3])
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    TestRunner.run(suite3) #run a single suite
-    #TestRunner.run(alltests) #run all tests
+    #TestRunner.run(suite1) #run a single suite
+    TestRunner.run(alltests) #run all tests

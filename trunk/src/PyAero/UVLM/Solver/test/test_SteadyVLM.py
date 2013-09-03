@@ -38,7 +38,6 @@ class Test_SteadyVLM_v_TAT(unittest.TestCase):
                                            WakeLength = 10000.0)
         
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
-        print(Coeffs)
         
         # Check lift then drag.
         # Note: increasing alpha causes geometrically nonlinear effect of wake 
@@ -71,7 +70,6 @@ class Test_SteadyVLM_v_UVLMpp(unittest.TestCase):
                                            WakeLength = 10000.0)
         
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
-        print(Coeffs)
         
         # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],0.965402,2)
@@ -80,7 +78,6 @@ class Test_SteadyVLM_v_UVLMpp(unittest.TestCase):
         # Now simulate using KJ method.
         VMOPTS.KJMeth = ct.c_bool(True)
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
-        print(Coeffs)
         
         # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],0.993501,5)
@@ -110,7 +107,6 @@ class Test_SteadyVLM_v_TAT_KJMeth(unittest.TestCase):
                                            WakeLength = 10000.0)
         
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
-        print(Coeffs)
         
         # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.alpha,4)
@@ -141,7 +137,6 @@ class Test_SteadyVLM_ZetaDot(unittest.TestCase):
                                            WakeLength = 10000.0)
         
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
-        print(Coeffs)
         
         # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.theta,4)
@@ -152,7 +147,6 @@ class Test_SteadyVLM_ZetaDot(unittest.TestCase):
         VMOPTS.KJMeth = ct.c_bool(True)
         
         Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
-        print(Coeffs)
         
         # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.theta,4)

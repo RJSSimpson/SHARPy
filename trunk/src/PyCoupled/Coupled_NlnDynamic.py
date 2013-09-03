@@ -1,5 +1,5 @@
 '''@package PyCoupled.Coupled_NlnDynamic
-@brief      NonlinearStatic Beam + UVLM.
+@brief      NonlinearDynamic Beam + UVLM.
 @author     Rob Simpson
 @contact    r.simpson11@imperial.ac.uk 
 @version    0.0
@@ -53,9 +53,13 @@ class VMCoupledUnstInput:
         self.PsiA_G = PsiA_G
 
 def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
-    """Nonlinear dynamic solver using Python to solve aeroelastic
-    equation. Assembly of structural matrices is carried out with 
-    Fortran subroutines. Aerodynamics solved using PyAero\.UVLM."""
+    """@brief Nonlinear dynamic solver using Python to solve aeroelastic
+    equation.
+    @details Assembly of structural matrices is carried out with 
+    Fortran subroutines. Aerodynamics solved using PyAero\.UVLM.
+    @warning test outstanding: test for maintaining static deflections in
+    same conditions.
+    TODO: Maintain static deflections in same conditions."""
         
     """BEAM INIT ------------------------------------------------------------"""
     
@@ -118,6 +122,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     PosDotDef, PsiDotDef,\
     OutGrids, PosPsiTime, VelocTime, DynOut\
         = BeamInit.Dynamic(XBINPUT,XBOPTS)
+        
+    # Delete unused variables.
+    del ForceTime, OutGrids, VelocTime
     
     
     "Write _force file"
@@ -154,7 +161,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     Mvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     Cvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     
-    X0    = np.zeros(NumDof.value, ct.c_double, 'F')
+#    X0    = np.zeros(NumDof.value, ct.c_double, 'F')
     X     = np.zeros(NumDof.value, ct.c_double, 'F')
     DX    = np.zeros(NumDof.value, ct.c_double, 'F')
     dXdt  = np.zeros(NumDof.value, ct.c_double, 'F')
@@ -237,13 +244,6 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     
     
     """ Initialise Aero -----------------------------------------------------"""
-    
-    "set AoA to zero Foo"
-    if AELAOPTS.ImpStart == False:
-        VMINPUT.U_infty = np.array([0.0, -np.linalg.norm(VMINPUT.U_infty), 0.0])
-        
-#    "set density to zero for free vibration"
-#    AELAOPTS.AirDensity = 0.0
     
     "define section used to generate aero mesh"       
     Section = InitSection(VMOPTS,VMINPUT,AELAOPTS.ElasticAxis)
@@ -378,12 +378,13 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
 
             
             "map AeroForces to beam"
-            CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
-                        Force)
+            CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
+                                Force)
             
             
-            "add gravity loads"
-            AddGravityLoads(Force,XBINPUT,XBELEM,AELAOPTS.gForce)
+            # Add gravity loads.
+            AddGravityLoads(Force,XBINPUT,XBELEM,AELAOPTS,
+                            PsiDefor,VMINPUT.c)
         
         #END if iStep > 0
             
@@ -464,8 +465,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                 CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
                             Force)
                 
-                "add gravity loads"
-                AddGravityLoads(Force,XBINPUT,XBELEM,AELAOPTS.gForce)
+                # Add gravity loads.
+                AddGravityLoads(Force,XBINPUT,XBELEM,AELAOPTS,
+                                PsiDefor,VMINPUT.c)
             
             #END if Tight
             
@@ -670,7 +672,7 @@ if __name__ == '__main__':
     "unsteady aero inputs"
     VelA_G = np.array(([0.0,0.0,0.0]))
     OmegaA_G = np.array(([0.0,0.0,0.0]))
-    VMUNST = VMCoupledUnstInput(VMOPTS, VMINPUT, 123.4, WakeLength/c,\
+    VMUNST = VMCoupledUnstInput(VMOPTS, VMINPUT, 0.0, 0.0,\
                               VelA_G, OmegaA_G)
     
     

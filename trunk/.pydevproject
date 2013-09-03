@@ -14,6 +14,7 @@
 <path>/SharPy/src/PyAero/UVLM</path>
 <path>/SharPy/src/PyAero/UVLM/Utils</path>
 <path>/SharPy/src/PyAero/UVLM/Solver</path>
+<path>/SharPy/src/Main</path>
 </pydev_pathproperty>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 3.0</pydev_property>
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">python3.2</pydev_property>

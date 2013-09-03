@@ -12,15 +12,14 @@ import DerivedTypesAero
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 from PyCoupled.Coupled_NlnDynamic import VMCoupledUnstInput, Solve_Py
 
-#TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyCoupled/' \
-#           + 'test/NlnDynamic/'
-
-TestDir = Settings.SharPyProjectDir + 'Output/Stretched_Goland/'
+TestDir = Settings.SharPyProjectDir + '/output/tests/PyCoupled/NlnDynamic/'
 
 Settings.PlotTec = True
 
 class Test_GolandFlutter(unittest.TestCase):
-
+    """@brief Test goland response.
+    @warning Not a formal test.
+    TODO: make this an actual test!"""
 
     def setUp(self):
         "Set SharPy output directory"
@@ -29,19 +28,21 @@ class Test_GolandFlutter(unittest.TestCase):
 
     def tearDown(self):
         pass
-
+    
+    
+    # Write proper test and move test_Custom to 'scripts' dir
 
     def test_Custom(self):
         
         
 #        NumNodesElemArr = [3, 2]
-        NumNodesElemArr = [3]
+        NumNodesElemArr = [2]
         
 #        NumElemsArr = [12,24,36]
-        NumElemsArr = [30]
+        NumElemsArr = [24]
 
         #iMArr = [6, 12, 18]
-        iMArr = [10]
+        iMArr = [6]
         
 #       U = [160.0, 161.0, 162.0, 163.0, 164.0, 165.0, 166.0, 167.0, 168.0, 169.0, \
 #             170.0]
@@ -49,7 +50,7 @@ class Test_GolandFlutter(unittest.TestCase):
         
         Tights = [False]
         Rollup = False
-        KJMeth = True
+        KJMeth = False
         ImpStart = False
         
         
@@ -127,7 +128,7 @@ class Test_GolandFlutter(unittest.TestCase):
                             "beam"
                             XBINPUT.dt = DelTime
                             XBINPUT.t0 = 0.0
-                            XBINPUT.tfin = 2.0
+                            XBINPUT.tfin = 1.0
                             
                             "aero"
                             WakeLength = 15.0*c

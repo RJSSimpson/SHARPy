@@ -12,8 +12,7 @@ import sys
 import SharPySettings as Settings
 import DerivedTypes
 
-TestDir = Settings.SharPyProjectDir + 'SharPy/src/PyBeam/' \
-           + 'Solver/test/NonlinearStatic/'
+TestDir = Settings.SharPyProjectDir + 'output/tests/PyBeam/NlnStatic/'
 
 class TestNonlinearStatic_v_Executable(unittest.TestCase):
     """@brief Test Python NonlinearStatic_F90 v F90 Executable for 'TPY0' case

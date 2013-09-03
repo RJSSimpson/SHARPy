@@ -42,9 +42,6 @@ def Solve_F90(XBINPUT,XBOPTS):
     
     
     "Solve static"
-    print(XBELEM.Mass[:6,:])
-    print(XBELEM.Stiff[:6,:])
-    dump(XBOPTS)
     
     BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
                             PosIni, PsiIni, XBNODE, NumDof,\
