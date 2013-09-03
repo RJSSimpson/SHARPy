@@ -468,8 +468,8 @@ subroutine input_elem (NumElems,NumNodes,Elem)
 
   case default
     !ForceDynAmp = 2.d0*ForceStatic
-    !ForceTime   = 1.d0
-    !ForceDynAmp(NumNodes,2) = 160.d0
+    ForceTime(:)   = 1.d0
+    ForceDynAmp(NumNodes,2) = 160.d0
 
 ! Ramped harmonic load.
     if (.false.) then
@@ -489,7 +489,7 @@ subroutine input_elem (NumElems,NumNodes,Elem)
     end if
 
 ! 1-Cos load.
-    if (.true.) then
+    if (.false.) then
      ForceDynAmp(NumNodes,3) = 1.d03
      do i=1,NumSteps+1
          if ((Time(i).ge.0.d0).and.(Time(i).le.1.d-2)) then
