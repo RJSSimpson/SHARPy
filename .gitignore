@@ -1,7 +1,12 @@
 *.py[cod]
+__pycache__/
 
 # C extensions
+*.o
+*.a
 *.so
+*.exe
+bin/*
 
 # Packages
 *.egg
@@ -33,3 +38,13 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Ignore all .pdfs
+*.pdf
+
+# Ignore tecplot macros, flash videos, etc
+*.mcr
+*.swf
+
+# Ignore UVLMLib Debug build
+Debug/
