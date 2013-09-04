@@ -620,5 +620,5 @@ if __name__ == "__main__":
     alltests = unittest.TestSuite([suite1, suite2, suite3])
     #alltests.run(unittest.defaultTestResult())
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    #TestRunner.run(suite2) #run a single suite
-    TestRunner.run(alltests) #run all tests
+    TestRunner.run(suite2) #run a single suite
+    #TestRunner.run(alltests) #run all tests
