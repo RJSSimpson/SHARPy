@@ -14,7 +14,7 @@ import sys
 # Directories.
 userid = getpass.getuser()
 
-SharPyProjectDir = '/home/' + userid + '/SharPyProject/'
+SharPyProjectDir = '/home/' + userid + '/git/testMerge/SHARPy/'
 
 BeamLibDir = SharPyProjectDir + 'BeamLib/bin/'
 BeamLibName = './BeamLib.so'

@@ -10,7 +10,7 @@ import numpy as np
 import ctypes as ct
 from VLM import Run_Cpp_Solver_VLM
 
-TestDir = (Settings.SharPyProjectDir + 'Output/Tests/PyAero/UVLM/' 
+TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
            + 'SteadyVLM/')
 
 

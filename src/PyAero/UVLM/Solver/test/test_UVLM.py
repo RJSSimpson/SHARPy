@@ -13,7 +13,7 @@ from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 import matplotlib.pyplot as plt
 from PyAero.UVLM.Utils.Analytical import TheoGarrAerofoil
 
-TestDir = (Settings.SharPyProjectDir + 'Output/Tests/PyAero/UVLM/' 
+TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
            + 'UVLM/')
 #/home/rjs10/Documents/MATLAB/UVLM++/Comparisons
 
