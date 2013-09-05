@@ -249,8 +249,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
 
             
             "apply factor corresponding to force step"
-            iForceStep = XBINPUT.ForceStatic*float( (iLoadStep+1) / \
-                                                XBOPTS.NumLoadSteps.value)
+            iForceStep = XBINPUT.ForceStatic*float( (iLoadStep+1) ) / \
+                                                XBOPTS.NumLoadSteps.value
             
             if XBOPTS.PrintInfo.value == True:
                 sys.stdout.write('  iLoad: %-10d\n' %(iLoadStep+1))

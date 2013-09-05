@@ -14,7 +14,7 @@ import sys
 # Directories.
 userid = getpass.getuser()
 
-SharPyProjectDir = '/home/' + userid + '/git/testMerge/SHARPy/'
+SharPyProjectDir = '/home/' + userid + '/git/SHARPy/'
 
 BeamLibDir = SharPyProjectDir + 'BeamLib/bin/'
 BeamLibName = './BeamLib.so'
@@ -27,19 +27,19 @@ OutputFileRoot = 'Foo'
 
 
 # Python path.
-sys.path.append(SharPyProjectDir + 'SharPy/src')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyBeam')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyBeam/Utils')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyBeam/Solver')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyBeam/Main')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyFSI')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyFSI/Utils')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero/UVLM')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero/UVLM/Utils')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyAero/UVLM/Solver')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyCoupled/')
-sys.path.append(SharPyProjectDir + 'SharPy/src/PyCoupled/Utils')
+sys.path.append(SharPyProjectDir + 'src')
+sys.path.append(SharPyProjectDir + 'src/PyBeam')
+sys.path.append(SharPyProjectDir + 'src/PyBeam/Utils')
+sys.path.append(SharPyProjectDir + 'src/PyBeam/Solver')
+sys.path.append(SharPyProjectDir + 'src/PyBeam/Main')
+sys.path.append(SharPyProjectDir + 'src/PyFSI')
+sys.path.append(SharPyProjectDir + 'src/PyFSI/Utils')
+sys.path.append(SharPyProjectDir + 'src/PyAero')
+sys.path.append(SharPyProjectDir + 'src/PyAero/UVLM')
+sys.path.append(SharPyProjectDir + 'src/PyAero/UVLM/Utils')
+sys.path.append(SharPyProjectDir + 'src/PyAero/UVLM/Solver')
+sys.path.append(SharPyProjectDir + 'src/PyCoupled')
+sys.path.append(SharPyProjectDir + 'src/PyCoupled/Utils')
 
 # Structural Code Constants.
 MaxElNod = 3

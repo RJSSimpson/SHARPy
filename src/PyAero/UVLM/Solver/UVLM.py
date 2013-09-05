@@ -113,11 +113,6 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
                    XBINPUT, Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
                    VMINPUT.ctrlSurf)
     
-    
-#    print("Section=\n",Section,"\n")
-#    print("Zeta=\n",Zeta,"\n")
-#    print("ZetaDot=\n",ZetaDot,"\n")
-    
     # Initialise wake for unsteady solution.
     ZetaStar, GammaStar = InitSteadyWake(VMOPTS, VMINPUT, Zeta,
                                          VMUNST.VelA_G)

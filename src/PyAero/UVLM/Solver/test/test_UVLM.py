@@ -6,7 +6,6 @@ Created on 20 Feb 2013
 import unittest
 import SharPySettings as Settings
 import numpy as np
-import ctypes as ct
 from DerivedTypesAero import VMopts, VMinput, ControlSurf
 from PyAero.UVLM.Solver.UVLM import Run_Cpp_Solver_UVLM, VMUnsteadyInput
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
@@ -118,7 +117,7 @@ class Test_v_TAT(unittest.TestCase):
         self.assertAlmostEqual(-CoeffHistory[-1,2],0,delta=1e-5)
 
 class Test_v_AR8_inKatzAndPlotkin(unittest.TestCase):
-    """@brief Test unsteady response to that in Katz and Plotkin."""
+    """Test unsteady response to that in Katz and Plotkin."""
 
     def setUp(self):
         # Set SharPy output directory and file root.
