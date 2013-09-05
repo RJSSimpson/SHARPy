@@ -49,7 +49,7 @@ class VMinput:
     @param U_infty Free-stream flow magnitude.
     @param alpha free-stream direction (AoA).
     @param theta root twist angle.
-    @param 
+    @param WakeLength length of wake in chords.
     """
     
     def __init__(self, c, b, U_mag, alpha, theta, ZetaDotTest=0.0,

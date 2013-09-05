@@ -172,22 +172,23 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
             # Overwrite Gamma with TE value from previous time step.
             GammaStar[0,:] = Gamma[VMOPTS.M.value-1,:]
             
-            # set NewAIC to false. TODO: dependent on CS or other deformations
-            VMOPTS.NewAIC = ct.c_bool(False)
+            # set NewAIC to false.
+            if VMINPUT.ctrlSurf == False:
+                VMOPTS.NewAIC = ct.c_bool(False)
             
         # END if iTimeStep > 1
         
         
         # Calculate forces on aerodynamic grid.
-        UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, \
+        UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS,
                                Forces, Gamma, GammaStar, AIC, BIC)
-        
-        
+         
         #print(PostProcess.GetCoeffs(VMOPTS, Forces, VMINPUT, VMUNST.VelA_G))
         
         CoeffHistory[iTimeStep,0] = Time[iTimeStep]
-        CoeffHistory[iTimeStep,1:] = PostProcess.GetCoeffs(VMOPTS, Forces, \
-                                                 VMINPUT, VMUNST.VelA_G)
+        CoeffHistory[iTimeStep,1:] = PostProcess.GetCoeffs(VMOPTS, Forces,
+                                                           VMINPUT,
+                                                           VMUNST.VelA_G)
         
         # Write aerodynamic surface data as tecplot zone data.
         PostProcess.WriteAeroTecZone(FileObject, 'Surface', Zeta,\

@@ -13,7 +13,7 @@ class AeroelasticOps:
                     start in aero solver. TODO: move to aero inputs.
     """
     
-    def __init__(self, ElasticAxis, InertialAxis, 
+    def __init__(self, ElasticAxis = 0.0, InertialAxis = 0.0, 
                   AirDensity = 1.0,
                   Tight = False, ImpStart = False):
         
