@@ -9,6 +9,7 @@ import scipy.linalg
 import matplotlib.pyplot as plt
 from scipy.signal import lti, abcd_normalize
 import scipy.signal.cont2discrete as scipyCont2discrete
+from scipy.io import loadmat
 
 class StateSpace(lti):
     """@brief State-space representation of LTI systems.
@@ -19,14 +20,30 @@ class StateSpace(lti):
     def __init__(self, *args, **kwords):
         """@brief Based on scipy.signal lti class init.
         Initialize the LTI system using either:
-
+        
+            - ('string to .mat file containing disSys')
             - (numerator, denominator)
             - (zeros, poles, gain)
             - (A, B, C, D) : state-space.
             - (A, B, C, D, Ts) : discrete-time state-space
+            
+        @pre .mat files are assumed to contain a discrete-time state-space
+        object disSys which is a MATLAB structure, i.e not the new style MATLAB
+        lti class. To convert to a struct in MATLAB simply use
+        disSys = struct(MATLAB_SS_object) before saving the .mat file.
         """
         N = len(args)
-        if N <= 4:
+        if N == 1:
+            Dict = loadmat(args[0], variable_names = ['disSys'])
+            disSys = Dict['disSys'][0,0]
+            sysMat = [disSys['a'],disSys['b'],disSys['c'],disSys['d']]
+            self._A, self._B, self._C, self._D = abcd_normalize(*sysMat)
+            self._Ts = disSys["Ts"]
+            self.inputs = self.B.shape[-1]
+            self.outputs = self.C.shape[0]
+            self._isDiscrete = True
+            #self._updateDiscrete()
+        elif N <= 4:
             super(StateSpace, self).__init__(*args, **kwords)
         elif N == 5:
             self._A, self._B, self._C, self._D = abcd_normalize(*args[0:4])
@@ -37,17 +54,17 @@ class StateSpace(lti):
             self.inputs = self.B.shape[-1]
             self.outputs = self.C.shape[0]
             self._isDiscrete = True
-            self._updateDiscrete()
+            #self._updateDiscrete()
         else:
             raise ValueError("Needs 2, 3, 4, or 5 arguments.")
     
         
     def _updateDiscrete(self):
         raise NotImplementedError("Make continuous then convert to discrete time")
-        # TODO: Convert to continuous-time before applying below
-#        self._num, self._den = ss2tf(self.A, self.B, self.C, self.D)
-#        self._zeros, self._poles, self._gain = ss2zpk(self.A, self.B,
-#                                                          self.C, self.D)
+#       # TODO: Convert to continuous-time before applying below
+#         self._num, self._den = ss2tf(self.A, self.B, self.C, self.D)
+#         self._zeros, self._poles, self._gain = ss2zpk(self.A, self.B,
+#                                                           self.C, self.D)
     
     def cont2discrete(self, Ts):
         """@brief Converts continuous-time to discrete-time using scipy's
@@ -88,9 +105,9 @@ class StateSpace(lti):
         """@brief Plot continuous time eigenvalues.
         """
         Vals = scipy.linalg.eig(A)[0]
-        plt.plot(np.real(scipy.linalg.eig(A)[0]),
-                         np.imag(scipy.linalg.eig(A)[0]),
-                         'ko')
+        plt.plot(np.real(Vals),
+                 np.imag(Vals),
+                 'ko')
         plt.plot((0,0),(-10e-10,1.1*np.max(np.imag(Vals))),'k--')
         plt.ylim((-10e-10,1.1*np.max(np.imag(Vals))))
         plt.grid()
@@ -100,8 +117,8 @@ class StateSpace(lti):
         """@brief Plot discrete time eigenvalues.
         """
         Vals = scipy.linalg.eig(A)[0]
-        plt.plot(np.real(scipy.linalg.eig(A)[0]),
-                 np.imag(scipy.linalg.eig(A)[0]),
+        plt.plot(np.real(Vals),
+                 np.imag(Vals),
                  'ko')
         unitCircle = plt.Circle((0,0),1.0,color='k',fill=False)
         fig = plt.gcf()
@@ -130,6 +147,8 @@ class StateSpace(lti):
         
         try:
             if self._isDiscrete == True and option == 0:
+                # TODO: this is slow - change so that within plotting function
+                # calc eigenvalues then convert between discrete and continuous.
                 Acont = np.real(scipy.linalg.logm(self._A))/self._Ts
                 self._plotContEig(Acont)
             elif self._isDiscrete == True and option == 1:
@@ -222,3 +241,9 @@ if __name__ == '__main__':
     
     dt = 0.5
     dSys.cont2discrete(dt) # Convert to discrete.
+    
+    #Test loading from .mat
+    matPath = '/home/rjs10/Documents/MATLAB/MPC/HALE/HALE_sigma1000_Py'
+    dSys = StateSpace(matPath)
+    dSys.plotEig(option = 1)
+    
