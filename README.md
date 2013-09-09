@@ -30,6 +30,7 @@ Then build a Debug configuration of the project.
 * numpy
 * scipy
 * slycot (routines for preditive controller design)
+* muAO-MPC (MPC controller design and C-code generation)
 * Eigen (C++ libraries)
 * Boost (C++ libraries)
 * LAPACK (Fortran libraries)
