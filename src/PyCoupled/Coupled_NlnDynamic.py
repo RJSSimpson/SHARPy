@@ -578,18 +578,18 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
 #    fp.close()
     
     
-    "Close Tecplot ascii FileObject"
+    # Close Tecplot ascii FileObject.
     if Settings.PlotTec==True:
         PostProcess.CloseAeroTecFile(FileObject)
     
     if XBOPTS.PrintInfo.value==True:
         sys.stdout.write(' ... done\n')
         
-    "for interactive analysis at end of simulation set breakpoint"
+    # For interactive analysis at end of simulation set breakpoint.
     pass
 
 if __name__ == '__main__':
-    "solve nlnstatic problem"
+    # Solve nlnstatic problem.
     
     "beam options"
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),\
