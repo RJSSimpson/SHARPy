@@ -4,6 +4,7 @@ Created on 21 Aug 2013
 @author: rjs10
 '''
 
+import os
 import numpy as np
 import scipy.linalg
 import matplotlib.pyplot as plt
@@ -31,14 +32,20 @@ class StateSpace(lti):
         object disSys which is a MATLAB structure, i.e not the new style MATLAB
         lti class. To convert to a struct in MATLAB simply use
         disSys = struct(MATLAB_SS_object) before saving the .mat file.
+        @details the string to the .may file is the absolute filename without
+        the .mat extension.
         """
         N = len(args)
         if N == 1:
+            # Assert the file exists
+            assert os.path.isfile(args[0] + '.mat'), \
+                   IOError("File doesn't exist")
+            # extract discrete system matrices
             Dict = loadmat(args[0], variable_names = ['disSys'])
             disSys = Dict['disSys'][0,0]
             sysMat = [disSys['a'],disSys['b'],disSys['c'],disSys['d']]
             self._A, self._B, self._C, self._D = abcd_normalize(*sysMat)
-            self._Ts = disSys["Ts"]
+            self._Ts = disSys["Ts"][0,0] #"Ts" is 2-D array for some reason!
             self.inputs = self.B.shape[-1]
             self.outputs = self.C.shape[0]
             self._isDiscrete = True
@@ -170,12 +177,16 @@ class StateSpace(lti):
                 raise ValueError("option must be 0/1")
             
     def nX(self):
-        "@brief Number of states."
+        """@brief Number of states."""
         return self._A.shape[0]
     
     def nU(self):
-        "@breif Number of inputs."
+        """@brief Number of inputs."""
         return self._B.shape[1]
+    
+    def nY(self):
+        """@brief Number of outputs"""
+        return self._C.shape[0]
     
 def pltContEig(self, A):
     """@brief Plot continuous time eigenvalues.
