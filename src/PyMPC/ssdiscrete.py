@@ -40,6 +40,8 @@ class StateSpace(lti):
             # Assert the file exists
             assert os.path.isfile(args[0] + '.mat'), \
                    IOError("File doesn't exist")
+            # Save the path for later
+            self._matPath = args[0]
             # extract discrete system matrices
             Dict = loadmat(args[0], variable_names = ['disSys'])
             disSys = Dict['disSys'][0,0]
@@ -175,18 +177,26 @@ class StateSpace(lti):
                 raise TypeError("Ts not yet specified, was never discrete.")
             else:
                 raise ValueError("option must be 0/1")
-            
+    
+    @property  
     def nX(self):
         """@brief Number of states."""
         return self._A.shape[0]
     
+    @property
     def nU(self):
         """@brief Number of inputs."""
         return self._B.shape[1]
     
+    @property
     def nY(self):
         """@brief Number of outputs"""
         return self._C.shape[0]
+    
+    @property
+    def dt(self):
+        """@brief timestep."""
+        return self._Ts
     
 def pltContEig(self, A):
     """@brief Plot continuous time eigenvalues.
