@@ -15,9 +15,10 @@ import numpy as np
 import ctypes as ct
 
 def Setup(XBINPUT, XBOPTS):
-    """@brief Initial functionality adapted from FxInput_PyFx.f90."""
+    """@brief Check the beam input and options for inconsistencies.
+    @details Initial functionality adapted from FxInput_PyFx.f90."""
     
-    "Check number of nodes per element and Gauss points"
+    # Check number of nodes per element and Gauss points.
     if XBINPUT.NumNodesElem != 2 and XBINPUT.NumNodesElem != 3:
         sys.stderr.write('Invalid number of nodes per element\n')
     elif XBINPUT.NumNodesElem == 2 and XBOPTS.NumGauss.value != 1:
@@ -32,16 +33,16 @@ def Setup(XBINPUT, XBOPTS):
                          %(XBOPTS.NumGauss.value)  +\
                          ' Gauss points set to (2)\n')
         XBOPTS.NumGauss.value = 2    
-    sys.stderr.flush()
-        
+    sys.stderr.flush()    
     return XBINPUT, XBOPTS
 
 
 def Elem(XBINPUT, XBOPTS, XBELEM):
-    """@brief Set up Xbelem type. Initial functionality adapted from 
+    """@brief Set up Xbelem derived type.
+    @details Initial functionality adapted from 
     FxInput_PyFx.f90."""
     
-    "Check number of nodes per element and set default connectivity."
+    # Check number of nodes per element and set default connectivity.
     assert (XBINPUT.NumNodesElem == 2 or XBINPUT.NumNodesElem == 3),\
             'Invalid number of nodes per element'
     if XBINPUT.NumNodesElem == 2:
@@ -63,10 +64,10 @@ def Elem(XBINPUT, XBOPTS, XBELEM):
         
         NumNodes_tot = ct.c_int(2*XBINPUT.NumElems + 1)
     
-    "Calculate Beam Inverse Stiffness Matrix"        
+    # Calculate Beam Inverse Stiffness Matrix.        
     InverseStiffness = np.linalg.inv(XBINPUT.BeamStiffness)
     
-    "Populate XBELEM"
+    # Populate XBELEM
     for ElemNo in range(0,XBINPUT.NumElems):
         i_start = ElemNo*6
         i_end = ElemNo*6+6
@@ -74,7 +75,7 @@ def Elem(XBINPUT, XBOPTS, XBELEM):
         XBELEM.Stiff[i_start:i_end,:] = XBINPUT.BeamStiffness
         XBELEM.InvStiff[i_start:i_end,:] = InverseStiffness
     
-    "Element orientation and member number"
+    # Element orientation and member number.
     for ElemNo in range(0,XBINPUT.NumElems):
         i = ElemNo*3
         XBELEM.Vector[i+1] = 1.0
@@ -86,17 +87,17 @@ def Elem(XBINPUT, XBOPTS, XBELEM):
 def Node(XBINPUT, XBOPTS, NumNodes_tot, XBELEM):
     """@brief Define nodal properties."""
     
-    "Default straight beam based on BeamLength"
+    # Default straight beam based on BeamLength
     PosIni = np.zeros((NumNodes_tot.value,3), dtype=ct.c_double, order='F')
     
     for NodeNo in range(0,NumNodes_tot.value):
         PosIni[NodeNo,0] = XBINPUT.BeamLength*\
                             (float(NodeNo)/float(NumNodes_tot.value - 1))
         
-    "Define pre-twist"
+    # Define pre-twist.
     PhiNodes = np.zeros(NumNodes_tot.value, dtype=ct.c_double, order='F')
     
-    "Declare and populate boundary conditions"
+    # Declare and populate boundary conditions.
     BoundConds = np.zeros(NumNodes_tot.value,dtype=ct.c_int,order='F')
     if XBINPUT.BConds == 'CF':
         BoundConds[0] = 1

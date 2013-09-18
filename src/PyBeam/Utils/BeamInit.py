@@ -19,97 +19,88 @@ import Input
 def Static(XBINPUT,XBOPTS):
     """@brief Initialise everything needed for Static beam simulation."""
     
-    "Declare variables not dependent on NumNodes_tot"
+    # Declare variables that are not dependent on NumNodes_tot.
     XBELEM      = DerivedTypes.Xbelem(XBINPUT.NumElems,Settings.MaxElNod)
     NumDof      = ct.c_int()
-    PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),\
-                         dtype=ct.c_double, order='F')
-    
-    "Check inputs"
+    PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
+                           dtype=ct.c_double, order='F')
+    # Check inputs.
     XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS)
-    
-    "Set-up element properties"
+    # Set-up element properties
     NumNodes_tot, XBELEM = Input.Elem(XBINPUT, XBOPTS, XBELEM)
-    
-    "Set-up nodal properties"
+    # Set-up nodal properties.
     PosIni, PhiNodes, BoundConds = \
         Input.Node(XBINPUT, XBOPTS, NumNodes_tot, XBELEM)
-        
-    "Compute initial (undeformed) geometry"
-    BeamLib.f_xbeam_undef_geom( \
-        ct.byref(ct.c_int(XBINPUT.NumElems)), \
-        ct.byref(NumNodes_tot), \
-        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)),\
-        PosIni.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        PhiNodes.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        PsiIni.ctypes.data_as(ct.POINTER(ct.c_double)),\
-        ct.byref(XBOPTS.FollowerForce),\
-        ct.byref(XBOPTS.FollowerForceRig),\
-        ct.byref(XBOPTS.PrintInfo),\
-        ct.byref(XBOPTS.OutInBframe),\
-        ct.byref(XBOPTS.OutInaframe),\
-        ct.byref(XBOPTS.ElemProj),\
-        ct.byref(XBOPTS.MaxIterations),\
-        ct.byref(XBOPTS.NumLoadSteps),\
-        ct.byref(XBOPTS.NumGauss),\
-        ct.byref(XBOPTS.Solution),\
-        ct.byref(XBOPTS.DeltaCurved),\
-        ct.byref(XBOPTS.MinDelta),\
+    # Compute initial (undeformed) geometry.
+    BeamLib.f_xbeam_undef_geom( 
+        ct.byref(ct.c_int(XBINPUT.NumElems)), 
+        ct.byref(NumNodes_tot), 
+        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)),
+        PosIni.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        PhiNodes.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        PsiIni.ctypes.data_as(ct.POINTER(ct.c_double)),
+        ct.byref(XBOPTS.FollowerForce),
+        ct.byref(XBOPTS.FollowerForceRig),
+        ct.byref(XBOPTS.PrintInfo),
+        ct.byref(XBOPTS.OutInBframe),
+        ct.byref(XBOPTS.OutInaframe),
+        ct.byref(XBOPTS.ElemProj),
+        ct.byref(XBOPTS.MaxIterations),
+        ct.byref(XBOPTS.NumLoadSteps),
+        ct.byref(XBOPTS.NumGauss),
+        ct.byref(XBOPTS.Solution),
+        ct.byref(XBOPTS.DeltaCurved),
+        ct.byref(XBOPTS.MinDelta),
         ct.byref(XBOPTS.NewmarkDamp) )
-
-    "Write to undeformed geometry to file"
+    # Write to undeformed geometry to file.
     WriteMode = 'w'
     if XBOPTS.PrintInfo==True:
-        sys.stdout.write('Writing file (mode: %s) %s' %(WriteMode,\
-                            Settings.OutputDir + Settings.OutputFileRoot +\
-                             '_SOL' + XBOPTS.Solution.value + '_und.dat\n'))
+        sys.stdout.write('Writing file (mode: %s) %s' %(WriteMode,
+                         Settings.OutputDir + Settings.OutputFileRoot + 
+                         '_SOL' + XBOPTS.Solution.value + '_und.dat\n'))
     
-    BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,\
-                              PosIni,PsiIni,\
-                              Settings.OutputDir + Settings.OutputFileRoot + \
-                               '_INIT' , WriteMode)
-    
-    
+    BeamIO.WriteUndefGeometry(XBINPUT.NumElems,NumNodes_tot.value,XBELEM,
+                              PosIni,PsiIni,
+                              Settings.OutputDir + Settings.OutputFileRoot +
+                              '_INIT' , WriteMode)
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Identify nodal degrees of freedom ... ')
-    
+    # Initialize nodal data derived type.
     XBNODE = DerivedTypes.Xbnode(NumNodes_tot.value)
-    
-    BeamLib.f_xbeam_undef_dofs( \
-        ct.byref(ct.c_int(XBINPUT.NumElems)), \
-        ct.byref(NumNodes_tot), \
-        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), \
-        BoundConds.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)), \
-        XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)), \
+    BeamLib.f_xbeam_undef_dofs( 
+        ct.byref(ct.c_int(XBINPUT.NumElems)), 
+        ct.byref(NumNodes_tot), 
+        XBELEM.NumNodes.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.MemNo.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.Conn.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.Master.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBELEM.Length.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.PreCurv.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Psi.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Vector.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Mass.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.Stiff.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.InvStiff.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        XBELEM.RBMass.ctypes.data_as(ct.POINTER(ct.c_double)), 
+        BoundConds.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBNODE.Master.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)), 
+        XBNODE.Fdof.ctypes.data_as(ct.POINTER(ct.c_int)), 
         ct.byref(NumDof) )
-    
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('done\n')
-        
+    
     return XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni,\
             XBNODE, NumDof
             
@@ -118,7 +109,7 @@ def Dynamic(XBINPUT,XBOPTS):
     """@brief Initialise everything for dynamic analysis."""
     
     "Create time vector"
-    Time = np.arange(XBINPUT.t0,XBINPUT.tfin  + XBINPUT.dt, XBINPUT.dt,\
+    Time = np.arange(XBINPUT.t0,XBINPUT.tfin  + XBINPUT.dt, XBINPUT.dt,
                      ct.c_double)
     
     "Calculate number of timesteps"
@@ -203,7 +194,7 @@ def Dynamic(XBINPUT,XBOPTS):
     
     "Rates of Dof Arrays"
     PosDotDef  = np.zeros((XBINPUT.NumNodesTot,3),ct.c_double,'F')
-    PsiDotDef  = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),\
+    PsiDotDef  = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                            ct.c_double, 'F')
     
     "Create Outgrids and check only 1 node specified"
@@ -217,11 +208,11 @@ def Dynamic(XBINPUT,XBOPTS):
     
     "Position/rotation history at Outgrids = True element"
     PosPsiTime = np.zeros((NumSteps.value+1,6), ct.c_double, 'F')
-    VelocTime  = np.zeros((NumSteps.value+1,XBINPUT.NumNodesTot),\
+    VelocTime  = np.zeros((NumSteps.value+1,XBINPUT.NumNodesTot),
                            ct.c_double, 'F')
     
     "Position of all nodes at all times"
-    DynOut     = np.zeros(((NumSteps.value+1)*XBINPUT.NumNodesTot,3),\
+    DynOut     = np.zeros(((NumSteps.value+1)*XBINPUT.NumNodesTot,3),
                            ct.c_double, 'F')
     
     return Time, NumSteps, ForceTime, ForcedVel, ForcedVelDot,\

@@ -49,10 +49,8 @@ class Xbopts:
                  DeltaCurved = ct.c_double(1.0e-5), \
                  MinDelta = ct.c_double(1.0e-8), \
                  NewmarkDamp = ct.c_double(1.0e-4) ):
-        """@brief Default initialisation (as defined in .f90).
-        
-        Non-default initialisation requires everything up to the argument in
-        the list is specified (except from self)."""
+        """@brief Default initialisation is as defined in the original fortran
+        derived type."""
         self.FollowerForce = FollowerForce
         self.FollowerForceRig = FollowerForceRig
         self.PrintInfo = PrintInfo

@@ -50,6 +50,7 @@ class VMinput:
     @param alpha free-stream direction (AoA).
     @param theta root twist angle.
     @param WakeLength length of wake in chords.
+    @param ctrlSurf ControlSurf object.
     """
     
     def __init__(self, c, b, U_mag, alpha, theta, ZetaDotTest=0.0,
@@ -129,12 +130,12 @@ class ControlSurf:
                 betaTemp = self.beta
                 timeTemp = self.time
                 
-                # Update member
+                # Update time member
                 self.time = time
                 
                 # Check for 0 denominator
-                if (self.time == time):
-                    raise Exception('Updated time equal to previous time')
+                if (self.time == timeTemp):
+                    raise Exception('Update time equal to previous time')
                 else:
                     # Overwrite current angle and rates
                     self.beta = beta
