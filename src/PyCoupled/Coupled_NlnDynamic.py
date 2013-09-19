@@ -28,6 +28,7 @@ from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 import PyCoupled.Coupled_NlnStatic as Static
 import PyBeam.Utils.XbeamLib as XbeamLib
 from PyCoupled.Coupled_NlnStatic import AddGravityLoads
+from DerivedTypesAero import ControlSurf
 
 class VMCoupledUnstInput:
     """@brief Contains data for unsteady run of UVLM.
@@ -73,27 +74,23 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     # Initialise static beam data.
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
                 = BeamInit.Static(XBINPUT,XBOPTS)
-    # Solve NlnStatic (PosDefor,PsiDefor,Gamma).
+    # Calculate initial displacements.
     if AELAOPTS.ImpStart == False:
-        # Modify options.
-        XBOPTS.Solution.value = 112
+        XBOPTS.Solution.value = 112 # Modify options.
         VMOPTS.Steady = ct.c_bool(True)
         Rollup = VMOPTS.Rollup.value
         VMOPTS.Rollup.value = False
         # Solve Static Aeroelastic.
         PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, Force = \
                     Static.Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, AELAOPTS)
-        # Reset options.
-        XBOPTS.Solution.value = 312
+        XBOPTS.Solution.value = 312 # Reset options.
         VMOPTS.Steady = ct.c_bool(False)
         VMOPTS.Rollup.value = Rollup
     elif AELAOPTS.ImpStart == True:
-        # Set PosDefor and PsiDefor to initial conditions.
         PosDefor = PosIni.copy(order='F')
         PsiDefor = PsiIni.copy(order='F')
-        # Force = 0.0
         Force = np.zeros((XBINPUT.NumNodesTot,6),ct.c_double,'F')
-    # Write deformed configuration to file.
+    # Write deformed configuration to file. TODO: tidy this away inside function.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_def.dat'
     if XBOPTS.PrintInfo==True:
         sys.stdout.write('Writing file %s ... ' %(ofile))
@@ -140,7 +137,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     Mvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     Cvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     
-#    X0    = np.zeros(NumDof.value, ct.c_double, 'F')
+#     X0    = np.zeros(NumDof.value, ct.c_double, 'F')
     X     = np.zeros(NumDof.value, ct.c_double, 'F')
     DX    = np.zeros(NumDof.value, ct.c_double, 'F')
     dXdt  = np.zeros(NumDof.value, ct.c_double, 'F')
@@ -168,15 +165,10 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     BeamLib.Cbeam_Solv_Disp2State(NumNodes_tot, NumDof, XBINPUT, XBNODE,
                                   PosDefor, PsiDefor, PosDotDef, PsiDotDef,
                                   X, dXdt)
-    
-    
     # Approximate initial accelerations.
-    
-    # Initialise accelerations as zero arrays.
     PosDotDotDef = np.zeros((NumNodes_tot.value,3),ct.c_double,'F')
     PsiDotDotDef = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                              ct.c_double, 'F')
-
     # Assemble matrices for dynamic analysis.
     BeamLib.Cbeam3_Asbly_Dynamic(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
                          PosIni, PsiIni, PosDefor, PsiDefor,
@@ -207,66 +199,45 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     gamma = 0.5 + XBOPTS.NewmarkDamp.value
     beta = 0.25*(gamma + 0.5)**2
     
-    """ Initialise Aero -----------------------------------------------------"""
-    
-    "define section used to generate aero mesh"       
+    # Initialize Aero       
     Section = InitSection(VMOPTS,VMINPUT,AELAOPTS.ElasticAxis)
- 
-    "declare memory for Aero grid velocities"
+    # Declare memory for Aero variables.
     ZetaDot = np.zeros((Section.shape[0],PosDefor.shape[0],3),ct.c_double,'C')
-    
-    "Additional Aero solver variables"
+    K = VMOPTS.M.value*VMOPTS.N.value
+    AIC = np.zeros((K,K),ct.c_double,'C')
+    BIC = np.zeros((K,K),ct.c_double,'C')
     AeroForces = np.zeros((VMOPTS.M.value+1,VMOPTS.N.value+1,3),ct.c_double,'C')
-    AIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,VMOPTS.M.value*VMOPTS.N.value), 
-                   ct.c_double,'C')
-    BIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,VMOPTS.M.value*VMOPTS.N.value), 
-                   ct.c_double,'C')
-    
-    "init external velocities"  
+    # Init external velocities.  
     Uext = InitSteadyExternalVels(VMOPTS,VMINPUT)
-    
-    
     if AELAOPTS.ImpStart == True:
-        "init required variables"
         Zeta = np.zeros((Section.shape[0],PosDefor.shape[0],3),ct.c_double,'C')             
         Gamma = np.zeros((VMOPTS.M.value,VMOPTS.N.value),ct.c_double,'C')
-        
-        "generate surface, wake and gamma matrix"
+        # Generate surface, wake and gamma matrices.
         CoincidentGrid(PosDefor, PsiDefor, Section, ForcedVel[0,:3], 
-                           ForcedVel[0,3:], PosDotDef, PsiDotDef, XBINPUT,
-                           Zeta, ZetaDot, VMUNST.OriginA_G,VMUNST.PsiA_G)
-        
-        "init wake"
+                       ForcedVel[0,3:], PosDotDef, PsiDotDef, XBINPUT,
+                       Zeta, ZetaDot, VMUNST.OriginA_G,VMUNST.PsiA_G)
+        # init wake grid and gamma matrix.
         ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)    
-    #END if ImpStart
-    
+    # Define tecplot stuff
     if Settings.PlotTec==True:
-        "define tecplot stuff"
         FileName = Settings.OutputDir + Settings.OutputFileRoot + 'AeroGrid.dat'
         Variables = ['X', 'Y', 'Z','Gamma']        
         FileObject = PostProcess.WriteAeroTecHeader(FileName, 
                                                     'Default',
                                                     Variables)
         
-        "plot results of static analysis"
-        "surface"
+        # Plot results of static analysis
         PostProcess.WriteAeroTecZone(FileObject, 'Surface', Zeta,
-                                  0,
-                                  XBOPTS.NumLoadSteps.value,
-                                  Time[0+1],
-                                  Variables, True, Gamma)
-        "wake"
+                                     0,
+                                     XBOPTS.NumLoadSteps.value,
+                                     Time[0+1],
+                                     Variables, True, Gamma)
         PostProcess.WriteAeroTecZone(FileObject, 'Wake', ZetaStar,
-                                  0,
-                                  XBOPTS.NumLoadSteps.value,
-                                  Time[0+1],
-                                  Variables, False, GammaStar)
-    #END if plot tec
-    
-    
-    """ begin analysis ----------------------------------------------------- """
-    
-    "Time loop"
+                                     0,
+                                     XBOPTS.NumLoadSteps.value,
+                                     Time[0+1],
+                                     Variables, False, GammaStar)
+    # Time loop.
     for iStep in range(NumSteps.value):
         
         if XBOPTS.PrintInfo.value==True:
@@ -552,18 +523,29 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     # For interactive analysis at end of simulation set breakpoint.
     pass
 
+def panellingFromFreq(freq,c=1.0,Umag=1.0):
+    """@brief Calculate adequate spatial/temporal resolution on UVLM grid
+    based on a frequency of interest.
+    @param freq Frequency of interest.
+    @param c chord of wing.
+    @param Umag mean reltive free-stream velocity magnitude.
+    @returns M Number of chordwise panels for wing.
+    @returns DelTime Suggested timestep [seconds.]
+    """
+    k = freq*c/(2*Umag) #get expected reduced freq
+    M = int(50.0*k/np.pi) #get adequate panelling
+    DelTime = c/(Umag*M) #get resulting DelTime
+    return M, DelTime
+
 if __name__ == '__main__':
-    # Solve nlnstatic problem.
-    
-    "beam options"
+    # Beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
                                  MaxIterations = ct.c_int(50),
                                  PrintInfo = ct.c_bool(True),
                                  NumLoadSteps = ct.c_int(25),
                                  Solution = ct.c_int(312),
                                  MinDelta = ct.c_double(1e-5))
-    
-    "beam inputs"
+    # beam inputs.
     XBINPUT = DerivedTypes.Xbinput(3,6)
     XBINPUT.BeamLength = 6.096
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
@@ -572,78 +554,78 @@ if __name__ == '__main__':
     XBINPUT.BeamStiffness[3,3] = 0.99e+06
     XBINPUT.BeamStiffness[4,4] = 9.77e+06
     XBINPUT.BeamStiffness[5,5] = 1.0e+09
-    
     XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
-    
     XBINPUT.BeamMass[0,0] = 35.71
     XBINPUT.BeamMass[1,1] = 35.71
     XBINPUT.BeamMass[2,2] = 35.71
     XBINPUT.BeamMass[3,3] = 8.64
     XBINPUT.BeamMass[4,4] = 0.001
     XBINPUT.BeamMass[5,5] = 0.001
-    
-    "off diagonal terms"
-    "in Theodorsen sectional coordinates"
+    # Off diagonal terms (in Theodorsen sectional coordinates)
     ElasticAxis = -0.34
     InertialAxis = -7.0/50.0
     x_alpha = InertialAxis - ElasticAxis
-    
-    "pitch-plunge coupling term"
-    "b-frame coordinates"
+    # pitch-plunge coupling term (b-frame coordinates)
     c = 1.8288
     mOff = x_alpha*(c/2)*XBINPUT.BeamMass[0,0]
-    
     XBINPUT.BeamMass[2,3] = -mOff
     XBINPUT.BeamMass[0,5] = mOff
     XBINPUT.BeamMass[3:,:3] = XBINPUT.BeamMass[:3,3:].T
-    
-    
-    "unsteady parameters"
-    OmegaF = 70.0 #approx flutter freq
-    U_mag = 170.0
-    k = OmegaF*c/(2*U_mag) #get expected reduced freq
-    M = int(50.0*k/np.pi) #get adequate panelling
-    DelTime = c/(U_mag*M) #get resulting DelTime
-    
-    "beam"
-    XBINPUT.dt = DelTime
+    # Get suggested panelling.
+    Umag = 140.0
+    M, delTime = panellingFromFreq(70,c,Umag)
+    print("suggested M = %d\n" % M)
+    print("suggested delTime = %d\n" % delTime)
+    # Unsteady parameters.
+    XBINPUT.dt = delTime
     XBINPUT.t0 = 0.0
-    XBINPUT.tfin = 0.1
-    
-    "aero"
+    XBINPUT.tfin = 0.5
+    # aero params.
     WakeLength = 30.0*c
-    Mstar = int(WakeLength/(DelTime*U_mag))
-    
-    
-    "aero options"
+    Mstar = int(WakeLength/(delTime*Umag))
+    # aero options.
+    N = XBINPUT.NumNodesTot - 1
     VMOPTS = DerivedTypesAero.VMopts(M = M,
-                                     N = XBINPUT.NumNodesTot - 1 ,
+                                     N = N,
                                      ImageMethod = True,
                                      Mstar = Mstar,
                                      Steady = False,
                                      KJMeth = False,
                                      NewAIC = True,
-                                     DelTime = DelTime)
-    
-    "aero inputs"
-    VMINPUT = DerivedTypesAero.VMinput(c = c, b = XBINPUT.BeamLength,
-                                       U_mag = U_mag,
-                                       alpha = 0.05*np.pi/180.0,
+                                     DelTime = delTime)
+    # Aero inputs.
+    iMin = M - M/4
+    iMax = M
+    jMin = N - N/4
+    jMax = N
+    typeMotion = 'sin'
+    betaBar = 1.0*np.pi/180.0
+    omega = 30.0
+    ctrlSurf = ControlSurf(iMin,
+                           iMax,
+                           jMin,
+                           jMax,
+                           typeMotion,
+                           betaBar,
+                           omega) 
+    VMINPUT = DerivedTypesAero.VMinput(c = c,
+                                       b = XBINPUT.BeamLength,
+                                       U_mag = Umag,
+                                       alpha = 0.0*np.pi/180.0,
                                        theta = 0.0,
                                        ZetaDotTest = 0.0,
-                                       WakeLength = WakeLength)
-    
-    "unsteady aero inputs"
-    VelA_G = np.array(([0.0,0.0,0.0]))
+                                       WakeLength = WakeLength,
+                                       ctrlSurf = ctrlSurf)
+    # Unsteady aero inputs.
+    VelA_G   = np.array(([0.0,0.0,0.0]))
     OmegaA_G = np.array(([0.0,0.0,0.0]))
-    VMUNST = VMCoupledUnstInput(VMOPTS, VMINPUT, 0.0, 0.0,
-                              VelA_G, OmegaA_G)
-    
-    
-    
-    "aeroelastic opts"
-    "Density and gravity"
-    AELAOPTS = AeroelasticOps(ElasticAxis,0.0,1.02)
-    
-    
+    VMUNST   = VMCoupledUnstInput(VMOPTS, VMINPUT, 0.0, 0.0,
+                                  VelA_G, OmegaA_G)
+    # Aerolastic simulation results.
+    AELAOPTS = AeroelasticOps(ElasticAxis = ElasticAxis,
+                              InertialAxis = InertialAxis,
+                              AirDensity = 1.02,
+                              Tight = False,
+                              ImpStart = False)
+    # Solve nonlinear static simulation.
     Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS)
