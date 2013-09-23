@@ -25,100 +25,7 @@ from PyAero.UVLM.Utils import PostProcess
 from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels
 from PyAero.UVLM.Solver.VLM import InitSteadyWake
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
-from PyBeam.Utils.XbeamLib import Psi2TransMat
-
-def isodd(num):
-    """@brief returns True if Num is odd"""
-    return bool(num & 1)
-
-#TODO: Move to Beam Utils.
-def AddGravityLoads(BeamForces,XBINPUT,XBELEM,AELAOPTS,PsiDefor,
-                      chord = 1.0):
-    """@brief Apply nodal gravity loads.
-    @param BeamForces Nodal forces to update.
-    @param XBINPUT Xbeam inputs.
-    @param XBELEM Xbeam element information.
-    @param AELAOPTS Aeroelastic options.
-    @param PsiA_G Cartesian rotation vector describing orientation of a-frame
-           with respect to earth.
-    @param chord Aerofoil chord, assumed to be 1.0 if ommited. 
-    @details Offset of mass centroid from elastic axis is currently calculated
-             using the AELAOPTS.ElasticAxis and .InertialAxis parameters which 
-             are analogous to that used by Theodorsen. It therefore assumes the 
-             aerofoil section is defined on the y-axis and hence the moment arm
-             points in the B-frame y-direction.
-    @warning Assumes even distribution of nodes along beam.
-    @warning Not valid for twisted aerofoil sections, i.e those that are defined
-             with some theta angle.
-    """
-    
-    MassPerLength = XBINPUT.BeamMass[0,0]
-    
-    if XBINPUT.NumNodesElem == 2:
-        NodeSpacing = XBELEM.Length[0]
-    elif XBINPUT.NumNodesElem == 3:
-        NodeSpacing = 0.5*XBELEM.Length[0]
-        
-    ForcePerNode = -NodeSpacing * MassPerLength * XBINPUT.g 
-    
-    # Obtain transformation from Earth to a-frame.
-    CGa = Psi2TransMat(XBINPUT.PsiA_G)
-    CaG = CGa.T
-    
-    # Force in a-frame.
-    Force_a = np.dot(CaG,np.array([0.0,0.0,ForcePerNode]))
-    
-    # Indices for boundary nodes.
-    Root = 0
-    Tip = BeamForces.shape[0]-1
-    
-    # Apply forces.
-    BeamForces[Root+1:Tip,:3] += Force_a
-    BeamForces[Root,:3] += 0.5*Force_a
-    BeamForces[Tip,:3] += 0.5*Force_a
-    
-    # Get number of nodes per beam element.
-    NumNodesElem = XBINPUT.NumNodesElem
-    
-    # Loop through nodes to get moment arm at each.
-    for iNode in range(XBINPUT.NumNodesTot):
-        
-        # Work out what element we are in (works for 2 and 3-noded).
-        if iNode == 0:
-            iElem = 0
-        elif iNode < XBINPUT.NumNodesTot-1:
-            iElem = int(iNode/(NumNodesElem-1))
-        elif iNode == XBINPUT.NumNodesTot-1:
-            iElem = int((iNode-1)/(NumNodesElem-1))
-            
-        # Work out what sub-element node (iiElem) we are in.
-        if NumNodesElem == 2:
-            if iNode < XBINPUT.NumNodesTot-1:
-                iiElem = 0
-            elif iNode == XBINPUT.NumNodesTot-1:
-                iiElem = 1
-                
-        elif NumNodesElem == 3:
-            iiElem = 0
-            if iNode == XBINPUT.NumNodesTot-1:
-                iiElem = 2 
-            elif isodd(iNode):
-                iiElem = 1
-        
-        # Calculate transformation matrix for each node.
-        CaB = Psi2TransMat(PsiDefor[iElem,iiElem,:])
-        
-        # Define moment arm in B-frame
-        # Moment arm to elastic axis defined using EA and IA of Theodorsen.
-        armY = -(AELAOPTS.InertialAxis - AELAOPTS.ElasticAxis)*chord/2.0
-        armY_a = np.dot(CaB,np.array([0.0, armY, 0.0]))
-        
-        # Calculate moment
-        if (iNode == Root or iNode == Tip):
-            BeamForces[iNode,3:] += np.cross(armY_a, 0.5*Force_a)
-        else:
-            BeamForces[iNode,3:] += np.cross(armY_a, Force_a)
-    
+from PyBeam.Utils.XbeamLib import AddGravityLoads
 
 def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         """Nonlinear static solver using Python to solve aeroelastic
@@ -186,6 +93,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                            OmegaA_A, PosDotDef, PsiDotDef, XBINPUT,
                            Zeta, ZetaDot,
                            ctrlSurf = VMINPUT.ctrlSurf)
+            # Set any velocities (for example from a control surface to zero)
+            ZetaDot[:,:,:] = 0.0
+            
             
             ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)
             
@@ -213,7 +123,6 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
             # Add gravity loads.
             AddGravityLoads(XBINPUT.ForceStatic,XBINPUT,XBELEM,AELAOPTS,
                             PsiDefor,VMINPUT.c)
-
             
             # Apply factor corresponding to force step.
             iForceStep = XBINPUT.ForceStatic*float( (iLoadStep+1) ) / \
@@ -227,37 +136,51 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
             while( (ResLog10 > np.log10(XBOPTS.MinDelta.value)) 
                  & (Iter < XBOPTS.MaxIterations.value) ):
                 
-                "Increment iteration counter"
                 Iter += 1
                 if XBOPTS.PrintInfo.value == True:
                     sys.stdout.write('   %-7d ' %(Iter))
                     
-                
-                "Set structural eqn tensors to zero"
+                # Set structural eqn tensors to zero
                 KglobalFull[:,:] = 0.0; ks = ct.c_int()
                 FglobalFull[:,:] = 0.0; fs = ct.c_int()
                 Qglobal[:] = 0.0
                 
+                # Assemble matrices for static problem
+                BeamLib.Cbeam3_Asbly_Static(XBINPUT,
+                                            NumNodes_tot,
+                                            XBELEM,
+                                            XBNODE,
+                                            PosIni,
+                                            PsiIni,
+                                            PosDefor,
+                                            PsiDefor,
+                                            iForceStep,
+                                            NumDof,
+                                            ks,
+                                            KglobalFull,
+                                            fs,
+                                            FglobalFull,
+                                            Qglobal,
+                                            XBOPTS)
                 
-                "Assemble matrices for static problem"
-                BeamLib.Cbeam3_Asbly_Static(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
-                            PosIni, PsiIni, PosDefor, PsiDefor,
-                            iForceStep, NumDof,
-                            ks, KglobalFull, fs, FglobalFull, Qglobal,
-                            XBOPTS)
-                
-                
-                "Get state vector from current deformation"
-                PosDot = np.zeros((NumNodes_tot.value,3), ct.c_double, 'F') #R
+                # Get state vector from current deformation.
+                PosDot = np.zeros((NumNodes_tot.value,3), ct.c_double, 'F')
                 PsiDot = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
-                                   ct.c_double, 'F') #Psi
+                                  ct.c_double, 'F')
                 
-                BeamLib.Cbeam_Solv_Disp2State(NumNodes_tot, NumDof, XBINPUT, XBNODE,
-                              PosDefor, PsiDefor, PosDot, PsiDot,
-                              x, dxdt)
+                BeamLib.Cbeam_Solv_Disp2State(NumNodes_tot,
+                                              NumDof,
+                                              XBINPUT,
+                                              XBNODE,
+                                              PosDefor,
+                                              PsiDefor,
+                                              PosDot,
+                                              PsiDot,
+                                              x,
+                                              dxdt)
                 
                 
-                "Get forces on unconstrained nodes"
+                # Get forces on unconstrained nodes.
                 BeamLib.f_fem_m2v(ct.byref(NumNodes_tot),
                                   ct.byref(ct.c_int(6)),
                                   iForceStep.ctypes.data_as(ct.POINTER(ct.c_double)),
@@ -265,45 +188,50 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                                   iForceStep_Dof.ctypes.data_as(ct.POINTER(ct.c_double)),
                                   XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)) )
                 
-                "Calculate \Delta RHS"
+                # Calculate \Delta RHS.
                 Qglobal = Qglobal - np.dot(FglobalFull, iForceStep_Dof)
                 
                 
-                "Calculate \Delta State Vector"    
+                # Calculate \Delta State Vector. 
                 DeltaS = - np.dot(np.linalg.inv(KglobalFull), Qglobal)
                     
                 if XBOPTS.PrintInfo.value == True:
                     sys.stdout.write('%-10.4e %-10.4e ' 
                                      % (max(abs(Qglobal)),max(abs(DeltaS))))
                 
+                # Update Solution.
+                BeamLib.Cbeam3_Solv_Update_Static(XBINPUT,
+                                                  NumNodes_tot,
+                                                  XBELEM,
+                                                  XBNODE,
+                                                  NumDof,
+                                                  DeltaS,
+                                                  PosIni,
+                                                  PsiIni,
+                                                  PosDefor,
+                                                  PsiDefor)
                 
-                "Update Solution"
-                BeamLib.Cbeam3_Solv_Update_Static(XBINPUT, NumNodes_tot, XBELEM,
-                                                  XBNODE, NumDof, DeltaS,
-                                                  PosIni, PsiIni, PosDefor,PsiDefor)
-                
-                
-                "Residual at first iteration"
+                # Record residual at first iteration.
                 if(Iter == 1):
                     Res0_Qglobal = max(abs(Qglobal)) + 1.e-16
                     Res0_DeltaX  = max(abs(DeltaS)) + 1.e-16
     
-                "Update residual and compute log10"
+                # Update residual and compute log10
                 Res_Qglobal = max(abs(Qglobal)) + 1.e-16
                 Res_DeltaX  = max(abs(DeltaS)) + 1.e-16
-    
                 ResLog10 = max([np.log10(Res_Qglobal/Res0_Qglobal), 
-                                np.log10(Res_DeltaX/Res0_DeltaX)])
-                
+                                np.log10(Res_DeltaX/Res0_DeltaX)]  )
                 
                 if XBOPTS.PrintInfo.value == True:
                     sys.stdout.write('%8.4f\n' %(ResLog10))
                     
-                "Stop the solution"
+                # Stop the solution.
                 if(ResLog10 > 10.):
                     sys.stderr.write(' STOP\n')
                     sys.stderr.write(' The max residual is %e\n' %(ResLog10))
                     exit(1)
+                elif Res_DeltaX < 1.e-15:
+                    break
                 
             # END Newton iteration
         # END Load step loop
@@ -313,7 +241,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
             sys.stdout.write(' ... done\n')
         
          
-        "Write deformed configuration to file"
+        # Write deformed configuration to file.
         ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL112_def.dat'
         if XBOPTS.PrintInfo.value==True:
             sys.stdout.write('Writing file %s ... ' %(ofile))
@@ -328,8 +256,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         BeamIO.OutputElems(XBINPUT.NumElems, NumNodes_tot.value, XBELEM, 
                            PosDefor, PsiDefor, ofile, WriteMode)
         
-        
-        "Print deformed configuration"
+        # Print deformed configuration.
         if XBOPTS.PrintInfo.value==True:
             sys.stdout.write('--------------------------------------\n')
             sys.stdout.write('NONLINEAR STATIC SOLUTION\n')
@@ -341,17 +268,16 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                 sys.stdout.write('\n')
             sys.stdout.write('--------------------------------------\n')
             
-        "Close Tecplot ascii FileObject"
+        # Close Tecplot ascii FileObject.
         PostProcess.CloseAeroTecFile(FileObject)
             
-        
-        "Return solution as optional output argument"
+        # Return solution
         return PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep
 
 if __name__ == '__main__':
-    "solve nlnstatic problem"
+    # solve nlnstatic problem.
     
-    "beam options"
+    # beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
                                  MaxIterations = ct.c_int(50),
                                  PrintInfo = ct.c_bool(True),
@@ -359,7 +285,7 @@ if __name__ == '__main__':
                                  Solution = ct.c_int(112),
                                  MinDelta = ct.c_double(1e-4))
     
-    "beam inputs"
+    # beam inputs.
     XBINPUT = DerivedTypes.Xbinput(3,20)
     XBINPUT.BeamLength = 16.0
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
@@ -379,7 +305,7 @@ if __name__ == '__main__':
     XBINPUT.BeamMass[5,5] = 0.001
     
     
-    "aero options"
+    # aero options. 
     M = 4
     N = XBINPUT.NumNodesTot - 1
     VMOPTS = DerivedTypesAero.VMopts(M = M,
@@ -388,7 +314,7 @@ if __name__ == '__main__':
                                      Steady = True,
                                      KJMeth = True)
     
-    "aero inputs"
+    # aero inputs.
     ctrlSurf = DerivedTypesAero.ControlSurf(iMin = M - M/4,
                                             iMax = M,
                                             jMin = N - N/4,
@@ -403,10 +329,9 @@ if __name__ == '__main__':
                                        theta = 0.0,
                                        ctrlSurf = ctrlSurf)
     
-    "aeroelastic opts"
-    "Density and gravity due to US standard atmosphere at 20km"
+    # aeroelastic opts.
+    # Density due to US standard atmosphere at 20km.
     AELAOPTS = AeroelasticOps(0.0,0.0,0.08891)
-    
     
     Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
     

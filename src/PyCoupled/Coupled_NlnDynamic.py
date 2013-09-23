@@ -29,6 +29,7 @@ import PyCoupled.Coupled_NlnStatic as Static
 import PyBeam.Utils.XbeamLib as XbeamLib
 from PyCoupled.Coupled_NlnStatic import AddGravityLoads
 from DerivedTypesAero import ControlSurf
+from scipy.linalg import expm, logm
 
 class VMCoupledUnstInput:
     """@brief Contains data for unsteady run of UVLM.
@@ -171,14 +172,14 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                              ct.c_double, 'F')
     # Assemble matrices for dynamic analysis.
     BeamLib.Cbeam3_Asbly_Dynamic(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
-                         PosIni, PsiIni, PosDefor, PsiDefor,
-                         PosDotDef, PsiDotDef, PosDotDotDef, PsiDotDotDef,
-                         Force, ForcedVel[0,:], ForcedVelDot[0,:],
-                         NumDof, Settings.DimMat,
-                         ms, MglobalFull, Mvel,
-                         cs, CglobalFull, Cvel,
-                         ks, KglobalFull, fs, FglobalFull,
-                         Qglobal, XBOPTS, Cao)
+                                 PosIni, PsiIni, PosDefor, PsiDefor,
+                                 PosDotDef, PsiDotDef, PosDotDotDef, PsiDotDotDef,
+                                 Force, ForcedVel[0,:], ForcedVelDot[0,:],
+                                 NumDof, Settings.DimMat,
+                                 ms, MglobalFull, Mvel,
+                                 cs, CglobalFull, Cvel,
+                                 ks, KglobalFull, fs, FglobalFull,
+                                 Qglobal, XBOPTS, Cao)
     # Get force vector for unconstrained nodes (Force_Dof).
     BeamLib.f_fem_m2v(ct.byref(NumNodes_tot),
                       ct.byref(ct.c_int(6)),
@@ -215,7 +216,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
         # Generate surface, wake and gamma matrices.
         CoincidentGrid(PosDefor, PsiDefor, Section, ForcedVel[0,:3], 
                        ForcedVel[0,3:], PosDotDef, PsiDotDef, XBINPUT,
-                       Zeta, ZetaDot, VMUNST.OriginA_G,VMUNST.PsiA_G)
+                       Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
+                       VMINPUT.ctrlSurf)
         # init wake grid and gamma matrix.
         ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)    
     # Define tecplot stuff
@@ -225,18 +227,16 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
         FileObject = PostProcess.WriteAeroTecHeader(FileName, 
                                                     'Default',
                                                     Variables)
-        
         # Plot results of static analysis
-        PostProcess.WriteAeroTecZone(FileObject, 'Surface', Zeta,
-                                     0,
-                                     XBOPTS.NumLoadSteps.value,
-                                     Time[0+1],
-                                     Variables, True, Gamma)
-        PostProcess.WriteAeroTecZone(FileObject, 'Wake', ZetaStar,
-                                     0,
-                                     XBOPTS.NumLoadSteps.value,
-                                     Time[0+1],
-                                     Variables, False, GammaStar)
+        PostProcess.WriteUVLMtoTec(FileObject,
+                                   Zeta,
+                                   ZetaStar,
+                                   Gamma,
+                                   GammaStar,
+                                   TimeStep = 0,
+                                   NumTimeSteps = XBOPTS.NumLoadSteps.value,
+                                   Time = 0.0,
+                                   Text = True)
     # Time loop.
     for iStep in range(NumSteps.value):
         
@@ -244,108 +244,85 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
             sys.stdout.write('Time: %-10.4e\n' %(Time[iStep+1]))
             sys.stdout.write('   SubIter DeltaF     DeltaX     ResLog10\n')
         
-        "calculate dt"
         dt = Time[iStep+1] - Time[iStep]
         
-        "set for aero force calcs"
+        # Set dt for aero force calcs.
         VMOPTS.DelTime = ct.c_double(dt)
         
-        
-        "Update transformation matrix for given angular velocity"
+        # Update transformation matrix for given angular velocity.
         Temp = np.linalg.inv(Unit4 + 0.25*XbeamLib.QuadSkew(ForcedVel[iStep+1,3:])*dt)
         Quat = np.dot(Temp, np.dot(Unit4 - 0.25*XbeamLib.QuadSkew(ForcedVel[iStep,3:])*dt, Quat))
         Quat = Quat/np.linalg.norm(Quat)
         Cao  = XbeamLib.Rot(Quat)
         
-        "Force at current time-step"
+        # Force at current time-step
         if iStep > 0:
             
-            "zero aero forces"
+            # zero aero forces.
             AeroForces[:,:,:] = 0.0
             
-            
-            "update geometry"
+            # Update geometry
             VMUNST.OriginA_G[:] += ForcedVel[iStep,:3]*dt
-            
+            VMINPUT.ctrlSurf.update(Time[iStep])
             CoincidentGrid(PosDefor, PsiDefor, Section, ForcedVel[iStep+1,:3], 
                            ForcedVel[iStep+1,3:], PosDotDef, PsiDotDef, XBINPUT,
-                           Zeta, ZetaDot, VMUNST.OriginA_G,VMUNST.PsiA_G)
+                           Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
+                           VMINPUT.ctrlSurf)
             
-            
-            "update wake geom"
-                   
-            "'roll' data"
+            # Update wake geom       
+            #'roll' data.
             ZetaStar = np.roll(ZetaStar,1,axis = 0)
             GammaStar = np.roll(GammaStar,1,axis = 0)
-            
-            "overwrite grid points with TE"
+            #overwrite grid points with TE.
             ZetaStar[0,:] = Zeta[VMOPTS.M.value,:]
-            
-            "overwrite Gamma with TE value from previous timestep"
+            # overwrite Gamma with TE value from previous timestep.
             GammaStar[0,:] = Gamma[VMOPTS.M.value-1,:]
             
-            
-            "solve for AeroForces"
+            # Solve for AeroForces
             UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, 
                            AeroForces, Gamma, GammaStar, AIC, BIC)
             
-            
-            "apply density scaling"
+            # Apply density scaling"
             AeroForces[:,:,:] = AELAOPTS.AirDensity*AeroForces[:,:,:]
             
-            
-            "write to tecplot file"
             if Settings.PlotTec==True:
-                
-                "surface"
-                PostProcess.WriteAeroTecZone(FileObject, 'Surface', Zeta,
-                                  iStep,
-                                  XBOPTS.NumLoadSteps.value,
-                                  Time[iStep+1],
-                                  Variables, True, Gamma)
-                "wake"
-                PostProcess.WriteAeroTecZone(FileObject, 'Wake', ZetaStar,
-                                  iStep,
-                                  XBOPTS.NumLoadSteps.value,
-                                  Time[iStep+1],
-                                  Variables, False, GammaStar)
-            # END if PlotTec 
+                PostProcess.WriteUVLMtoTec(FileObject,
+                                           Zeta,
+                                           ZetaStar,
+                                           Gamma,
+                                           GammaStar,
+                                           TimeStep = iStep,
+                                           NumTimeSteps = XBOPTS.NumLoadSteps.value,
+                                           Time = Time[iStep],
+                                           Text = True)
 
-            
-            "map AeroForces to beam"
+            # map AeroForces to beam.
             CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
                                 Force)
             
-            
             # Add gravity loads.
-            AddGravityLoads(Force,XBINPUT,XBELEM,AELAOPTS,
-                            PsiDefor,VMINPUT.c)
-        
+            AddGravityLoads(Force, XBINPUT, XBELEM, AELAOPTS,
+                            PsiDefor, VMINPUT.c)
         #END if iStep > 0
             
-            
-        
-        
-        "Predictor step"
+        # Predictor step.
         X += dt*dXdt + (0.5-beta)*dXddt*dt**2
         dXdt += (1.0-gamma)*dXddt*dt
         dXddt[:] = 0.0
         
-    
-        "Reset convergence parameters"
+        # Reset convergence parameters.
         Iter = 0
         ResLog10 = 0.0
             
-        
-        "save Gamma for tightly coupled"
+        # Save Gamma for tightly coupled.
         if AELAOPTS.Tight == True:
             GammaSav = Gamma.copy(order = 'C')
         
-        "Newton-Raphson loop"        
+        # Newton-Raphson loop.        
         while ( (ResLog10 > np.log10(XBOPTS.MinDelta.value)) 
                 & (Iter < XBOPTS.MaxIterations.value) ):
             
-            "set tensors to zero"
+            # set tensors to zero.
             Qglobal[:] = 0.0 
             Mvel[:,:] = 0.0
             Cvel[:,:] = 0.0
@@ -354,51 +331,61 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
             KglobalFull[:,:] = 0.0
             FglobalFull[:,:] = 0.0
             
-            "Update counter"
+            # Update counter.
             Iter += 1
             
             if XBOPTS.PrintInfo.value==True:
                 sys.stdout.write('   %-7d ' %(Iter))
-                
             
-            "nodal diplacements and velocities from state vector"
-            BeamLib.Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
-                           PosIni, PsiIni, NumDof, X, dXdt,
-                           PosDefor, PsiDefor, PosDotDef, PsiDotDef)
+            # nodal diplacements and velocities from state vector.
+            BeamLib.Cbeam3_Solv_State2Disp(XBINPUT,
+                                           NumNodes_tot,
+                                           XBELEM,
+                                           XBNODE,
+                                           PosIni,
+                                           PsiIni,
+                                           NumDof,
+                                           X,
+                                           dXdt,
+                                           PosDefor,
+                                           PsiDefor,
+                                           PosDotDef,
+                                           PsiDotDef)
             
-            "if tightly coupled is on then get new aeroforces"
+            # if tightly coupled is on then get new aeroforces.
             if AELAOPTS.Tight == True:
-                "zero aero forces"
+                # zero aero forces.
                 AeroForces[:,:,:] = 0.0
                 
-                "set gamma at t-1 to saved solution"
+                # Set gamma at t-1 to saved solution.
                 Gamma[:,:] = GammaSav[:,:]
                 
-                "get new grid"
+                # get new grid.
                 CoincidentGrid(PosDefor, PsiDefor, Section, ForcedVel[iStep+1,:3], 
-                           ForcedVel[iStep+1,3:], PosDotDef, PsiDotDef, XBINPUT,
-                           Zeta, ZetaDot, VMUNST.OriginA_G,VMUNST.PsiA_G)
+                               ForcedVel[iStep+1,3:], PosDotDef, PsiDotDef, XBINPUT,
+                               Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
+                               VMINPUT.ctrlSurf)
                 
-                "close wake"
+                # close wake.
                 ZetaStar[0,:] = Zeta[VMOPTS.M.value,:]
                 
-                "save data and turn off rollup"
+                # save pereference and turn off rollup.
                 Rollup = VMOPTS.Rollup.value
                 VMOPTS.Rollup.value = False
                 
-                "solve for AeroForces"
+                # Solve for AeroForces.
                 UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, 
-                               AeroForces, Gamma, GammaStar, AIC, BIC)
+                                       AeroForces, Gamma, GammaStar, AIC, BIC)
                 
-                "turn rollup back to original"
+                # turn rollup back to original preference
                 VMOPTS.Rollup.value = Rollup
                 
-                "apply density scaling"
+                # apply density scaling.
                 AeroForces[:,:,:] = AELAOPTS.AirDensity*AeroForces[:,:,:]
                 
-                "beam forces"
+                # beam forces.
                 CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
-                            Force)
+                                    Force)
                 
                 # Add gravity loads.
                 AddGravityLoads(Force,XBINPUT,XBELEM,AELAOPTS,
@@ -407,7 +394,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
             #END if Tight
             
             
-            "update matrices"
+            # Update matrices.
             BeamLib.Cbeam3_Asbly_Dynamic(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
                          PosIni, PsiIni, PosDefor, PsiDefor,
                          PosDotDef, PsiDotDef, PosDotDotDef, PsiDotDotDef,
@@ -419,7 +406,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                          Qglobal, XBOPTS, Cao)
             
             
-            "Get force vector for unconstrained nodes (Force_Dof)"
+            # Get force vector for unconstrained nodes (Force_Dof).
             BeamLib.f_fem_m2v(ct.byref(NumNodes_tot),
                               ct.byref(ct.c_int(6)),
                               Force.ctypes.data_as(ct.POINTER(ct.c_double)),
@@ -428,43 +415,38 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                               XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)) )
             
             
-            "Solve for update vector"
-            "Residual"
+            # Solve for update vector.
+            # Residual.
             Qglobal += np.dot(MglobalFull, dXddt) \
                         + np.dot(Mvel,ForcedVelDot[iStep+1,:]) \
-                     - np.dot(FglobalFull, Force_Dof)
+                        - np.dot(FglobalFull, Force_Dof)
                               
-            
-             
             if XBOPTS.PrintInfo.value==True:                 
                 sys.stdout.write('%-10.4e ' %(max(abs(Qglobal))))
             
             
-            "Calculate system matrix for update calculation"
-            Asys = KglobalFull + \
-                      CglobalFull*gamma/(beta*dt) + \
-                      MglobalFull/(beta*dt**2)
+            # Calculate system matrix for update calculation.
+            Asys = KglobalFull \
+                    + CglobalFull*gamma/(beta*dt) \
+                    + MglobalFull/(beta*dt**2)
                       
             
-            "Solve for update"
+            # Solve for update.
             DX[:] = np.dot(np.linalg.inv(Asys), -Qglobal)
             
-            
-            "Corrector step"
+            # Corrector step"
             X += DX
             dXdt += DX*gamma/(beta*dt)
             dXddt += DX/(beta*dt**2)
             
-            
-            "Residual at first iteration"
+            # Residual at first iteration.
             if(Iter == 1):
                 Res0_Qglobal = max(abs(Qglobal)) + 1.e-16
                 Res0_DeltaX  = max(abs(DX)) + 1.e-16
             
-            "Update residual and compute log10"
+            # Update residual and compute log10.
             Res_Qglobal = max(abs(Qglobal)) + 1.e-16
             Res_DeltaX  = max(abs(DX)) + 1.e-16
-            
             ResLog10 = max([np.log10(Res_Qglobal/Res0_Qglobal),
                             np.log10(Res_DeltaX/Res0_DeltaX)])
             
@@ -475,32 +457,34 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                 print("Residual growing! Exit Newton-Raphson...")
                 break
                 
-        "END Netwon-Raphson"
+        # END Netwon-Raphson.
         
         if ResLog10 > 1.0:
                 print("Residual growing! Exit time-loop...")
                 break
         
-        "update to converged nodal displacements and velocities"
+        # Update to converged nodal displacements and velocities.
         BeamLib.Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
                            PosIni, PsiIni, NumDof, X, dXdt,
                            PosDefor, PsiDefor, PosDotDef, PsiDotDef)
         
-        
         PosPsiTime[iStep+1,:3] = PosDefor[-1,:]
         PosPsiTime[iStep+1,3:] = PsiDefor[-1,XBELEM.NumNodes[-1]-1,:]
         
-        "Position of all grid points in global FoR"
+        # Position of all grid points in global FoR.
         i1 = (iStep+1)*NumNodes_tot.value
         i2 = (iStep+2)*NumNodes_tot.value
         DynOut[i1:i2,:] = PosDefor
         
-        "Rollup due to external velocities"
+        # 'Rollup' due to external velocities.
         ZetaStar[:,:] += VMINPUT.U_infty*dt
+        
+        # print test root strains.
+        localStrains(PosDefor, PsiDefor, XBELEM, ElemList = [0,])
     
     # END Time loop
     
-    "Write _dyn file"
+    # Write _dyn file.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_dyn.dat'
     fp = open(ofile,'w')
     BeamIO.Write_dyn_File(fp, Time, PosPsiTime)
@@ -537,6 +521,55 @@ def panellingFromFreq(freq,c=1.0,Umag=1.0):
     DelTime = c/(Umag*M) #get resulting DelTime
     return M, DelTime
 
+def localStrains(Rdef, PsiDef, XBELEM, ElemList):
+    """@brief Approximate strains at the centre of element(s).
+    
+    @param RDef Deformed nodal coordinates.
+    @param PsiDef Deformed nodal rotation vectors.
+    @param XBELEM Xbeam element derived type containing element data.
+    @param ElemList List of element numbers for strain approximation,
+            starts from zero.
+    @warning Untested.
+    """
+    
+    strains = np.zeros((len(ElemList),6))
+    iOut = 0 # Output index
+    for iElem in ElemList:
+        NumNodes = XBELEM.NumNodes[iElem]
+        if NumNodes == 2:
+            iNode = ElemList[iElem]
+            Rdash = (Rdef[iNode+1] - Rdef[iNode]) / XBELEM.Length[iElem]
+            # Work out what sub-element node (iiElem) we are in.
+            iiElem = 0 # Always for 2-noded Elem in this case.
+            # Calculate transformation at node 1
+            CaB = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem,:])
+            # Consistent calculation of midpoint strains using SO(3) manifold.
+            CB1a = CaB.T
+            CaB2 = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem+1,:])
+            CB1B2 = np.dot(CB1a,CaB2)
+            # Crisfield and Jelenic 1999, pg.1132
+            phiMat = logm(CB1B2) # skew symmetric matrix of rotation vector from node 1 -> node 2
+            CaBmid = np.dot(CaB,expm(0.5*phiMat))
+            CBaMid = CaBmid.T
+            forceStrain = np.dot(CBaMid,Rdash) - np.array([1.0, 0.0 ,0.0])
+            momentStrain = ( 1.0/XBELEM.Length[iElem] ) \
+                            * XbeamLib.VectofSkew(phiMat)
+        elif NumNodes == 3:
+            iNode = 2*ElemList[iElem] + 1
+            Rdash = (Rdef[iNode+1] - Rdef[iNode-1]) / XBELEM.Length[iElem]
+            #TODO 3-noded calc
+            raise NotImplementedError("Only available for 2-noded just now.")
+        else:
+            raise ValueError("Only 2- or 3-noded elements are supported.")
+        
+        strains[iOut,:3] = np.real(forceStrain) #matrix log or exponent gives small imaginary part
+        strains[iOut,3:] = np.real(momentStrain)
+        # output index
+        iOut += 1
+    # END for iElem
+    return strains
+        
+
 if __name__ == '__main__':
     # Beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
@@ -544,9 +577,9 @@ if __name__ == '__main__':
                                  PrintInfo = ct.c_bool(True),
                                  NumLoadSteps = ct.c_int(25),
                                  Solution = ct.c_int(312),
-                                 MinDelta = ct.c_double(1e-5))
+                                 MinDelta = ct.c_double(1e-4))
     # beam inputs.
-    XBINPUT = DerivedTypes.Xbinput(3,6)
+    XBINPUT = DerivedTypes.Xbinput(2,28)
     XBINPUT.BeamLength = 6.096
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -575,7 +608,7 @@ if __name__ == '__main__':
     Umag = 140.0
     M, delTime = panellingFromFreq(70,c,Umag)
     print("suggested M = %d\n" % M)
-    print("suggested delTime = %d\n" % delTime)
+    print("suggested delTime = %f\n" % delTime)
     # Unsteady parameters.
     XBINPUT.dt = delTime
     XBINPUT.t0 = 0.0

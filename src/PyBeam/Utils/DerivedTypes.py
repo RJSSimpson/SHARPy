@@ -150,7 +150,7 @@ def dump(obj):
 class Xbelem:
     """@brief Pythonic version of fortran arrays containing derived type 'Elem'
     data, one set of arrays for each element, as defined in xbeam_shared.f90."""
-    def __init__(self, NumElems, MaxElNod):
+    def __init__(self, NumElems, MaxElNod = 3):
         """@brief Create 'NumElems' arrays with zero entries.
         
         @param NumNodes Number of nodes in each element.

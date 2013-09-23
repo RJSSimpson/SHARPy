@@ -22,6 +22,10 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.clock()
         self.interval = self.end - self.start
+        
+def isodd(num):
+    """@brief returns True if Num is odd"""
+    return bool(num & 1)
 
 if __name__ == '__main__':
     "example: test timer"

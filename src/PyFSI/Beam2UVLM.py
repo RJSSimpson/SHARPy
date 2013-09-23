@@ -127,7 +127,7 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
                 # There is an extra velocity contribution due to the rotation 
                 # of the hinge, with reference frame Bnew. Hence, 
                 # CBBnew * ( Omega_Bnew_Bnew X Point__Bnew), which is the
-                # velocity at a point on the hinge due to the rotation
+                # velocity at a point on the flap due to the rotation
                 # of the hinge projected in the B-frame. is added. 
                 AeroVels[jSection,iNode,:] = (VelA_A
                         + np.dot(Skew(OmegaA_A),PosDefor[iNode,:])
