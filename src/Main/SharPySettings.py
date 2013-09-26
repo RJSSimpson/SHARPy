@@ -50,5 +50,8 @@ RotEpsilon = 0.001 # Rotations below this are linearised.
 # Tecplot.
 PlotTec = True
 
+# Output options
+WriteOut = True
+
 if __name__ == '__main__':
     pass

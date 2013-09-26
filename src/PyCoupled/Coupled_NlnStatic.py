@@ -26,6 +26,7 @@ from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels
 from PyAero.UVLM.Solver.VLM import InitSteadyWake
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 from PyBeam.Utils.XbeamLib import AddGravityLoads
+from DerivedTypesAero import ControlSurf
 
 def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         """Nonlinear static solver using Python to solve aeroelastic
@@ -275,64 +276,150 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         return PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep
 
 if __name__ == '__main__':
-    # solve nlnstatic problem.
+#      solve nlnstatic problem.
+#     
+#      beam options.
+#     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
+#                                  MaxIterations = ct.c_int(50),
+#                                  PrintInfo = ct.c_bool(True),
+#                                  NumLoadSteps = ct.c_int(25),
+#                                  Solution = ct.c_int(112),
+#                                  MinDelta = ct.c_double(1e-4))
+#     
+#      beam inputs.
+#     XBINPUT = DerivedTypes.Xbinput(3,20)
+#     XBINPUT.BeamLength = 16.0
+#     XBINPUT.BeamStiffness[0,0] = 1.0e+09
+#     XBINPUT.BeamStiffness[1,1] = 1.0e+09
+#     XBINPUT.BeamStiffness[2,2] = 1.0e+09
+#     XBINPUT.BeamStiffness[3,3] = 1.0e+04
+#     XBINPUT.BeamStiffness[4,4] = 2.0e+04
+#     XBINPUT.BeamStiffness[5,5] = 5.0e+06
+#     
+#     XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
+#     
+#     XBINPUT.BeamMass[0,0] = 0.75
+#     XBINPUT.BeamMass[1,1] = 0.75
+#     XBINPUT.BeamMass[2,2] = 0.75
+#     XBINPUT.BeamMass[3,3] = 0.1
+#     XBINPUT.BeamMass[4,4] = 0.001
+#     XBINPUT.BeamMass[5,5] = 0.001
+#     
+#     
+#      aero options. 
+#     M = 4
+#     N = XBINPUT.NumNodesTot - 1
+#     VMOPTS = DerivedTypesAero.VMopts(M = M,
+#                                      N = N,
+#                                      ImageMethod = True,
+#                                      Steady = True,
+#                                      KJMeth = True)
+#     
+#      aero inputs.
+#     ctrlSurf = DerivedTypesAero.ControlSurf(iMin = M - M/4,
+#                                             iMax = M,
+#                                             jMin = N - N/4,
+#                                             jMax = N,
+#                                             typeMotion = 'cos',
+#                                             betaBar = 5.0*np.pi/180.0,
+#                                             omega = 0.0)
+#     VMINPUT = DerivedTypesAero.VMinput(c = 1.0,
+#                                        b = XBINPUT.BeamLength,
+#                                        U_mag = 25.0,
+#                                        alpha = 0.0*np.pi/180.0,
+#                                        theta = 0.0,
+#                                        ctrlSurf = ctrlSurf)
+#     
+#      aeroelastic opts.
+#      Density due to US standard atmosphere at 20km.
+#     AELAOPTS = AeroelasticOps(0.0,0.0,0.08891)
+#     
+#     Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
     
-    # beam options.
+    
+    
+    ### Goland Static with Henrik ###
+    
+    # Beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
                                  MaxIterations = ct.c_int(50),
                                  PrintInfo = ct.c_bool(True),
                                  NumLoadSteps = ct.c_int(25),
                                  Solution = ct.c_int(112),
                                  MinDelta = ct.c_double(1e-4))
-    
     # beam inputs.
-    XBINPUT = DerivedTypes.Xbinput(3,20)
-    XBINPUT.BeamLength = 16.0
+    XBINPUT = DerivedTypes.Xbinput(2,28)
+    XBINPUT.BeamLength = 6.096
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
     XBINPUT.BeamStiffness[2,2] = 1.0e+09
-    XBINPUT.BeamStiffness[3,3] = 1.0e+04
-    XBINPUT.BeamStiffness[4,4] = 2.0e+04
-    XBINPUT.BeamStiffness[5,5] = 5.0e+06
-    
+    XBINPUT.BeamStiffness[3,3] = 0.99e+06
+    XBINPUT.BeamStiffness[4,4] = 9.77e+06
+    XBINPUT.BeamStiffness[5,5] = 1.0e+09
     XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
-    
-    XBINPUT.BeamMass[0,0] = 0.75
-    XBINPUT.BeamMass[1,1] = 0.75
-    XBINPUT.BeamMass[2,2] = 0.75
-    XBINPUT.BeamMass[3,3] = 0.1
+    XBINPUT.BeamMass[0,0] = 35.71
+    XBINPUT.BeamMass[1,1] = 35.71
+    XBINPUT.BeamMass[2,2] = 35.71
+    XBINPUT.BeamMass[3,3] = 8.64
     XBINPUT.BeamMass[4,4] = 0.001
     XBINPUT.BeamMass[5,5] = 0.001
-    
-    
-    # aero options. 
-    M = 4
+    # Off diagonal terms (in Theodorsen sectional coordinates)
+    ElasticAxis = -0.34
+    InertialAxis = -7.0/50.0
+    x_alpha = InertialAxis - ElasticAxis
+    # pitch-plunge coupling term (b-frame coordinates)
+    c = 1.8288
+    mOff = x_alpha*(c/2)*XBINPUT.BeamMass[0,0]
+    XBINPUT.BeamMass[2,3] = -mOff
+    XBINPUT.BeamMass[0,5] = mOff
+    XBINPUT.BeamMass[3:,:3] = XBINPUT.BeamMass[:3,3:].T
+    # Get suggested panelling.
+    Umag = 140.0
+    M = 16
+
+    # aero params.
+    WakeLength = 30.0*c
+    Mstar = 1    # aero options.
     N = XBINPUT.NumNodesTot - 1
     VMOPTS = DerivedTypesAero.VMopts(M = M,
                                      N = N,
                                      ImageMethod = True,
+                                     Mstar = Mstar,
                                      Steady = True,
-                                     KJMeth = True)
+                                     KJMeth = False,
+                                     NewAIC = True)
+    # Aero inputs.
+    iMin = M - M/4
+    iMax = M
+    jMin = N - N/4
+    jMax = N
+    typeMotion = 'cos'
+    betaBar = 1.0*np.pi/180.0
+    omega = 30.0
+    ctrlSurf = ControlSurf(iMin,
+                           iMax,
+                           jMin,
+                           jMax,
+                           typeMotion,
+                           betaBar,
+                           omega)
     
-    # aero inputs.
-    ctrlSurf = DerivedTypesAero.ControlSurf(iMin = M - M/4,
-                                            iMax = M,
-                                            jMin = N - N/4,
-                                            jMax = N,
-                                            typeMotion = 'cos',
-                                            betaBar = 5.0*np.pi/180.0,
-                                            omega = 0.0)
-    VMINPUT = DerivedTypesAero.VMinput(c = 1.0,
+    VMINPUT = DerivedTypesAero.VMinput(c = c,
                                        b = XBINPUT.BeamLength,
-                                       U_mag = 25.0,
+                                       U_mag = Umag,
                                        alpha = 0.0*np.pi/180.0,
                                        theta = 0.0,
+                                       ZetaDotTest = 0.0,
+                                       WakeLength = WakeLength,
                                        ctrlSurf = ctrlSurf)
     
-    # aeroelastic opts.
-    # Density due to US standard atmosphere at 20km.
-    AELAOPTS = AeroelasticOps(0.0,0.0,0.08891)
-    
+    # Aerolastic simulation results. # 1.02
+    AELAOPTS = AeroelasticOps(ElasticAxis = ElasticAxis,
+                              InertialAxis = InertialAxis,
+                              AirDensity = 1.02,
+                              Tight = False,
+                              ImpStart = False)
+    # Solve nonlinear static simulation.
     Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
     
     

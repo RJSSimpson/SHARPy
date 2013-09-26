@@ -480,7 +480,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
         ZetaStar[:,:] += VMINPUT.U_infty*dt
         
         # print test root strains.
-        localStrains(PosDefor, PsiDefor, XBELEM, ElemList = [0,])
+        localElasticForces(PosDefor, PsiDefor, XBELEM, ElemList = [0,])
     
     # END Time loop
     
@@ -564,11 +564,32 @@ def localStrains(Rdef, PsiDef, XBELEM, ElemList):
         
         strains[iOut,:3] = np.real(forceStrain) #matrix log or exponent gives small imaginary part
         strains[iOut,3:] = np.real(momentStrain)
-        # output index
         iOut += 1
     # END for iElem
     return strains
-        
+    
+def localElasticForces(Rdef, PsiDef, XBELEM, ElemList):
+    """@brief Approximate shear force and moments from local strain and
+    stiffness matrix.
+    
+    @param RDef Deformed nodal coordinates.
+    @param PsiDef Deformed nodal rotation vectors.
+    @param XBELEM Xbeam element derived type containing element data.
+    @param ElemList List of element numbers for strain approximation,
+            starts from zero.
+    @warning Untested.
+    """
+    
+    elemF = np.zeros((len(ElemList),6))
+    strains = localStrains(Rdef, PsiDef, XBELEM, ElemList)
+    iOut = 0 # Output index
+    for iElem in ElemList:
+        elemStrain = strains[iOut,:]
+        elemK = XBELEM.Stiff[iElem*6:(iElem+1)*6,:]
+        elemF[iOut,:] = np.dot(elemK,elemStrain)
+        iOut += 1
+    # END of iElem
+    return elemF
 
 if __name__ == '__main__':
     # Beam options.
@@ -660,5 +681,5 @@ if __name__ == '__main__':
                               AirDensity = 1.02,
                               Tight = False,
                               ImpStart = False)
-    # Solve nonlinear static simulation.
+    # Solve nonlinear dynamic simulation.
     Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS)

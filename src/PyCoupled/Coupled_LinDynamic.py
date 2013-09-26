@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from scipy.io import loadmat
+from scipy.interpolate import interp1d
+import SharPySettings as Settings
 
 
 # Flag for some interactive routines
@@ -30,6 +32,8 @@ def Solve_Py(*args, **kwords):
     @param U u(t), the input sequence (None for free response).
     @param t timesteps at which input is defined (None to default).
     @param x0 The initial state size(x,1) (None: zero by default).
+    @param loopWrite list of output indices to write in the loop, Keyword.
+    @param loopPlot list of output indices to plot during the loop, Keyword.
     @returns tout Time values for output.
     @returns yout y(t), the system response.
     @returns xout x(t), the state history.
@@ -44,14 +48,14 @@ def Solve_Py(*args, **kwords):
                                 args[0][1],
                                 args[0][2],
                                 args[0][3],
-                                args[0][4])
+                                disSys.A)
         elif isinstance(args[0],StateSpace):
             disSys = args[0]
         else:
             raise TypeError("First argument (of 4) not recognised.")
         # check input sequence
         try:
-            args[1].shape[1] #check array has 2 dimensions
+            disSys._Ts.shape[1] #check array has 2 dimensions
             arg2d = args[1] 
         except:
             arg2d = np.atleast_2d(args[1]) #make 2d for comparison with nU
@@ -71,16 +75,101 @@ def Solve_Py(*args, **kwords):
             raise ValueError("Wrong number of inputs in input sequence")
         else:
             U = arg2d
-        # Run discrete time sim
-        tout, yout, xout = dlsim((disSys.A,disSys.B,
-                                  disSys.C,disSys.D,
-                                  disSys._Ts),
-                                  U,
-                                  t = args[2],
-                                  x0 = args[3])
+            
+        # Run simulation
+        if 'loopWrite' in kwords or 'loopPlot' in kwords:
+            # get y Indices and determine to write and/or plot
+            if 'loopWrite' in kwords:
+                if Settings.WriteOut == False:
+                    raise ValueError("SharPy WriteOut setting is false")
+                write = True
+                youtJwrite = kwords['loopWrite']
+                # TODO: use outDict and plotDict instead!
+            
+            if 'loopPlot' in kwords:
+                plot = True
+                youtJplot = kwords['loopPlot']
+            
+            # Check function inputs for discrete time system plotting/writing
+            if t is None:
+                out_samples = U.shape[0]
+                stoptime = (out_samples - 1) * disSys._Ts
+            else:
+                stoptime = t[-1]
+                out_samples = int(np.floor(stoptime / disSys._Ts)) + 1
+        
+            # Pre-build output arrays
+            xout = np.zeros((out_samples, disSys.A.shape[0]))
+            yout = np.zeros((out_samples, disSys.C.shape[0]))
+            tout = np.linspace(0.0, stoptime, num=out_samples)
+        
+            # Check initial condition
+            if args[3] is None:
+                xout[0,:] = np.zeros((disSys.A.shape[1],))
+            else:
+                xout[0,:] = np.asarray(args[3])
+        
+            # Pre-interpolate inputs into the desired time steps
+            if t is None:
+                u_dt = U
+            else:
+                if len(U.shape) == 1:
+                    U = U[:, np.newaxis]
+        
+                u_dt_interp = interp1d(t, U.transpose(), copy=False, bounds_error=True)
+                u_dt = u_dt_interp(tout).transpose()
+                
+            if write == True:
+                # Write output file header
+                outDict = {'R_z (tip)':     kwords['loopWrite'][0],
+                           'M_x':           kwords['loopWrite'][1],
+                           'M_y':           kwords['loopWrite'][2],
+                           'M_z':           kwords['loopWrite'][3]}
+                outputIndices = list(outDict.values())
+                ofile = Settings.OutputDir + \
+                        Settings.OutputFileRoot + \
+                        '_SOL302_out.dat'
+                fp = open(ofile,'w')
+                fp.write("{:<13}".format("Time"))
+                for output in outDict.keys():
+                    fp.write("{:<13}".format(output))
+                fp.write("\n")
+                fp.flush()
+            # END if write
+                
+            # Simulate the system
+            for i in range(0, out_samples - 1):
+                xout[i+1,:] = np.dot(disSys.A, xout[i,:]) + np.dot(disSys.B, u_dt[i,:])
+                yout[i,:] = np.dot(disSys.C, xout[i,:]) + np.dot(disSys.D, u_dt[i,:])
+                
+                if write == True:
+                    fp.write("{:<13,f}".format(tout[i]))
+                    for j in yout[i,outputIndices]:
+                        fp.write("{:<13,f}".format(j))
+                    fp.write("\n")
+                    fp.flush()
+        
+            # Last point
+            yout[out_samples-1,:] = np.dot(disSys.C, xout[out_samples-1,:]) + \
+                                    np.dot(disSys.D, u_dt[out_samples-1,:])
+            # Write final output and close
+            fp.write("{:<13,f}".format(tout[out_samples-1]))
+            for j in yout[out_samples-1,outputIndices]:
+                fp.write("{:<13,f}".format(j))      
+            fp.close()
+                                    
+            return tout, yout, xout
+        else:
+            # Run discrete time sim using scipy solver
+            tout, yout, xout = dlsim((disSys.A,disSys.B,
+                                      disSys.C,disSys.D,
+                                      disSys._Ts),
+                                      U,
+                                      t = args[2],
+                                      x0 = args[3])
         return tout, yout, xout
     else:
-        raise ValueError("Needs 4 input arguments")
+        raise ValueError("Needs 4 positional arguments")
     
 def plotOutputs(tout, yout, xout, youtJ = None, xoutJ = None):
     """@brief plot outputs from linear system.
@@ -119,7 +208,7 @@ def plotOutputs(tout, yout, xout, youtJ = None, xoutJ = None):
             plotCount += 1
             
     else:
-        raise TypeError("youJ must be None or a tuple of indices")
+        raise TypeError("youtJ must be None or a tuple of indices")
     plt.show()
     if xoutJ != None:
         raise NotImplementedError("plotting of states not implemented yet.")
@@ -154,6 +243,6 @@ if __name__ == '__main__':
     omega = 30.0 # rads-1
     t = np.arange(0,0.5,disSysBc.dt)
     U = betaHat*np.sin(omega*t)
-    tout, yout, xout = Solve_Py(disSysBc,U,None,None)
+    tout, yout, xout = Solve_Py(disSysBc,U,None,None,loopWrite=[0,1,2,3])
     plotOutputs(tout, yout, xout, youtJ = None)
     
