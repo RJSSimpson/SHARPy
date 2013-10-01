@@ -23,9 +23,6 @@ import BeamInit
 from PyFSI.Beam2UVLM import InitSection, CoincidentGrid
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 
-Settings.OutputDir = os.getcwd() + '/'
-Settings.OutputFileRoot = ''
-
 class VMUnsteadyInput:
     """@brief Contains data for unsteady run of UVLM.
     @param WakeLength Length of wake in chordlengths.

@@ -12,6 +12,7 @@ import os
 from scipy.io import loadmat
 from scipy.interpolate import interp1d
 import SharPySettings as Settings
+from collections import OrderedDict
 
 
 # Flag for some interactive routines
@@ -32,8 +33,8 @@ def Solve_Py(*args, **kwords):
     @param U u(t), the input sequence (None for free response).
     @param t timesteps at which input is defined (None to default).
     @param x0 The initial state size(x,1) (None: zero by default).
-    @param loopWrite list of output indices to write in the loop, Keyword.
-    @param loopPlot list of output indices to plot during the loop, Keyword.
+    @param writeDict OrderedDict of 'name':output index to write in loop, Keyword.
+    @param plotDict OrderedDict of 'name':output index to plot in loop, Keyword.
     @returns tout Time values for output.
     @returns yout y(t), the system response.
     @returns xout x(t), the state history.
@@ -77,18 +78,14 @@ def Solve_Py(*args, **kwords):
             U = arg2d
             
         # Run simulation
-        if 'loopWrite' in kwords or 'loopPlot' in kwords:
-            # get y Indices and determine to write and/or plot
-            if 'loopWrite' in kwords:
-                if Settings.WriteOut == False:
-                    raise ValueError("SharPy WriteOut setting is false")
+        if 'writeDict' in kwords or 'plotDict' in kwords:
+            # Determine whether to write and/or plot
+            if 'writeDict' in kwords and Settings.WriteOut == True:
                 write = True
-                youtJwrite = kwords['loopWrite']
-                # TODO: use outDict and plotDict instead!
             
-            if 'loopPlot' in kwords:
-                plot = True
-                youtJplot = kwords['loopPlot']
+            if 'plotDict' in kwords and Settings.PlotOut == True:
+                #plot = True
+                raise NotImplementedError()
             
             # Check function inputs for discrete time system plotting/writing
             if t is None:
@@ -116,23 +113,21 @@ def Solve_Py(*args, **kwords):
                 if len(U.shape) == 1:
                     U = U[:, np.newaxis]
         
-                u_dt_interp = interp1d(t, U.transpose(), copy=False, bounds_error=True)
+                u_dt_interp = interp1d(t, U.transpose(),
+                                       copy=False,
+                                       bounds_error=True)
                 u_dt = u_dt_interp(tout).transpose()
                 
             if write == True:
                 # Write output file header
-                outDict = {'R_z (tip)':     kwords['loopWrite'][0],
-                           'M_x':           kwords['loopWrite'][1],
-                           'M_y':           kwords['loopWrite'][2],
-                           'M_z':           kwords['loopWrite'][3]}
-                outputIndices = list(outDict.values())
+                outputIndices = list(writeDict.values())
                 ofile = Settings.OutputDir + \
                         Settings.OutputFileRoot + \
                         '_SOL302_out.dat'
                 fp = open(ofile,'w')
-                fp.write("{:<13}".format("Time"))
-                for output in outDict.keys():
-                    fp.write("{:<13}".format(output))
+                fp.write("{:<14}".format("Time"))
+                for output in writeDict.keys():
+                    fp.write("{:<14}".format(output))
                 fp.write("\n")
                 fp.flush()
             # END if write
@@ -143,9 +138,9 @@ def Solve_Py(*args, **kwords):
                 yout[i,:] = np.dot(disSys.C, xout[i,:]) + np.dot(disSys.D, u_dt[i,:])
                 
                 if write == True:
-                    fp.write("{:<13,f}".format(tout[i]))
+                    fp.write("{:<14,e}".format(tout[i]))
                     for j in yout[i,outputIndices]:
-                        fp.write("{:<13,f}".format(j))
+                        fp.write("{:<14,e}".format(j))
                     fp.write("\n")
                     fp.flush()
         
@@ -153,9 +148,9 @@ def Solve_Py(*args, **kwords):
             yout[out_samples-1,:] = np.dot(disSys.C, xout[out_samples-1,:]) + \
                                     np.dot(disSys.D, u_dt[out_samples-1,:])
             # Write final output and close
-            fp.write("{:<13,f}".format(tout[out_samples-1]))
+            fp.write("{:<14,e}".format(tout[out_samples-1]))
             for j in yout[out_samples-1,outputIndices]:
-                fp.write("{:<13,f}".format(j))      
+                fp.write("{:<14,e}".format(j))      
             fp.close()
                                     
             return tout, yout, xout
@@ -243,6 +238,12 @@ if __name__ == '__main__':
     omega = 30.0 # rads-1
     t = np.arange(0,0.5,disSysBc.dt)
     U = betaHat*np.sin(omega*t)
-    tout, yout, xout = Solve_Py(disSysBc,U,None,None,loopWrite=[0,1,2,3])
+    # Define names and indices of outputs.
+    writeDict = OrderedDict()
+    writeDict['R_z (tip)'] = 0
+    writeDict['M_x (root)'] = 1
+    writeDict['M_y (root)'] = 2
+    writeDict['M_z (root)'] = 3
+    tout, yout, xout = Solve_Py(disSysBc, U, None, None, writeDict = writeDict)
     plotOutputs(tout, yout, xout, youtJ = None)
     

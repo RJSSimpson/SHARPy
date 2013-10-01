@@ -30,6 +30,8 @@ import PyBeam.Utils.XbeamLib as XbeamLib
 from PyCoupled.Coupled_NlnStatic import AddGravityLoads
 from DerivedTypesAero import ControlSurf
 from scipy.linalg import expm, logm
+from collections import OrderedDict
+import re
 
 class VMCoupledUnstInput:
     """@brief Contains data for unsteady run of UVLM.
@@ -54,7 +56,7 @@ class VMCoupledUnstInput:
         self.OriginA_G = OriginA_G
         self.PsiA_G = PsiA_G
 
-def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
+def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS,**kwords):
     """@brief Nonlinear dynamic solver using Python to solve aeroelastic
     equation.
     @details Assembly of structural matrices is carried out with 
@@ -67,7 +69,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     @param VMOPTS UVLM solver options (for C/C++).
     @param VMINPUT UVLM solver inputs (for initialization in Python).
     @param VMUNST Unsteady input information for aero solver.
-    @param AELAOPTS Options relevant to coupled aeroelastic simulations."""
+    @param AELAOPTS Options relevant to coupled aeroelastic simulations.
+    @param writeDict OrderedDict of 'name':tuple of outputs to write."""
         
     # Check correct solution code.
     assert XBOPTS.Solution.value == 312, ('NonlinearDynamic requested' +
@@ -75,6 +78,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     # Initialise static beam data.
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
                 = BeamInit.Static(XBINPUT,XBOPTS)
+                
     # Calculate initial displacements.
     if AELAOPTS.ImpStart == False:
         XBOPTS.Solution.value = 112 # Modify options.
@@ -91,6 +95,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
         PosDefor = PosIni.copy(order='F')
         PsiDefor = PsiIni.copy(order='F')
         Force = np.zeros((XBINPUT.NumNodesTot,6),ct.c_double,'F')
+        
     # Write deformed configuration to file. TODO: tidy this away inside function.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_def.dat'
     if XBOPTS.PrintInfo==True:
@@ -105,6 +110,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     # Write
     BeamIO.OutputElems(XBINPUT.NumElems, NumNodes_tot.value, XBELEM,
                        PosDefor, PsiDefor, ofile, WriteMode)
+    
     # Initialise structural variables for dynamic analysis.
     Time, NumSteps, ForceTime, ForcedVel, ForcedVelDot,\
     PosDotDef, PsiDotDef,\
@@ -112,6 +118,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
         = BeamInit.Dynamic(XBINPUT,XBOPTS)
     # Delete unused variables.
     del ForceTime, OutGrids, VelocTime
+    
     # Write _force file
 #    ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_force.dat'
 #    fp = open(ofile,'w')
@@ -121,8 +128,10 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     #TODO: write _vel file
     # Write .mrb file.
     #TODO: write .mrb file
+    
     if XBOPTS.PrintInfo.value==True:
         sys.stdout.write('Solve nonlinear dynamic case in Python ... \n')
+    
     # Initialise structural system tensors.
     MglobalFull = np.zeros((NumDof.value,NumDof.value), ct.c_double, 'F')
     CglobalFull = np.zeros((NumDof.value,NumDof.value), ct.c_double, 'F') 
@@ -166,10 +175,12 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
     BeamLib.Cbeam_Solv_Disp2State(NumNodes_tot, NumDof, XBINPUT, XBNODE,
                                   PosDefor, PsiDefor, PosDotDef, PsiDotDef,
                                   X, dXdt)
+    
     # Approximate initial accelerations.
     PosDotDotDef = np.zeros((NumNodes_tot.value,3),ct.c_double,'F')
     PsiDotDotDef = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                              ct.c_double, 'F')
+    
     # Assemble matrices for dynamic analysis.
     BeamLib.Cbeam3_Asbly_Dynamic(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
                                  PosIni, PsiIni, PosDefor, PsiDefor,
@@ -180,6 +191,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                                  cs, CglobalFull, Cvel,
                                  ks, KglobalFull, fs, FglobalFull,
                                  Qglobal, XBOPTS, Cao)
+    
     # Get force vector for unconstrained nodes (Force_Dof).
     BeamLib.f_fem_m2v(ct.byref(NumNodes_tot),
                       ct.byref(ct.c_int(6)),
@@ -187,27 +199,34 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                       ct.byref(NumDof),
                       Force_Dof.ctypes.data_as(ct.POINTER(ct.c_double)),
                       XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)) )
+    
     # Get RHS at initial condition.
     Qglobal += -np.dot(FglobalFull, Force_Dof)
+    
     # Initial Accel.
     dXddt[:] = np.dot(np.linalg.inv(MglobalFull), -Qglobal)
+    
     # Record position of all grid points in global FoR at initial time step.
     DynOut[0:NumNodes_tot.value,:] = PosDefor
+    
     # Record state of the selected node in initial deformed configuration.
     PosPsiTime[0,:3] = PosDefor[-1,:]
     PosPsiTime[0,3:] = PsiDefor[-1,XBELEM.NumNodes[-1]-1,:]
+    
     # Get gamma and beta for Newmark scheme.
     gamma = 0.5 + XBOPTS.NewmarkDamp.value
     beta = 0.25*(gamma + 0.5)**2
     
     # Initialize Aero       
     Section = InitSection(VMOPTS,VMINPUT,AELAOPTS.ElasticAxis)
+    
     # Declare memory for Aero variables.
     ZetaDot = np.zeros((Section.shape[0],PosDefor.shape[0],3),ct.c_double,'C')
     K = VMOPTS.M.value*VMOPTS.N.value
     AIC = np.zeros((K,K),ct.c_double,'C')
     BIC = np.zeros((K,K),ct.c_double,'C')
     AeroForces = np.zeros((VMOPTS.M.value+1,VMOPTS.N.value+1,3),ct.c_double,'C')
+    
     # Init external velocities.  
     Uext = InitSteadyExternalVels(VMOPTS,VMINPUT)
     if AELAOPTS.ImpStart == True:
@@ -219,7 +238,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                        Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
                        VMINPUT.ctrlSurf)
         # init wake grid and gamma matrix.
-        ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)    
+        ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)
+          
     # Define tecplot stuff
     if Settings.PlotTec==True:
         FileName = Settings.OutputDir + Settings.OutputFileRoot + 'AeroGrid.dat'
@@ -237,6 +257,79 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
                                    NumTimeSteps = XBOPTS.NumLoadSteps.value,
                                    Time = 0.0,
                                    Text = True)
+    
+    # Open output file for writing
+    if 'writeDict' in kwords and Settings.WriteOut == True:
+        writeDict = kwords['writeDict']
+        ofile = Settings.OutputDir + \
+                Settings.OutputFileRoot + \
+                '_SOL312_out.dat'
+        fp = open(ofile,'w')
+        fp.write("{:<14}".format("Time"))
+        for output in writeDict.keys():
+            fp.write("{:<14}".format(output))
+        fp.write("\n")
+        fp.flush()
+        
+    # Write initial outputs to file.
+    if 'writeDict' in kwords and Settings.WriteOut == True:
+        locForces = None # Stops recalculation of forces
+        fp.write("{:<14,e}".format(Time[0]))
+        for myStr in writeDict.keys():
+            if re.search(r'^R_.',myStr):
+                if re.search(r'^R_._.', myStr):
+                    index = int(myStr[4])
+                elif re.search(r'root', myStr):
+                    index = 0
+                elif re.search(r'tip', myStr):
+                    index = -1
+                else:
+                    raise IOError("Node index not recognised.")
+                
+                if myStr[2] == 'x':
+                    component = 0
+                elif myStr[2] == 'y':
+                    component = 1
+                elif myStr[2] == 'z':
+                    component = 2
+                else:
+                    raise IOError("Displacement component not recognised.")
+                
+                fp.write("{:<14,e}".format(PosDefor[index,component]))
+                
+            elif re.search(r'^M_.',myStr):
+                if re.search(r'^M_._.', myStr):
+                    index = int(myStr[4])
+                elif re.search(r'root', myStr):
+                    index = 0
+                elif re.search(r'tip', myStr):
+                    index = -1
+                else:
+                    raise IOError("Node index not recognised.")
+                
+                if myStr[2] == 'x':
+                    component = 0
+                elif myStr[2] == 'y':
+                    component = 1
+                elif myStr[2] == 'z':
+                    component = 2
+                else:
+                    raise IOError("Moment component not recognised.")
+                
+                if locForces == None:
+                    locForces = localElasticForces(PosDefor,
+                                                   PsiDefor,
+                                                   XBELEM,
+                                                   [index])
+                
+                fp.write("{:<14,e}".format(locForces[0,3+component]))
+            else:
+                raise IOError("writeDict key not recognised.")
+        # END for myStr
+        fp.write("\n")
+        fp.flush()
+    # END if write
+
     # Time loop.
     for iStep in range(NumSteps.value):
         
@@ -453,13 +546,13 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
             if XBOPTS.PrintInfo.value==True:
                 sys.stdout.write('%-10.4e %8.4f\n' %(max(abs(DX)),ResLog10))
             
-            if ResLog10 > 1.0:
+            if ResLog10 > 2.0:
                 print("Residual growing! Exit Newton-Raphson...")
                 break
                 
         # END Netwon-Raphson.
         
-        if ResLog10 > 1.0:
+        if ResLog10 > 2.0:
                 print("Residual growing! Exit time-loop...")
                 break
         
@@ -476,11 +569,68 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
         i2 = (iStep+2)*NumNodes_tot.value
         DynOut[i1:i2,:] = PosDefor
         
-        # 'Rollup' due to external velocities.
-        ZetaStar[:,:] += VMINPUT.U_infty*dt
+        # Write selected outputs
+        if 'writeDict' in kwords and Settings.WriteOut == True:
+            locForces = None # Stops recalculation of forces
+            fp.write("{:<14,e}".format(Time[iStep+1]))
+            for myStr in writeDict.keys():
+                if re.search(r'^R_.',myStr):
+                    if re.search(r'^R_._.', myStr):
+                        index = int(myStr[4])
+                    elif re.search(r'root', myStr):
+                        index = 0
+                    elif re.search(r'tip', myStr):
+                        index = -1
+                    else:
+                        raise IOError("Node index not recognised.")
+                    
+                    if myStr[2] == 'x':
+                        component = 0
+                    elif myStr[2] == 'y':
+                        component = 1
+                    elif myStr[2] == 'z':
+                        component = 2
+                    else:
+                        raise IOError("Displacement component not recognised.")
+                    
+                    fp.write("{:<14,e}".format(PosDefor[index,component]))
+                    
+                elif re.search(r'^M_.',myStr):
+                    if re.search(r'^M_._.', myStr):
+                        index = int(myStr[4])
+                    elif re.search(r'root', myStr):
+                        index = 0
+                    elif re.search(r'tip', myStr):
+                        index = -1
+                    else:
+                        raise IOError("Node index not recognised.")
+                    
+                    if myStr[2] == 'x':
+                        component = 0
+                    elif myStr[2] == 'y':
+                        component = 1
+                    elif myStr[2] == 'z':
+                        component = 2
+                    else:
+                        raise IOError("Moment component not recognised.")
+                    
+                    if locForces == None:
+                        locForces = localElasticForces(PosDefor,
+                                                       PsiDefor,
+                                                       XBELEM,
+                                                       [index])
+                    
+                    fp.write("{:<14,e}".format(locForces[0,3+component]))
+                else:
+                    raise IOError("writeDict key not recognised.")
+            # END for myStr
+            fp.write("\n")
+            fp.flush()
+                    
+            
         
-        # print test root strains.
-        localElasticForces(PosDefor, PsiDefor, XBELEM, ElemList = [0,])
+        # 'Rollup' due to external velocities. TODO: Must add gusts here!
+        ZetaStar[:,:] += VMINPUT.U_infty*dt
     
     # END Time loop
     
@@ -496,6 +646,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS):
 #    BeamIO.Write_shape_File(fp, len(Time), NumNodes_tot.value, Time, DynOut)
 #    fp.close()
     
+    # Close output file if it exists.
+    if 'writeDict' in kwords and Settings.WriteOut == True:
+        fp.close()
     
     # Close Tecplot ascii FileObject.
     if Settings.PlotTec==True:
@@ -521,7 +674,8 @@ def panellingFromFreq(freq,c=1.0,Umag=1.0):
     DelTime = c/(Umag*M) #get resulting DelTime
     return M, DelTime
 
-def localStrains(Rdef, PsiDef, XBELEM, ElemList):
+def localStrains(Rdef, PsiDef, XBELEM, ElemList,
+                  SO3 = False):
     """@brief Approximate strains at the centre of element(s).
     
     @param RDef Deformed nodal coordinates.
@@ -529,6 +683,7 @@ def localStrains(Rdef, PsiDef, XBELEM, ElemList):
     @param XBELEM Xbeam element derived type containing element data.
     @param ElemList List of element numbers for strain approximation,
             starts from zero.
+    @param SO3 Flag for use of the SO(3) manifold in CRV interpolation.
     @warning Untested.
     """
     
@@ -539,26 +694,47 @@ def localStrains(Rdef, PsiDef, XBELEM, ElemList):
         if NumNodes == 2:
             iNode = ElemList[iElem]
             Rdash = (Rdef[iNode+1] - Rdef[iNode]) / XBELEM.Length[iElem]
+            
             # Work out what sub-element node (iiElem) we are in.
             iiElem = 0 # Always for 2-noded Elem in this case.
-            # Calculate transformation at node 1
-            CaB = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem,:])
+            
             # Consistent calculation of midpoint strains using SO(3) manifold.
-            CB1a = CaB.T
-            CaB2 = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem+1,:])
-            CB1B2 = np.dot(CB1a,CaB2)
-            # Crisfield and Jelenic 1999, pg.1132
-            phiMat = logm(CB1B2) # skew symmetric matrix of rotation vector from node 1 -> node 2
-            CaBmid = np.dot(CaB,expm(0.5*phiMat))
-            CBaMid = CaBmid.T
+            if SO3 == True:
+                # Calculate transformation at node 1
+                CaB = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem,:])
+                CB1a = CaB.T
+                CaB2 = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem+1,:])
+                CB1B2 = np.dot(CB1a,CaB2)
+                # Crisfield and Jelenic 1999, pg.1132
+                phiMat = logm(CB1B2) # skew symmetric matrix of rotation vector from node 1 -> node 2
+                CaBmid = np.dot(CaB,expm(0.5*phiMat))
+                CBaMid = CaBmid.T
+                momentStrain = ( 1.0/XBELEM.Length[iElem] ) \
+                			   *XbeamLib.VectofSkew(phiMat)
+            else:
+                # Interpolate the CRV as if it were a standard vector.
+                psiDash = (PsiDef[iElem,iiElem+1,:] - PsiDef[iElem,iiElem,:]) \
+                          /XBELEM.Length[iElem]
+                psiMid = 0.5*(PsiDef[iElem,iiElem,:] + PsiDef[iElem,iiElem+1,:])
+                CaBmid = XbeamLib.Psi2TransMat(psiMid)
+                CBaMid = CaBmid.T
+                momentStrain = np.dot(XbeamLib.Tangential(psiMid), psiDash) \
+                			   - XBELEM.PreCurv[iElem*3:(iElem+1)*3]
+            # END if SO3
             forceStrain = np.dot(CBaMid,Rdash) - np.array([1.0, 0.0 ,0.0])
-            momentStrain = ( 1.0/XBELEM.Length[iElem] ) \
-                            * XbeamLib.VectofSkew(phiMat)
+            
         elif NumNodes == 3:
             iNode = 2*ElemList[iElem] + 1
             Rdash = (Rdef[iNode+1] - Rdef[iNode-1]) / XBELEM.Length[iElem]
-            #TODO 3-noded calc
-            raise NotImplementedError("Only available for 2-noded just now.")
+            
+            # Work out what sub-element node (iiElem) we are in.
+            # TODO: this!
+            
+            if SO3 == True:
+                raise NotImplementedError("Only available for 2-noded just now.")
+            else:
+                #TODO 3-noded calc
+                raise NotImplementedError("Only available for 2-noded just now.")
         else:
             raise ValueError("Only 2- or 3-noded elements are supported.")
         
@@ -598,7 +774,7 @@ if __name__ == '__main__':
                                  PrintInfo = ct.c_bool(True),
                                  NumLoadSteps = ct.c_int(25),
                                  Solution = ct.c_int(312),
-                                 MinDelta = ct.c_double(1e-4))
+                                 MinDelta = ct.c_double(1e-5))
     # beam inputs.
     XBINPUT = DerivedTypes.Xbinput(2,28)
     XBINPUT.BeamLength = 6.096
@@ -681,5 +857,13 @@ if __name__ == '__main__':
                               AirDensity = 1.02,
                               Tight = False,
                               ImpStart = False)
+    # Live output options.
+    writeDict = OrderedDict()
+    writeDict['R_z (tip)'] = 0
+    writeDict['M_x (root)'] = 0
+    writeDict['M_y (root)'] = 0
+    writeDict['M_z (root)'] = 0
+    
     # Solve nonlinear dynamic simulation.
-    Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS)
+    Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, VMUNST, AELAOPTS,
+             writeDict =  writeDict)

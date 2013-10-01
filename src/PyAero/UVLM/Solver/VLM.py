@@ -17,9 +17,6 @@ import PostProcess
 import SharPySettings as Settings
 import os
 
-Settings.OutputDir = os.getcwd() + '/'
-Settings.OutputFileRoot = ''
-
 def InitSteadyGrid(VMOPTS,VMINPUT):
     """@brief Initialise steady grid and zero grid velocities."""
     
