@@ -32,6 +32,7 @@ from DerivedTypesAero import ControlSurf
 from scipy.linalg import expm, logm
 from collections import OrderedDict
 import re
+from PyBeam.Utils.Misc import iNode2iElem
 
 class VMCoupledUnstInput:
     """@brief Contains data for unsteady run of UVLM.
@@ -674,43 +675,56 @@ def panellingFromFreq(freq,c=1.0,Umag=1.0):
     DelTime = c/(Umag*M) #get resulting DelTime
     return M, DelTime
 
-def localStrains(Rdef, PsiDef, XBELEM, ElemList,
+def localStrains(PosDefor, PsiDef, XBELEM, NodeList,
                   SO3 = False):
-    """@brief Approximate strains at the centre of element(s).
+    """@brief Approximate strains at the midpoint of nodes.
     
-    @param RDef Deformed nodal coordinates.
+    @param PosDefor Deformed nodal coordinates.
     @param PsiDef Deformed nodal rotation vectors.
     @param XBELEM Xbeam element derived type containing element data.
-    @param ElemList List of element numbers for strain approximation,
-            starts from zero.
+    @param NodeList List of node numbers for strain approximation at adjacent
+            midpoint in the direction of increasing node index,
+            starts from zero:
+            0---x---1---x---2---x---3-- ... --(NumNodes-1)
+            Strains are calculated at the x to the right of selected nodes.
     @param SO3 Flag for use of the SO(3) manifold in CRV interpolation.
+    
+    @details Assumes that all nodes are either two- or three- noded. 
     @warning Untested.
     """
     
-    strains = np.zeros((len(ElemList),6))
+    strains = np.zeros((len(NodeList),6))
+    NumNodes = PosDefor.shape[0]-1
+    NumNodesElem = XBELEM.NumNodes[0]
     iOut = 0 # Output index
-    for iElem in ElemList:
-        NumNodes = XBELEM.NumNodes[iElem]
-        if NumNodes == 2:
-            iNode = ElemList[iElem]
-            Rdash = (Rdef[iNode+1] - Rdef[iNode]) / XBELEM.Length[iElem]
+    for iNode in NodeList:
+        if iNode == NumNodes:
+            raise ValueError("Midpoint strain requested beyond final node.")
+        
+        iElem, iiElem = iNode2iElem(iNode, NumNodes, NumNodesElem)
+        
+        if NumNodesElem == 2:
             
-            # Work out what sub-element node (iiElem) we are in.
-            iiElem = 0 # Always for 2-noded Elem in this case.
-            
+            Rdash = (PosDefor[iNode+1] - PosDefor[iNode]) / XBELEM.Length[iElem]
             # Consistent calculation of midpoint strains using SO(3) manifold.
             if SO3 == True:
-                # Calculate transformation at node 1
-                CaB = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem,:])
-                CB1a = CaB.T
-                CaB2 = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem+1,:])
-                CB1B2 = np.dot(CB1a,CaB2)
-                # Crisfield and Jelenic 1999, pg.1132
-                phiMat = logm(CB1B2) # skew symmetric matrix of rotation vector from node 1 -> node 2
-                CaBmid = np.dot(CaB,expm(0.5*phiMat))
-                CBaMid = CaBmid.T
-                momentStrain = ( 1.0/XBELEM.Length[iElem] ) \
-                			   *XbeamLib.VectofSkew(phiMat)
+#                 # Transformation at node 1
+#                 CaB = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem,:])
+#                 CB1a = CaB.T
+#                 
+#                 # Transformation at node 2
+#                 CaB2 = XbeamLib.Psi2TransMat(PsiDef[iElem,iiElem+1,:])
+#                 
+#                 # Transformation between nodes 2 and 1
+#                 CB1B2 = np.dot(CB1a,CaB2)
+#                 
+#                 # Crisfield and Jelenic 1999, pg.1134
+#                 phiMat = logm(CB1B2) # skew symmetric matrix of rotation vector from node 1 -> node 2
+#                 CaBmid = np.dot(CaB,expm(0.5*phiMat))
+#                 CBaMid = CaBmid.T
+#                 momentStrain = ( 1.0/XBELEM.Length[iElem] ) \
+#                 			   *XbeamLib.VectofSkew(phiMat)
+                raise NotImplementedError("SO(3) manifold strains.")
             else:
                 # Interpolate the CRV as if it were a standard vector.
                 psiDash = (PsiDef[iElem,iiElem+1,:] - PsiDef[iElem,iiElem,:]) \
@@ -723,12 +737,14 @@ def localStrains(Rdef, PsiDef, XBELEM, ElemList,
             # END if SO3
             forceStrain = np.dot(CBaMid,Rdash) - np.array([1.0, 0.0 ,0.0])
             
-        elif NumNodes == 3:
-            iNode = 2*ElemList[iElem] + 1
-            Rdash = (Rdef[iNode+1] - Rdef[iNode-1]) / XBELEM.Length[iElem]
+        elif NumNodesElem == 3:
+            Rdash = (PosDefor[iNode+1] - PosDefor[iNode-1]) / XBELEM.Length[iElem]
             
             # Work out what sub-element node (iiElem) we are in.
-            # TODO: this!
+            iElem, iiElem = iNode2iElem(iNode, NumNodes, NumNodesElem)
+            
+            
+            
             
             if SO3 == True:
                 raise NotImplementedError("Only available for 2-noded just now.")
@@ -744,11 +760,11 @@ def localStrains(Rdef, PsiDef, XBELEM, ElemList,
     # END for iElem
     return strains
     
-def localElasticForces(Rdef, PsiDef, XBELEM, ElemList):
+def localElasticForces(PosDefor, PsiDef, XBELEM, ElemList):
     """@brief Approximate shear force and moments from local strain and
     stiffness matrix.
     
-    @param RDef Deformed nodal coordinates.
+    @param PosDefor Deformed nodal coordinates.
     @param PsiDef Deformed nodal rotation vectors.
     @param XBELEM Xbeam element derived type containing element data.
     @param ElemList List of element numbers for strain approximation,
@@ -757,7 +773,7 @@ def localElasticForces(Rdef, PsiDef, XBELEM, ElemList):
     """
     
     elemF = np.zeros((len(ElemList),6))
-    strains = localStrains(Rdef, PsiDef, XBELEM, ElemList)
+    strains = localStrains(PosDefor, PsiDef, XBELEM, ElemList)
     iOut = 0 # Output index
     for iElem in ElemList:
         elemStrain = strains[iOut,:]

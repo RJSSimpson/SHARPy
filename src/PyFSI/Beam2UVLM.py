@@ -15,10 +15,7 @@ from PyBeam.Utils.XbeamLib import Psi2TransMat
 from PyBeam.Utils.XbeamLib import Skew
 from PyBeam.Utils.XbeamLib import Tangential
 from PyAero.UVLM.Utils import DerivedTypesAero
-
-def isodd(num):
-    """@brief returns True if Num is odd"""
-    return bool(num & 1)
+from PyBeam.Utils.Misc import iNode2iElem
 
 def CoincidentGrid(PosDefor, PsiDefor, Section,
                    VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
@@ -42,32 +39,15 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
     @param PsiA_G Attitude of a-frame w.r.t earth.
     @param ctrlSurf Control surface definition. 
     
-    @details All displacements and velocities are projected in A-frame.
+    @details AeroGrid and AeroVels are projected in G-frame.
     """
     
+    NumNodes = PosDefor.shape[0]
     NumNodesElem = XBINPUT.NumNodesElem
             
     for iNode in range(PosDefor.shape[0]):
         # Work out what element we are in.
-        if iNode == 0:
-            iElem = 0
-        elif iNode < PosDefor.shape[0]-1:
-            iElem = int(iNode/(NumNodesElem-1))
-        elif iNode == PosDefor.shape[0]-1:
-            iElem = int((iNode-1)/(NumNodesElem-1))
-            
-        # Work out what sub-element node we are in.
-        if NumNodesElem == 2:
-            if iNode < PosDefor.shape[0]-1:
-                iiElem = 0
-            elif iNode == PosDefor.shape[0]-1:
-                iiElem = 1
-        elif NumNodesElem == 3:
-            iiElem = 0
-            if iNode == PosDefor.shape[0]-1:
-                iiElem = 2 
-            elif isodd(iNode):
-                iiElem = 1
+        iElem, iiElem = iNode2iElem(iNode, NumNodes, NumNodesElem)
         
         # Calculate transformation matrix for each node.
         CaB = Psi2TransMat(PsiDefor[iElem,iiElem,:])
@@ -150,11 +130,11 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
         for iNode in range(PosDefor.shape[0]):
             for jSection in range(Section.shape[0]):
                 AeroGrid[jSection,iNode,:] = OriginA_G + \
-                                             np.dot(CGa,\
-                                             AeroGrid[jSection,iNode,:])
+                                             np.dot(
+                                             CGa, AeroGrid[jSection,iNode,:])
                                              
-                AeroVels[jSection,iNode,:] = np.dot(\
-                                             CGa,AeroVels[jSection,iNode,:])
+                AeroVels[jSection,iNode,:] = np.dot(
+                                             CGa, AeroVels[jSection,iNode,:])
             #END for jSection
         #END for iNode
     #END if    
@@ -179,33 +159,16 @@ def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
     CGa = Psi2TransMat(XBINPUT.PsiA_G)
     CaG = CGa.T
     
+    # Num Nodes
+    NumNodes = XBINPUT.NumNodesTot
+    
     # Get number of nodes per beam element.
     NumNodesElem = XBINPUT.NumNodesElem
     
     # Loop along beam length.
-    for iNode in range(XBINPUT.NumNodesTot):
+    for iNode in range(NumNodes):
         
-        # Work out what element we are in (works for 2 and 3-noded).
-        if iNode == 0:
-            iElem = 0
-        elif iNode < XBINPUT.NumNodesTot-1:
-            iElem = int(iNode/(NumNodesElem-1))
-        elif iNode == XBINPUT.NumNodesTot-1:
-            iElem = int((iNode-1)/(NumNodesElem-1))
-            
-        # Work out what sub-element node (iiElem) we are in.
-        if NumNodesElem == 2:
-            if iNode < XBINPUT.NumNodesTot-1:
-                iiElem = 0
-            elif iNode == XBINPUT.NumNodesTot-1:
-                iiElem = 1
-                
-        elif NumNodesElem == 3:
-            iiElem = 0
-            if iNode == XBINPUT.NumNodesTot-1:
-                iiElem = 2 
-            elif isodd(iNode):
-                iiElem = 1
+        iElem, iiElem = iNode2iElem(iNode, NumNodes, NumNodesElem)
         
         # Calculate transformation matrix for each node.
         CaB = Psi2TransMat(PsiDefor[iElem,iiElem,:])
