@@ -40,6 +40,7 @@ sys.path.append(SharPyProjectDir + 'src/PyAero/UVLM/Utils')
 sys.path.append(SharPyProjectDir + 'src/PyAero/UVLM/Solver')
 sys.path.append(SharPyProjectDir + 'src/PyCoupled')
 sys.path.append(SharPyProjectDir + 'src/PyCoupled/Utils')
+sys.path.append(SharPyProjectDir + 'BeamLib/src/wrapper/f2py')
 
 # Structural Code Constants.
 MaxElNod = 3

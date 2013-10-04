@@ -10,6 +10,8 @@
 
 import ctypes as ct #http://docs.python.org/3.2/library/ctypes.html
 import SharPySettings as Settings
+import lib_fem
+import lib_cbeam3
 
 BeamPath = Settings.BeamLibDir + Settings.BeamLibName
 BeamLib = ct.cdll.LoadLibrary(BeamPath)
@@ -434,4 +436,5 @@ def Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
 
     
 if __name__ == '__main__':
-    pass
+    print(lib_fem.__doc__)
+    print(lib_cbeam3.__doc__)

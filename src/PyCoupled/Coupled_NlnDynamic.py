@@ -71,7 +71,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS,**kwords):
     @param VMINPUT UVLM solver inputs (for initialization in Python).
     @param VMUNST Unsteady input information for aero solver.
     @param AELAOPTS Options relevant to coupled aeroelastic simulations.
-    @param writeDict OrderedDict of 'name':tuple of outputs to write."""
+    @param writeDict OrderedDict of 'name':tuple of outputs to write.
+    """
         
     # Check correct solution code.
     assert XBOPTS.Solution.value == 312, ('NonlinearDynamic requested' +
@@ -867,12 +868,14 @@ if __name__ == '__main__':
     OmegaA_G = np.array(([0.0,0.0,0.0]))
     VMUNST   = VMCoupledUnstInput(VMOPTS, VMINPUT, 0.0, 0.0,
                                   VelA_G, OmegaA_G)
+    
     # Aerolastic simulation results.
     AELAOPTS = AeroelasticOps(ElasticAxis = ElasticAxis,
                               InertialAxis = InertialAxis,
                               AirDensity = 1.02,
                               Tight = False,
                               ImpStart = False)
+    
     # Live output options.
     writeDict = OrderedDict()
     writeDict['R_z (tip)'] = 0

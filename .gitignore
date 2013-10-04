@@ -10,6 +10,9 @@ __pycache__/
 # FORTRAN modules
 *.mod
 
+# Auto generated signature files from f2py
+*.pyf
+
 # Packages
 *.egg
 *.egg-info
