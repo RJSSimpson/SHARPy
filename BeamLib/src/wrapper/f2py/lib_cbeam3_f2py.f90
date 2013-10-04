@@ -22,7 +22,7 @@
   real(8),intent(in)   :: r0       (NumNodesElem,6)! Initial position/orient
   real(8),intent(in)   :: Ri       (NumNodesElem,6)! Current position/orient
   real(8),intent(in)   :: ElemStiff(6,6)     ! Stiffness properties in the element.
-  real(8),intent(inout):: Forces   (6)       ! Stiffness forces.
+  real(8),intent(out):: Forces   (6)       ! Stiffness forces.
   real(8),intent(in)   :: z                  ! Local element coordinate
 
 ! Local variables.

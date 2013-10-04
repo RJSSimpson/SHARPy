@@ -7,7 +7,7 @@
 @pre        Compile the beam code into wrapped dynamic library.
 @warning    None
 '''
-
+import numpy as np
 import ctypes as ct #http://docs.python.org/3.2/library/ctypes.html
 import SharPySettings as Settings
 import lib_fem
@@ -438,3 +438,14 @@ def Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
 if __name__ == '__main__':
     print(lib_fem.__doc__)
     print(lib_cbeam3.__doc__)
+    
+    # Test forces at z
+    NumNodesElem = 2
+    R0 = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                   [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+    Ri = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                   [2.0, 0.0, 0.0, 0.5*np.pi, 0.0, 0.0]])
+    K = np.eye(6)
+    z = 0.0 #local coordinate
+    
+    print(lib_cbeam3.cbeam3_fstifz(R0,Ri,K,z))

@@ -38,6 +38,9 @@ class Xbopts:
     @param DeltaCurved Min. angle for two vectors to be parallel, double.
     @param MinDelta Convergence param for Newton-Rhaphson iterations, double.
     @param NewmarkDamp Numerical damping in Newmark integration scheme, double.
+    
+    @warning If FollowerForce = ct.c_bool(True), beam forces must be applied
+    in the local FoR, B.
     """
 
     def __init__(self, FollowerForce = ct.c_bool(False), \
