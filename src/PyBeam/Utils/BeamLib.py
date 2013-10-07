@@ -433,6 +433,38 @@ def Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
                 PsiDefor.ctypes.data_as(ct.POINTER(ct.c_double)), \
                 PosDotDefor.ctypes.data_as(ct.POINTER(ct.c_double)), \
                 PsiDotDefor.ctypes.data_as(ct.POINTER(ct.c_double)) )
+    
+def Cbeam3_fstifz(R0,Ri,K,z):
+    """@brief Local element stiffness forces as a function of non-dim ordinate z
+    .
+    
+    @param eta0 Undeformed element displacements and rotations (2x6 or 3x6
+                 array).
+    @param eta Current element displacements and rotations.
+    @param K Element stiffness matrix.
+    @param z Non-dim ordinate on reference line.
+    @return stiffForce Discrete elastic force at z.
+    @details For three-noded elements R0(i,:) corresponds to LHS element for
+    i=1, RHS for i=2, and center for i=3. Also, z = 0 is the centre of the
+    element with z in [-1,1].
+    """
+    return (lib_cbeam3.cbeam3_fstifz(R0,Ri,K,z))
+
+def Cbeam3_strainz(R0,Ri,z):
+    """@brief Local element strain as a function of non-dim ordinate z.
+    
+    @param eta0 Undeformed element displacements and rotations (2x6 or 3x6
+                 array).
+    @param eta Current element displacements and rotations.
+    @param z Non-dim ordinate on reference line.
+    @return stiffForce Discrete elastic force at z.
+    @details For three-noded elements R0(i,:) corresponds to LHS element for
+    i=1, RHS for i=2, and center for i=3. Also, z = 0 is the centre of the
+    element with z in [-1,1].
+    """
+    return (lib_cbeam3.cbeam3_strainz(R0,Ri,z))
+    
+
 
     
 if __name__ == '__main__':
@@ -444,8 +476,19 @@ if __name__ == '__main__':
     R0 = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                    [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
     Ri = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                   [2.0, 0.0, 0.0, 0.5*np.pi, 0.0, 0.0]])
-    K = np.eye(6)
-    z = 0.0 #local coordinate
+                   [2.0, 0.0, 0.0, 0.5*np.pi, 0.5*np.pi, 0.0]])
+    K = 1e3*np.eye(6)
+    z = 1.0 #local coordinate
     
-    print(lib_cbeam3.cbeam3_fstifz(R0,Ri,K,z))
+    print(Cbeam3_fstifz(R0, Ri, K, z))
+    print(Cbeam3_strainz(R0, Ri, z))
+    
+    R0 = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                   [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                   [0.5, 0.0, 0.0, 0.0, 0.0, 0.0],])
+    Ri = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                   [1.0, 0.0, 4.0, 0.0, np.pi, 0.0],
+                   [0.5, 0.0, 1.0, 0.0, 0.25*np.pi, 0.0]])
+    
+    print(Cbeam3_fstifz(R0, Ri, K, z))
+    print(Cbeam3_strainz(R0, Ri, z))

@@ -9,7 +9,7 @@
 '''
 
 import sys
-import SharPySettings as Settings
+import Main.SharPySettings as Settings
 import DerivedTypes
 import BeamIO
 import BeamLib
@@ -29,7 +29,6 @@ import PyCoupled.Coupled_NlnStatic as Static
 import PyBeam.Utils.XbeamLib as XbeamLib
 from PyCoupled.Coupled_NlnStatic import AddGravityLoads
 from DerivedTypesAero import ControlSurf
-from scipy.linalg import expm, logm
 from collections import OrderedDict
 import re
 from PyBeam.Utils.Misc import iNode2iElem
