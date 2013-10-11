@@ -72,33 +72,47 @@ def WriteAeroTecHeader(FileName='AeroGrid.dat', Title='Default',
     return FileObject
 
 
-def WriteAeroTecZone(FileObject, Name, AeroGrid, TimeStep=-1, NumTimeSteps=0,\
-                     Time=0.0, Variables=['X', 'Y', 'Z'], Text=True, Gamma = 0.0):
+def WriteAeroTecZone(FileObject,
+                       Name,
+                       Zeta,
+                       TimeStep=-1,
+                       NumTimeSteps=0,
+                       Time=0.0,
+                       Variables = ['X', 'Y', 'Z'],
+                       Text=True, 
+                       Gamma = 0.0):
     """@brief Writes aero grid data to ascii file in tecplot ij format.
     @param FileObject Must be an open file object.
+    @param Name Name of the block of data for teclplot [Surface/Wake]
+    @param Zeta Lattice of points making up the block of data (M+1,N+1,3).
     @param Timestep -1 for static solution and >-1 thereafter.
-    
+    @param NumTimeSteps Total number of timesteps.
+    @param Time Time at current step.
+    @param Variables Pythonic list of variable names to plot, e.g
+            ['X','Y','Z','Gamma'].
+    @param Text Flag to write current time into output.
+    @param Gamma Corresponding circulation strengths to plot (M,N).
     @details Tecplot ascii reader has a per-line character limit before which
-     it looks for a new line."""
+    it looks for a new line."""
     
-    STRANDID = 1 
+    STRANDID = 1
     if Name == 'Wake':
         STRANDID = 2
     
     FileObject.write('ZONE I=%d J=%d DATAPACKING=BLOCK T="%s: Timestep %d of %d"\nSOLUTIONTIME=%f STRANDID=%d\n' % \
-                     (AeroGrid.shape[0],AeroGrid.shape[1],Name,TimeStep+1,\
+                     (Zeta.shape[0],Zeta.shape[1],Name,TimeStep,\
                       NumTimeSteps,Time,STRANDID))
     if len(Variables) == 4: 
         FileObject.write('VARLOCATION = (4=CELLCENTERED)\n')
     
     for Var in range(len(Variables)):
         charcounter = 0
-        for j in range(AeroGrid.shape[1]):
-            for i in range(AeroGrid.shape[0]):
+        for j in range(Zeta.shape[1]):
+            for i in range(Zeta.shape[0]):
                 if Var < 3:
-                    FileObject.write('%f\t' % (AeroGrid[i,j,Var]))
+                    FileObject.write('%f\t' % (Zeta[i,j,Var]))
                     charcounter += 9
-                if (Var==3 and j<AeroGrid.shape[1]-1 and i<AeroGrid.shape[0]-1):
+                if (Var==3 and j<Zeta.shape[1]-1 and i<Zeta.shape[0]-1):
                     FileObject.write('%f\t' % (Gamma[i,j]))
                     charcounter += 9
                 if charcounter > 900:
@@ -118,6 +132,48 @@ def WriteAeroTecZone(FileObject, Name, AeroGrid, TimeStep=-1, NumTimeSteps=0,\
 def CloseAeroTecFile(FileObject):
     """TODO: could whole file writing process be encapsulated in a class?"""
     FileObject.close()
+    
+def WriteUVLMtoTec(FileObject,
+                     Zeta,
+                     ZetaStar,
+                     Gamma,
+                     GammaStar,
+                     TimeStep,
+                     NumTimeSteps,
+                     Time,
+                     Text = False):
+    """@brief Write surface and wake to open tecplot file object.
+    @param FileObject Must be an open file object.
+    @param Zeta Lattice of points on surface (M+1,N+1,3).
+    @param ZetaStar Lattice of points wake (Mstar+1,N+1,3).
+    @param Gamma Surface circulation strengths (M,N).
+    @param GammaStar Wake circulation strengths (Mstar,N).
+    @param Timestep -1 for static solution and >-1 thereafter.
+    @param NumTimeSteps Total number of timesteps.
+    @param Time Time at current step.
+    @param Text Flag to write current time into output.
+    @details If Text is true then the time only needs to be written once,
+              and is done so when plotting the 'surface'.
+    """
+    Variables = ['X','Y','Z','Gamma']
+    WriteAeroTecZone(FileObject,
+                     'Surface',
+                     Zeta,
+                     TimeStep,
+                     NumTimeSteps,
+                     Time,
+                     Variables,
+                     Text,
+                     Gamma)
+    WriteAeroTecZone(FileObject,
+                     'Wake',
+                     ZetaStar,
+                     TimeStep,
+                     NumTimeSteps,
+                     Time,
+                     Variables,
+                     False,
+                     GammaStar)
 
 if __name__ == '__main__':
     pass

@@ -38,6 +38,9 @@ class Xbopts:
     @param DeltaCurved Min. angle for two vectors to be parallel, double.
     @param MinDelta Convergence param for Newton-Rhaphson iterations, double.
     @param NewmarkDamp Numerical damping in Newmark integration scheme, double.
+    
+    @warning If FollowerForce = ct.c_bool(True), beam forces must be applied
+    in the local FoR, B.
     """
 
     def __init__(self, FollowerForce = ct.c_bool(False), \
@@ -49,10 +52,8 @@ class Xbopts:
                  DeltaCurved = ct.c_double(1.0e-5), \
                  MinDelta = ct.c_double(1.0e-8), \
                  NewmarkDamp = ct.c_double(1.0e-4) ):
-        """@brief Default initialisation (as defined in .f90).
-        
-        Non-default initialisation requires everything up to the argument in
-        the list is specified (except from self)."""
+        """@brief Default initialisation is as defined in the original fortran
+        derived type."""
         self.FollowerForce = FollowerForce
         self.FollowerForceRig = FollowerForceRig
         self.PrintInfo = PrintInfo
@@ -152,7 +153,7 @@ def dump(obj):
 class Xbelem:
     """@brief Pythonic version of fortran arrays containing derived type 'Elem'
     data, one set of arrays for each element, as defined in xbeam_shared.f90."""
-    def __init__(self, NumElems, MaxElNod):
+    def __init__(self, NumElems, MaxElNod = 3):
         """@brief Create 'NumElems' arrays with zero entries.
         
         @param NumNodes Number of nodes in each element.

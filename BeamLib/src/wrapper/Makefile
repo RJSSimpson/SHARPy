@@ -48,7 +48,6 @@ F90OBJ=$(F90SRC:.f90=.o)
 # Define targets
 all: $(F90OBJ)
 	gfortran -o $(DYNLIB) $^ $(LIBFLAG)
-	rm -vf *.mod
 
 %.o: %.f90
 	gfortran -o $@ -c $< $(F90FLAG)

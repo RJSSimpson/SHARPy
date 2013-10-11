@@ -82,8 +82,8 @@ def OutputElems(NumElems,TotNumNodes,XBELEM,PosDefor,PsiDefor,ofile,WriteMode):
     
     return
 
-def WriteUndefGeometry(NumElems,TotNumNodes,XBELEM,\
-                       PosIni,PsiIni,RootFile,WriteMode = 'a'):
+def WriteUndefGeometry(NumElems,TotNumNodes,XBELEM,
+                          PosIni,PsiIni,RootFile,WriteMode = 'a'):
     """@brief Create *_UndefGeom.dat file and write output of 
     fem_glob2loc_extract from lib_fem.f90.
     
@@ -96,8 +96,8 @@ def WriteUndefGeometry(NumElems,TotNumNodes,XBELEM,\
     fp.write('VARIABLES="iElem" "iNode" "Px" "Py" "Pz" "Rx" "Ry" "Rz"\n')
     fp.close()
 
-    OutputElems( NumElems,TotNumNodes,XBELEM,\
-                 PosIni,PsiIni,ofile,WriteMode)
+    OutputElems(NumElems,TotNumNodes,XBELEM,
+                PosIni,PsiIni,ofile,WriteMode)
 
     return
 

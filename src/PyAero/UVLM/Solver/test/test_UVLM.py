@@ -224,14 +224,20 @@ class Test_v_TheoGarrick(unittest.TestCase):
         """Test K&P then Joukowski methods unsteady lift and drag."""
         
         # Declare UVLM solver options.
-        M = 25
-        N = 2
-        Mstar = 250
-        VMOPTS = VMopts(M,N,True,Mstar,False,False,True,0.0,False,4)
+        VMOPTS = VMopts(M = 25,
+                        N = 2,
+                        ImageMethod = True,
+                        Mstar = 250,
+                        Steady = False,
+                        KJMeth = False,
+                        NewAIC = True,
+                        DelTime = 0.0,
+                        Rollup = False,
+                        NumCores = 4)
         
         # Define wing geometry parameters.
         c = 1.0
-        b = 1000.0 #semi-span
+        b = 1000.0
         theta = 0.0*np.pi/180.0
         
         # Define free-stream conditions.
@@ -248,40 +254,43 @@ class Test_v_TheoGarrick(unittest.TestCase):
         nT = 2.0
         NumChordLengths = nT * np.pi / k
         
-        VMINPUT = VMinput(c, b, U_mag, alpha, theta, 0.0,
-                          NumChordLengths, ctrlSurf)
+        VMINPUT = VMinput(c,
+                          b,
+                          U_mag,
+                          alpha,
+                          theta,
+                          ZetaDotTest = 0.0,
+                          WakeLength = NumChordLengths,
+                          ctrlSurf = ctrlSurf)
         
         # Define unsteady solver parameters.
-        WakeLength = 10.0
-        DeltaS = 1.0/25.0
-        VelA_A = np.array([0, 0, 0])
-        OmegaA_A = np.array([0, 0, 0])
-        VMUNST = VMUnsteadyInput(VMOPTS,VMINPUT,
-                                 WakeLength,
-                                 DeltaS,
-                                 NumChordLengths,
-                                 VelA_A, OmegaA_A)
+        VMUNST = VMUnsteadyInput(VMOPTS,
+                                 VMINPUT,
+                                 WakeLength = 10.0,
+                                 DelS = 1.0/25.0,
+                                 NumChordLengths = NumChordLengths,
+                                 VelA_G = np.array([0, 0, 0]),
+                                 OmegaA_G = np.array([0, 0, 0]))
         
         # Define 'aeroelastic' options.
-        AELOPTS = AeroelasticOps(ElasticAxis = -0.5,InertialAxis=0.0,
-                                AirDensity = 1.0)
+        ElasticAxis = -0.5
+        AELOPTS = AeroelasticOps(ElasticAxis = ElasticAxis) # Quarter chord.
         
         # Run C++ solver.
-        CoeffHistory = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
+        CoeffHistoryKatz = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
         
         # Run from Joukowski method.
         VMOPTS.KJMeth.value = True
         CoeffHistoryJouk = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
-        
         print(CoeffHistoryJouk)
         
-        # Get analytical result.
+        # Set parameters for analytical result.
         alphaBar = 0.0
         hBar = 0.0
         phi0 = 0.0
         phi1 = 0.0
         phi2 = 0.0
-        a = -0.5
+        a = ElasticAxis
         e = 0.6
         k = 1.0
         
@@ -289,20 +298,23 @@ class Test_v_TheoGarrick(unittest.TestCase):
                                                         phi0, phi1, phi2,
                                                         a, e, k, nT+0.1)
         
+        # Delete unused variables
+        del hDot
+        
         # Interpolate analytical result onto simulated time steps.
-        ClTheo = np.interp(CoeffHistory[:,0]*U_mag/(c/2.0), s, Cl)
-        CdGarr = np.interp(CoeffHistory[:,0]*U_mag/(c/2.0), s, Cd)
+        ClTheo = np.interp(CoeffHistoryKatz[:,0]*U_mag/(c/2.0), s, Cl)
+        CdGarr = np.interp(CoeffHistoryKatz[:,0]*U_mag/(c/2.0), s, Cd)
         
         # Calculate error as function of time in last period.
-        kTimeMid = len(CoeffHistory[:,0])/2
-        ClErr = CoeffHistory[kTimeMid:,3] - ClTheo[kTimeMid:]
-        CdErr = -CoeffHistory[kTimeMid:,2] - CdGarr[kTimeMid:]
+        kTimeMid = len(CoeffHistoryKatz[:,0])/2
+        ClErr = CoeffHistoryKatz[kTimeMid:,3] - ClTheo[kTimeMid:]
+        CdErr = -CoeffHistoryKatz[kTimeMid:,2] - CdGarr[kTimeMid:]
         ClErrJouk = CoeffHistoryJouk[kTimeMid:,3] - ClTheo[kTimeMid:]
         CdErrJouk = -CoeffHistoryJouk[kTimeMid:,2] - CdGarr[kTimeMid:]
         
         # RMS error
-        rmsCl = np.sqrt(np.mean(pow(ClErr,2.0)))/max(CoeffHistory[:,3])
-        rmsCd = np.sqrt(np.mean(pow(CdErr,2.0)))/max(-CoeffHistory[:,2])
+        rmsCl = np.sqrt(np.mean(pow(ClErr,2.0)))/max(CoeffHistoryKatz[:,3])
+        rmsCd = np.sqrt(np.mean(pow(CdErr,2.0)))/max(-CoeffHistoryKatz[:,2])
         rmsClJouk = ( np.sqrt(np.mean(pow(ClErrJouk,2.0)))
                       / max(CoeffHistoryJouk[:,3]) )
         rmsCdJouk = ( np.sqrt(np.mean(pow(CdErrJouk,2.0)))
@@ -313,18 +325,18 @@ class Test_v_TheoGarrick(unittest.TestCase):
         self.assertAlmostEqual(rmsCd, 0.136290106597,5,'RMS error in drag.')
     
         
-        if False:
+        if True:
             # Define beta here for plotting purposes.
-            betaSim = betaBar * np.sin(omega * CoeffHistory[:,0])
+            betaSim = betaBar * np.sin(omega * CoeffHistoryKatz[:,0])
             
             plt.subplot(2,1,1)
             plt.grid()
-            plt.plot(betaSim,-CoeffHistory[:,2],'ko-',beta,Cd,'k-.')
+            plt.plot(betaSim,-CoeffHistoryKatz[:,2],'ko-',beta,Cd,'k-.')
             plt.xlabel(r'$\beta$')
             plt.ylabel(r'$C_d$')
             plt.subplot(2,1,2)
             plt.grid()
-            plt.plot(betaSim,CoeffHistory[:,3],'ko-',beta,Cl,'k-.')
+            plt.plot(betaSim,CoeffHistoryKatz[:,3],'ko-',beta,Cl,'k-.')
             plt.xlabel(r'$\beta$')
             plt.ylabel(r'$C_l$')
             
@@ -341,5 +353,5 @@ if __name__ == "__main__":
               .loadTestsFromTestCase(Test_v_TheoGarrick))
     alltests = unittest.TestSuite([suite1, suite2, suite3])
     TestRunner = unittest.TextTestRunner(verbosity=2) # creates a test runner
-    #TestRunner.run(suite1) #run a single suite
+    #TestRunner.run(suite3) #run a single suite
     TestRunner.run(alltests) #run all tests

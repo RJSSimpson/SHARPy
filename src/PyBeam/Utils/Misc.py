@@ -22,6 +22,42 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.clock()
         self.interval = self.end - self.start
+        
+def isodd(num):
+    """@brief returns True if Num is odd"""
+    return bool(num & 1)
+
+def iNode2iElem(iNode, NumNodes, NumNodesElem):
+        """@brief Work out what element and sub-element node we are in.
+        @param iNode Node number.
+        @param NumNodes Total number of nodes.
+        @param NumNodesElem Number of nodes per element.
+        @return iElem Element number.
+        @return iiElem Sub-element node number.
+        """
+        
+        # Work out what element we are in.
+        if iNode == 0:
+            iElem = 0
+        elif iNode < NumNodes:
+            iElem = int(iNode/(NumNodesElem-1))
+        elif iNode == NumNodes:
+            iElem = int((iNode-1)/(NumNodesElem-1))
+            
+        # Work out what sub-element node we are in.
+        if NumNodesElem == 2:
+            if iNode < NumNodes:
+                iiElem = 0
+            elif iNode == NumNodes:
+                iiElem = 1
+        elif NumNodesElem == 3:
+            iiElem = 0
+            if iNode == NumNodes:
+                iiElem = 2 
+            elif isodd(iNode):
+                iiElem = 1
+        
+        return iElem, iiElem
 
 if __name__ == '__main__':
     "example: test timer"

@@ -12,6 +12,7 @@ import numpy as np
 import ctypes as ct
 import SharPySettings as Settings
 from scipy import linalg
+from PyBeam.Utils.Misc import isodd
 
 def QuadSkew(Omega):
     """@brief Calculate incremental update operator for Quaternion based on Omega.
@@ -119,7 +120,93 @@ def Tangential(Psi):
                     + (1 - np.sin(Norm)/Norm) * np.dot(SkewPsi,SkewPsi)/Norm**2
     
     return Tang
-     
+
+def AddGravityLoads(BeamForces,XBINPUT,XBELEM,AELAOPTS,PsiDefor,
+                      chord = 1.0):
+    """@brief Apply nodal gravity loads.
+    @param BeamForces Nodal forces to update.
+    @param XBINPUT Xbeam inputs.
+    @param XBELEM Xbeam element information.
+    @param AELAOPTS Aeroelastic options.
+    @param PsiA_G Cartesian rotation vector describing orientation of a-frame
+           with respect to earth.
+    @param chord Aerofoil chord, assumed to be 1.0 if ommited. 
+    @details Offset of mass centroid from elastic axis is currently calculated
+             using the AELAOPTS.ElasticAxis and .InertialAxis parameters which 
+             are analogous to that used by Theodorsen. It therefore assumes the 
+             aerofoil section is defined on the y-axis and hence the moment arm
+             points in the B-frame y-direction.
+    @warning Assumes even distribution of nodes along beam.
+    @warning Not valid for twisted aerofoil sections, i.e those that are defined
+             with some theta angle.
+    """
+    
+    MassPerLength = XBINPUT.BeamMass[0,0]
+    
+    if XBINPUT.NumNodesElem == 2:
+        NodeSpacing = XBELEM.Length[0]
+    elif XBINPUT.NumNodesElem == 3:
+        NodeSpacing = 0.5*XBELEM.Length[0]
+        
+    ForcePerNode = -NodeSpacing * MassPerLength * XBINPUT.g 
+    
+    # Obtain transformation from Earth to a-frame.
+    CGa = Psi2TransMat(XBINPUT.PsiA_G)
+    CaG = CGa.T
+    
+    # Force in a-frame.
+    Force_a = np.dot(CaG,np.array([0.0,0.0,ForcePerNode]))
+    
+    # Indices for boundary nodes.
+    Root = 0
+    Tip = BeamForces.shape[0]-1
+    
+    # Apply forces.
+    BeamForces[Root+1:Tip,:3] += Force_a
+    BeamForces[Root,:3] += 0.5*Force_a
+    BeamForces[Tip,:3] += 0.5*Force_a
+    
+    # Get number of nodes per beam element.
+    NumNodesElem = XBINPUT.NumNodesElem
+    
+    # Loop through nodes to get moment arm at each.
+    for iNode in range(XBINPUT.NumNodesTot):
+        
+        # Work out what element we are in (works for 2 and 3-noded).
+        if iNode == 0:
+            iElem = 0
+        elif iNode < XBINPUT.NumNodesTot-1:
+            iElem = int(iNode/(NumNodesElem-1))
+        elif iNode == XBINPUT.NumNodesTot-1:
+            iElem = int((iNode-1)/(NumNodesElem-1))
+            
+        # Work out what sub-element node (iiElem) we are in.
+        if NumNodesElem == 2:
+            if iNode < XBINPUT.NumNodesTot-1:
+                iiElem = 0
+            elif iNode == XBINPUT.NumNodesTot-1:
+                iiElem = 1
+                
+        elif NumNodesElem == 3:
+            iiElem = 0
+            if iNode == XBINPUT.NumNodesTot-1:
+                iiElem = 2 
+            elif isodd(iNode):
+                iiElem = 1
+        
+        # Calculate transformation matrix for each node.
+        CaB = Psi2TransMat(PsiDefor[iElem,iiElem,:])
+        
+        # Define moment arm in B-frame
+        # Moment arm to elastic axis defined using EA and IA of Theodorsen.
+        armY = -(AELAOPTS.InertialAxis - AELAOPTS.ElasticAxis)*chord/2.0
+        armY_a = np.dot(CaB,np.array([0.0, armY, 0.0]))
+        
+        # Calculate moment
+        if (iNode == Root or iNode == Tip):
+            BeamForces[iNode,3:] += np.cross(armY_a, 0.5*Force_a)
+        else:
+            BeamForces[iNode,3:] += np.cross(armY_a, Force_a)
 
 
 if __name__ == '__main__':

@@ -29,7 +29,8 @@ Then build a Debug configuration of the project.
 * Python 3.2
 * numpy
 * scipy
-* slycot (routines for predictive controller design)
+* slycot (routines for preditive controller design)
+* muAO-MPC (MPC controller design and C-code generation)
 * Eigen (C++ libraries)
 * Boost (C++ libraries)
 * LAPACK (Fortran libraries)
