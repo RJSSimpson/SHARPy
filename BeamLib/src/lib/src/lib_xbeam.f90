@@ -19,7 +19,6 @@
 !    -xbeam_crr:        Compute reference system damping matrix.
 !
 !    -xbeam_fext:       Compute influence coefficients for force vector.
-!    -xbeam_faero:      Aero forces using strip theory
 !
 !    -xbeam_rot:        Definition of rotation operator in Euler quaternions
 !    -xbeam_quadskew:   See Shearer and Cesnik (2007)
@@ -35,7 +34,6 @@
 !  2) The element can have 2 or 3 nodes.
 !
 !-> Modifications.-
-! 20120317 A.Da Ronch Conditional compilation added (NOLAPACK)
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module lib_xbeam
@@ -1237,7 +1235,7 @@ module lib_xbeam
   real(8),intent(in)   :: r0       (:,:)    ! Initial position/orientation of grid points.
   real(8),intent(in)   :: Ri       (:,:)    ! Current position/orientation of grid points.
   real(8),intent(in)   :: ElemMass (:,:)    ! Inertial properties in the element.
-  real(8),intent(out)  :: MRR     (:,:)    ! Tangent mass matrix.
+  real(8),intent(inout):: MRR     (:,:)     ! Tangent mass matrix.
   integer,intent(in)   :: NumGauss          ! Number of Gauss points in the element.
 
 ! Local variables.
@@ -1315,7 +1313,7 @@ module lib_xbeam
   real(8),intent(in)   :: r0       (:,:)   ! Initial position/orientation of grid points.
   real(8),intent(in)   :: Ri       (:,:)   ! Current position/orientation of grid points.
   real(8),intent(in)   :: NodalMass(:,:,:) ! Inertia tensor of lumped masses at element nodes.
-  real(8),intent(out)  :: MRR     (:,:)    ! Tangent mass matrix.
+  real(8),intent(inout):: MRR     (:,:)    ! Tangent mass matrix.
 
 ! Local variables.
   integer :: iNode                 ! Counters.
@@ -1700,44 +1698,13 @@ module lib_xbeam
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-!->Subroutines XBEAM_LAPACK_INV and XBEAM_2NORM
+!->Subroutines XBEAM_2NORM
 !
 !->Description.-
 !
-!   computes the inverse of a matrix and the 2norm of a vector
+!   computes the 2norm of a vector
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#ifndef NOLAPACK
- subroutine xbeam_lapack_inv (N,A,invA)
-  integer,intent(in) :: N               ! Size of the matrix.
-  real(8),intent(in) :: A   (:,:)       ! Matrix to be inverted.
-  real(8),intent(out):: invA(:,:)       ! A^-1 (full matrix)
-
-! Local variables.
-  integer            :: Info
-  integer,allocatable:: IPIV(:)
-  real(8),allocatable:: WORK(:)
-
-! Allocate auxiliary memory.
-  Info = 0
-  allocate (IPIV(N));   IPIV = 0
-  allocate (WORK(N*N)); WORK = 0.d0
-
-! Perform LU decomposition.
-  call DGETRF (N,N,A,N,IPIV,Info)
-  if (Info.ne.0) STOP 'Problem with inverse of matrix in xbeam_xbeam'
-
-! Perform matrix inversion.
-  invA=0.d0
-  call SGETRI (N,A,N,IPIV,WORK,N*N,Info)
-  invA=A
-
-  deallocate(WORK,IPIV)
-
-  return
- end subroutine xbeam_lapack_inv
-#endif
-
  function xbeam_2norm (V)
 ! I/O Variables.
   real(8),  intent(in):: V(:)           ! Vector

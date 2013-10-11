@@ -8,16 +8,16 @@
 #   'blank'     create a shared object
 #
 # Remarks:
-#   -DNOLAPACK is used for conditional compilation
-#   -cpp is used for preprocessing/conditional compilation
+#   -g can be used for debugging (optional)
+#   -cpp is used for preprocessing
 #-------------------------------------------------------------------------------
 
 # Define dynamic library name
 DYNLIB=../../bin/BeamLib.so
 
 # Define flags
-F90FLAG=-fPIC -Wextra -cpp -DNOLAPACK -g
-LIBFLAG=-fPIC -shared -ffree-form -g
+F90FLAG=-fPIC -Wextra -cpp -O3 #-g
+LIBFLAG=-fPIC -shared -ffree-form -O3 #-g
 
 # Define path relative to cwd
 PATHFOR=../fortran

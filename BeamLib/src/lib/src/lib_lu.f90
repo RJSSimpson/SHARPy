@@ -224,6 +224,7 @@ module lib_lu
 !
   return
  end subroutine lu_invers
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 !->Subroutine LU_DETERM.

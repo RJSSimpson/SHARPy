@@ -361,11 +361,11 @@ module cbeam3_asbly
     call fem_glob2loc_extract (Elem(iElem)%Conn,Force,ForceElem,NumNE)
 
 ! Prevent singularities in mass matrices when using reduced integration.
-!	if (NumNE.gt.Options%NumGauss) then
-!		NumGaussMass=NumNE
-!	else
+	if (NumNE.gt.Options%NumGauss) then
+		NumGaussMass=NumNE
+	else
 		NumGaussMass=Options%NumGauss
-!	end if
+	end if
 
 ! Compute the element contribution to the mass and damping in the motion of the reference frame.
     call cbeam3_mvel (NumNE,rElem0,rElem,              Elem(iElem)%Mass,Mvelelem,Options%NumGauss)
@@ -394,21 +394,23 @@ module cbeam3_asbly
     call cbeam3_kgeom (NumNE,rElem0,rElem,Elem(iElem)%Stiff,Kelem,Options%NumGauss)
     call cbeam3_fstif (NumNE,rElem0,rElem,Elem(iElem)%Stiff,Qelem,Options%NumGauss)
 
-! Project slave degrees of freedom to the orientation of the "master" ones.
-    call cbeam3_projs2m (NumNE,Elem(iElem)%Master(:,:),Psi0(iElem,:,:),Psi0,SB2B1)
-    Melem=matmul(transpose(SB2B1),matmul(Melem,SB2B1))
-    Celem=matmul(transpose(SB2B1),matmul(Celem,SB2B1))
-    Kelem=matmul(transpose(SB2B1),matmul(Kelem,SB2B1))
-    Qelem=matmul(transpose(SB2B1),Qelem)
-    Mvelelem=matmul(transpose(SB2B1),Mvelelem)
-    Cvelelem=matmul(transpose(SB2B1),Cvelelem)
-
 ! Add external forces to the residual, and their derivatives with respect to the nodal
 ! degrees of freedom to the stiffness.
     if (any(ForceElem.ne.0.d0)) then
       call cbeam3_fext (NumNE,rElem,Flags(1:NumNE),Felem,Options%FollowerForce,Options%FollowerForceRig,Cao)
       call cbeam3_dqext(NumNE,rElem,ForceElem,Flags(1:NumNE),Kelem,Options%FollowerForce)
     end if
+
+! Project slave degrees of freedom to the orientation of the "master" ones.
+!    call cbeam3_projs2m (NumNE,Elem(iElem)%Master(:,:),Psi0(iElem,:,:),Psi0,SB2B1)
+    call cbeam3_slave2master (NumNE,Elem(iElem)%Master(:,:),rElem0(:,4:6),Psi0,rElem(:,4:6),PsiDefor,SB2B1)
+    Melem=matmul(transpose(SB2B1),matmul(Melem,SB2B1))
+    Celem=matmul(transpose(SB2B1),matmul(Celem,SB2B1))
+    Kelem=matmul(transpose(SB2B1),matmul(Kelem,SB2B1))
+    Qelem=matmul(transpose(SB2B1),Qelem)
+    Felem=matmul(transpose(SB2B1),Felem)
+    Mvelelem=matmul(transpose(SB2B1),Mvelelem)
+    Cvelelem=matmul(transpose(SB2B1),Cvelelem)
 
 ! Add to global matrix. Remove columns and rows at clamped points.
     do i=1,NumNE

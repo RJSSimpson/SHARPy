@@ -379,7 +379,7 @@ subroutine xbeam_perturb_asbly (Elem,Node,NumDof,Coords,Psi0,PosDefor,PsiDefor,V
   use lib_sparse
   use lib_xbeam
   use cbeam3_solv
-  use interface_lapack
+  use lib_lu
 
 ! I/O Variables.
   integer,      intent(in)   :: iOut              ! Output file.
@@ -497,7 +497,7 @@ subroutine xbeam_perturb_asbly (Elem,Node,NumDof,Coords,Psi0,PosDefor,PsiDefor,V
   Qpert(1:NumDof)          = sparse_matvmul(ifs,Felast,NumDof,fem_m2v(F0+Ftime(iStep+1)*Fa,NumDof,Filter=ListIN))
   Qpert(NumDof+1:NumDof+6) = sparse_matvmul(ifr,Frigid,6,fem_m2v(F0+Ftime(iStep+1)*Fa,NumDof+6))
 
-  call lapack_sparse (iml,Mlin,Qpert,dQddt)
+  call lu_sparse (iml,Mlin,Qpert,dQddt)
 
 ! Loop in the time steps.
   do iStep=1,size(Time)-1
@@ -554,7 +554,7 @@ subroutine xbeam_perturb_asbly (Elem,Node,NumDof,Coords,Psi0,PosDefor,PsiDefor,V
       call sparse_addsparse(0,0,iml,Mlin,ias,Asys,Factor=1.d0/(beta*dt*dt))
 
       ! Calculation of the correction.
-      call lapack_sparse (ias,Asys,-Qpert,DQ)
+      call lu_sparse (ias,Asys,-Qpert,DQ)
 
       Q     = Q     + DQ
       dQdt  = dQdt  + gamma/(beta*dt)*DQ
