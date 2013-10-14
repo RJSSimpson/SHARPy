@@ -130,13 +130,20 @@ class Test_SteadyVLM_ZetaDot(unittest.TestCase):
         
         # Set up baseline options.
         VMOPTS = DerivedTypesAero.VMopts(10, 1, True, 1, True, False)
-        VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 0.5,\
-                                           0.0*np.pi/180.0,\
-                                           0.1*np.pi/180.0,\
-                                           ZetaDotTest = 0.5,\
+        VMINPUT = DerivedTypesAero.VMinput(1.0, 1000.0, 0.5,
+                                           0.0*np.pi/180.0,
+                                           0.1*np.pi/180.0,
                                            WakeLength = 10000.0)
         
-        Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
+        # Test using motion of the frame as an input.
+        VMUNST = DerivedTypesAero.VMUnsteadyInput(VMOPTS, VMINPUT,
+                                                  0.0, 0.0, 0.0,
+                                                  VelA_G = np.array([0.0,0.5,0.0]),
+                                                  OmegaA_G = np.array([0.0,0.0,0.0]),
+                                                  OriginA_G = np.array([0.0,0.0,0.0]),
+                                                  PsiA_G = np.array([0.0,0.0,0.0]))
+        
+        Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT,VMUNST)
         
         # Check lift then drag.
         self.assertAlmostEqual(Coeffs[2],2*np.pi*VMINPUT.theta,4)

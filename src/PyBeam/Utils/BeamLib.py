@@ -12,6 +12,7 @@ import ctypes as ct #http://docs.python.org/3.2/library/ctypes.html
 import SharPySettings as Settings
 import lib_fem
 import lib_cbeam3
+import lib_rotvect
 
 BeamPath = Settings.BeamLibDir + Settings.BeamLibName
 BeamLib = ct.cdll.LoadLibrary(BeamPath)
@@ -463,6 +464,14 @@ def Cbeam3_strainz(R0,Ri,z):
     element with z in [-1,1].
     """
     return (lib_cbeam3.cbeam3_strainz(R0,Ri,z))
+
+def Cbeam3_quat2psi(quat):
+    """@brief Convert quaternion into Cartesian rotation vector.
+    
+    @param quat Quaternion.
+    @returns Cartesian rotation vector.
+    """
+    return(lib_rotvect.lib_rotvect.rotvect_quat2psi(quat))
     
 
 
@@ -492,3 +501,6 @@ if __name__ == '__main__':
     
     print(Cbeam3_fstifz(R0, Ri, K, z))
     print(Cbeam3_strainz(R0, Ri, z))
+    
+    quat = np.array([1.0,0.0,0.0,0.0])
+    print(Cbeam3_quat2psi(quat))

@@ -39,23 +39,24 @@ def iNode2iElem(iNode, NumNodes, NumNodesElem):
         # Work out what element we are in.
         if iNode == 0:
             iElem = 0
-        elif iNode < NumNodes:
+        elif iNode < NumNodes-1:
             iElem = int(iNode/(NumNodesElem-1))
-        elif iNode == NumNodes:
+        elif iNode == NumNodes-1:
             iElem = int((iNode-1)/(NumNodesElem-1))
             
         # Work out what sub-element node we are in.
+        # TODO: Is the iiElem numbering from LtR 0,2,1!?
         if NumNodesElem == 2:
-            if iNode < NumNodes:
+            if iNode < NumNodes-1:
                 iiElem = 0
-            elif iNode == NumNodes:
+            elif iNode == NumNodes-1:
                 iiElem = 1
         elif NumNodesElem == 3:
             iiElem = 0
-            if iNode == NumNodes:
-                iiElem = 2 
+            if iNode == NumNodes-1:
+                iiElem = 1 
             elif isodd(iNode):
-                iiElem = 1
+                iiElem = 2
         
         return iElem, iiElem
 

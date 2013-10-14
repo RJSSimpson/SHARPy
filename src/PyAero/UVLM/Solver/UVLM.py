@@ -17,59 +17,14 @@ from XbeamLib import Psi2TransMat
 import DerivedTypes
 import PostProcess
 import SharPySettings as Settings
-import os
 from VLM import InitSteadyExternalVels, InitSteadyWake
 import BeamInit
 from PyFSI.Beam2UVLM import InitSection, CoincidentGrid
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
-
-class VMUnsteadyInput:
-    """@brief Contains data for unsteady run of UVLM.
-    @param WakeLength Length of wake in chordlengths.
-    @param DelS non-dim timestep s = omega*c/U.
-    @param NumChordLengths Number of chord lengths to travel 
-    in prescribed simulation.
-    @param VelA_G Velocity of reference frame.
-    @param OmegaA_G Initial angular vel of reference frame.
-    @param OriginA_G Origin of reference frame in G-frame.
-    @param PsiA_G Orientation of reference frame in G-frame."""
-    
-    def __init__(self, VMOPTS, VMINPUT, WakeLength,\
-                 DelS, NumChordLengths,\
-                 VelA_G, OmegaA_G,\
-                 OriginA_G = np.zeros((3),ct.c_double),\
-                 PsiA_G = np.zeros((3),ct.c_double)):
-        
-        self.WakeLength = WakeLength
-        self.NumChordLengths = NumChordLengths
-        if np.linalg.norm(VelA_G) != 0.0:
-            self.VelA_G = VelA_G/np.linalg.norm(VelA_G)
-        else:
-            self.VelA_G = np.array([0.0,0.0,0.0])
-        self.OmegaA_G = OmegaA_G
-        self.OriginA_G = OriginA_G
-        self.PsiA_G = PsiA_G
-        
-        # Physical time step information."
-        self.NumSteps = NumChordLengths/DelS 
-        self.FinalTime = NumChordLengths*VMINPUT.c / \
-                    np.linalg.norm(VMINPUT.U_infty-VelA_G)
-        self.DelTime = self.FinalTime/self.NumSteps
-        
-        # Check Mstar is high enough to discretize wake.
-        if self.DelTime != self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value:
-            print("DelTime requested is ",self.DelTime,\
-                  "\nDelWakePanel is ",self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value,\
-                  "\nChanging Mstar to ", self.WakeLength*VMINPUT.c/self.DelTime)
-            VMOPTS.Mstar.value = int(self.WakeLength*VMINPUT.c/self.DelTime)
-            
-        # Set DelTime for VMOPTS
-        VMOPTS.DelTime = ct.c_double(self.DelTime)
-        
+from PyAero.UVLM.Utils.DerivedTypesAero import VMUnsteadyInput
 
 def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     """@brief UVLM solver with prescribed inputs."""
-    
     
     # Initialise DerivedTypes for PyBeam initialisation. 
     XBOPTS = DerivedTypes.Xbopts()
@@ -96,8 +51,8 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     
     # Initialise origin and orientation of surface velocities in a-frame
     CGa = Psi2TransMat(VMUNST.PsiA_G)
-    VelA_A = np.dot(CGa,VMUNST.VelA_G)
-    OmegaA_A = np.dot(CGa,VMUNST.OmegaA_G)
+    VelA_A = np.dot(CGa.T,VMUNST.VelA_G)
+    OmegaA_A = np.dot(CGa.T,VMUNST.OmegaA_G)
     
     # Declare empty array for aerodynamic grid and velocities.
     Zeta = np.zeros((VMOPTS.M.value + 1,VMOPTS.N.value + 1,3), ct.c_double, 'C')
@@ -156,10 +111,19 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
                 VMINPUT.ctrlSurf.update(Time[iTimeStep])
             
             # Update aerodynamic surface.
-            CoincidentGrid(PosDefor, PsiDefor, Section,\
-                       VelA_A, OmegaA_A, PosDotDef, PsiDotDef,
-                       XBINPUT, Zeta, ZetaDot, VMUNST.OriginA_G, VMUNST.PsiA_G,
-                       VMINPUT.ctrlSurf)
+            CoincidentGrid(PosDefor,
+                           PsiDefor,
+                           Section,
+                           VelA_A,
+                           OmegaA_A,
+                           PosDotDef,
+                           PsiDotDef,
+                           XBINPUT,
+                           Zeta,
+                           ZetaDot,
+                           VMUNST.OriginA_G,
+                           VMUNST.PsiA_G,
+                           VMINPUT.ctrlSurf)
             
             # Convect wake downstream.        
             ZetaStar = np.roll(ZetaStar,1,axis = 0)
@@ -243,9 +207,7 @@ if __name__ == '__main__':
                              VelA_A, OmegaA_A)
     
     # Define 'aeroelastic' options.
-    AELOPTS = AeroelasticOps(ElasticAxis = -0.5,
-                             gForce =  0.0,
-                             AirDensity = 1.0)
+    AELOPTS = AeroelasticOps(ElasticAxis = -0.5)
     
     # Run C++ solver
     Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)

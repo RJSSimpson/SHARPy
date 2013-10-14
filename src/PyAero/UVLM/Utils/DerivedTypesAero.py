@@ -53,7 +53,7 @@ class VMinput:
     @param ctrlSurf ControlSurf object.
     """
     
-    def __init__(self, c, b, U_mag, alpha, theta, ZetaDotTest=0.0,
+    def __init__(self, c, b, U_mag, alpha, theta,
                   WakeLength = 50.0,
                   ctrlSurf = None):
         self.c = c
@@ -63,7 +63,6 @@ class VMinput:
         self.U_infty[:] = [0.0, -U_mag*np.cos(alpha), U_mag*np.sin(alpha)]
         self.alpha = alpha
         self.theta = theta
-        self.ZetaDotTest = ZetaDotTest
         self.WakeLength = WakeLength
         self.ctrlSurf = ctrlSurf
         
@@ -144,6 +143,75 @@ class ControlSurf:
             else:
                 raise Exception('beta specified and typeMotion not ' +
                                 'recognised')
+                
+class VMCoupledUnstInput:
+    """@brief Contains data for unsteady run of UVLM.
+    
+    @param WakeLength Length of wake in chordlengths.
+    @param DelS non-dim timestep s = omega*c/U.
+    @param NumChordLengths Number of chord lengths to travel 
+    in prescribed simulation.
+    @param VelA_G Velocity of reference frame.
+    @param OmegaA_G Initial angular vel of reference frame.
+    @param OriginA_G Origin of reference frame in G-frame.
+    @param PsiA_G Orientation of reference frame in G-frame."""
+    
+    def __init__(self, VMOPTS, VMINPUT,
+                  DelS, NumChordLengths,
+                  VelA_G, OmegaA_G,
+                  OriginA_G = np.zeros((3),ct.c_double),
+                  PsiA_G = np.zeros((3),ct.c_double)):
+        
+        self.NumChordLengths = NumChordLengths
+        self.VelA_G = VelA_G
+        self.OmegaA_G = OmegaA_G
+        self.OriginA_G = OriginA_G
+        self.PsiA_G = PsiA_G
+        
+class VMUnsteadyInput:
+    """@brief Contains data for unsteady run of UVLM.
+    
+    @param WakeLength Length of wake in chordlengths.
+    @param DelS non-dim timestep s = omega*c/U.
+    @param NumChordLengths Number of chord lengths to travel 
+    in prescribed simulation.
+    @param VelA_G Velocity of reference frame.
+    @param OmegaA_G Initial angular vel of reference frame.
+    @param OriginA_G Origin of reference frame in G-frame.
+    @param PsiA_G Orientation of reference frame in G-frame."""
+    
+    def __init__(self, VMOPTS, VMINPUT, WakeLength,
+                 DelS, NumChordLengths,
+                 VelA_G, OmegaA_G,
+                 OriginA_G = np.zeros((3),ct.c_double),
+                 PsiA_G = np.zeros((3),ct.c_double)):
+        
+        self.WakeLength = WakeLength
+        self.NumChordLengths = NumChordLengths
+        self.VelA_G = VelA_G
+        self.OmegaA_G = OmegaA_G
+        self.OriginA_G = OriginA_G
+        self.PsiA_G = PsiA_G
+        
+        # Physical time step information.
+        try:
+            self.NumSteps = NumChordLengths/DelS
+        except ZeroDivisionError:
+            self.NumSteps = 1
+        
+        self.FinalTime = NumChordLengths*VMINPUT.c / \
+                    np.linalg.norm(VMINPUT.U_infty-VelA_G)
+        self.DelTime = self.FinalTime/self.NumSteps
+        
+        # Check Mstar is high enough to discretize wake.
+        if self.DelTime != self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value:
+            print("DelTime requested is ",self.DelTime,\
+                  "\nDelWakePanel is ",self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value,\
+                  "\nChanging Mstar to ", self.WakeLength*VMINPUT.c/self.DelTime)
+            VMOPTS.Mstar.value = int(self.WakeLength*VMINPUT.c/self.DelTime)
+            
+        # Set DelTime for VMOPTS
+        VMOPTS.DelTime = ct.c_double(self.DelTime)
     
 
 if __name__ == '__main__':

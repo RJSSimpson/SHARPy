@@ -10,7 +10,7 @@ import ctypes as ct
 import DerivedTypes
 import DerivedTypesAero
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
-from PyCoupled.Coupled_NlnDynamic import VMCoupledUnstInput, Solve_Py
+from PyCoupled.Coupled_NlnDynamic import Solve_Py
 
 TestDir = Settings.SharPyProjectDir + '/output/tests/PyCoupled/NlnDynamic/'
 
@@ -155,14 +155,6 @@ class Test_GolandFlutter(unittest.TestCase):
                                                                ZetaDotTest = 0.0,\
                                                                WakeLength = WakeLength)
                             
-                            "unsteady aero inputs"
-                            VelA_G = np.array(([0.0,0.0,0.0]))
-                            OmegaA_G = np.array(([0.0,0.0,0.0]))
-                            VMUNST = VMCoupledUnstInput(VMOPTS, VMINPUT, WakeLength, 123.4, WakeLength/c,\
-                                                      VelA_G, OmegaA_G)
-                            
-                             
-                            
                             "aeroelastic opts"
                             "Density and gravity"
                             AELAOPTS = AeroelasticOps(ElasticAxis,0.0,1.02,\
@@ -190,7 +182,7 @@ class Test_GolandFlutter(unittest.TestCase):
                                 Settings.OutputFileRoot += '_ImpStart'
                             
                             "solve"
-                            Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,VMUNST,AELAOPTS)
+                            Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
                             pass
                     
                     # END for iU

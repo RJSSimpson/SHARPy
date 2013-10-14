@@ -67,7 +67,7 @@ def Psi2TransMat(Psi):
     TransMat = np.zeros((3,3))
     Norm = TriadNorm(Psi)
     SkewPsi=Skew(Psi)
-    "Check norm of Psi for linearised OR fully-nonlinear matrix"
+    # Check norm of Psi for linearised OR fully-nonlinear matrix.
     if Norm < Settings.RotEpsilon:
         TransMat[:,:] = np.identity(3) + SkewPsi + 0.5*np.dot(SkewPsi,SkewPsi) 
     else:
@@ -111,7 +111,7 @@ def Tangential(Psi):
     Tang = np.zeros((3,3))
     Norm = TriadNorm(Psi)
     SkewPsi=Skew(Psi)
-    "Check norm of Psi for linearised OR fully-nonlinear matrix"
+    # Check norm of Psi for linearised OR fully-nonlinear matrix.
     if Norm < Settings.RotEpsilon:
         Tang[:,:] = np.identity(3) - 0.5* SkewPsi + 1.0/6.0*np.dot(SkewPsi,SkewPsi) 
     else:
