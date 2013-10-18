@@ -216,27 +216,40 @@ def Run_Cpp_Solver_VLM(VMOPTS, VMINPUT, VMUNST = None, AELOPTS = None):
     # close file
     PostProcess.CloseAeroTecFile(FileObject)
     
+    if Settings.WriteUVLMdebug == True:
+        debugFile = Settings.OutputDir + 'gamma_1degBeta.dat'
+        np.savetxt(debugFile, Gamma.flatten('C'))
+    
     # post process to get coefficients
     return PostProcess.GetCoeffs(VMOPTS, Forces, VMINPUT, VMUNST.VelA_G)
 
 
 if __name__ == '__main__':
     # Create inputs
-    M = 16
-    N = 28
-    Mstar = 1
-    VMOPTS = VMopts(M,N,False,Mstar,True,True)
+    from Goland import *
     
-    # define wing geom
-    c = 1.0
-    b = 1000 #semi-span
+    # Re-define control Surface
+    ctrlSurf = DerivedTypesAero.ControlSurf(iMin = M - M/4,
+                                            iMax = M,
+                                            jMin = N - N/4,
+                                            jMax = N,
+                                            typeMotion = 'cos',
+                                            betaBar = 1.0*np.pi/180.0,
+                                            omega = 0.0)
+    # Inputs.
+    WakeLength = 100.0
+    VMINPUT = DerivedTypesAero.VMinput(c = c,
+                                   b = XBINPUT.BeamLength,
+                                   U_mag = Umag,
+                                   alpha = 0.0*np.pi/180.0,
+                                   theta = 0.0,
+                                   WakeLength = WakeLength,
+                                   ctrlSurf = ctrlSurf)
     
-    # free stream conditions
-    U_mag = 25.0
-    alpha = 1.0*np.pi/180.0
-    theta = 0.0*np.pi/180.0
-    VMINPUT = VMinput(c, b, U_mag, alpha, theta)
-    
+    # Redefine VMOPTS
+    VMOPTS.Mstar = ct.c_int(1)
+    VMOPTS.Steady = ct.c_bool(True)
+    VMOPTS.ImageMethod = ct.c_bool(True)
     # run solver
     Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
     

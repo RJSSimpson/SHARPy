@@ -5,6 +5,7 @@ import PyCoupled.Utils.DerivedTypesAeroelastic as DerivedTypesAeroelastic
 import ctypes as ct
 import numpy as np
 from PyBeam.Utils.XbeamLib import Skew
+from collections import OrderedDict
 
 # Beam options.
 XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
@@ -91,21 +92,20 @@ VMINPUT = DerivedTypesAero.VMinput(c = c,
                                    U_mag = Umag,
                                    alpha = 0.0*np.pi/180.0,
                                    theta = 0.0,
-                                   ZetaDotTest = 0.0,
                                    WakeLength = WakeLength,
                                    ctrlSurf = ctrlSurf)
 # Unsteady aero inputs.
 VelA_G   = np.array(([0.0,0.0,0.0]))
 OmegaA_G = np.array(([0.0,0.0,0.0]))
-VMUNST   = VMCoupledUnstInput(VMOPTS, VMINPUT, 0.0, 0.0,
-                              VelA_G, OmegaA_G)
+VMUNST   = DerivedTypesAero.VMCoupledUnstInput(VMOPTS, VMINPUT, 0.0, 0.0,
+                                               VelA_G, OmegaA_G)
 
 # Aerolastic simulation results.
-AELAOPTS = AeroelasticOps(ElasticAxis = ElasticAxis,
-                          InertialAxis = InertialAxis,
-                          AirDensity = 1.02,
-                          Tight = False,
-                          ImpStart = False)
+AELAOPTS = DerivedTypesAeroelastic.AeroelasticOps(ElasticAxis = ElasticAxis,
+                                                  InertialAxis = InertialAxis,
+                                                  AirDensity = 1.02,
+                                                  Tight = False,
+                                                  ImpStart = False)
 
 # Live output options.
 writeDict = OrderedDict()

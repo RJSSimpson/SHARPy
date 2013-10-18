@@ -47,15 +47,17 @@ MaxElNod = 3
 DimMat = 24 # Memory allocated for sparse matrix storage in fortran solver.
 RotEpsilon = 0.001 # Rotations below this are linearised.
 
-
 # Tecplot.
 PlotTec = True
 
-# Output options
+# Output options.
 WriteOut = True
 
-# Live plotting options
+# Live plotting options.
 PlotOut = True
+
+# Write UVLM info to text file for debugging.
+WriteUVLMdebug = False
 
 if __name__ == '__main__':
     pass

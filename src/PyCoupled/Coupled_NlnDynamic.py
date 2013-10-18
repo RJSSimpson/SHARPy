@@ -749,7 +749,7 @@ if __name__ == '__main__':
     jMax = N
     typeMotion = 'sin'
     betaBar = 1.0*np.pi/180.0
-    omega = 15.0
+    omega = 30.0
     ctrlSurf = ControlSurf(iMin,
                            iMax,
                            jMin,
@@ -762,7 +762,6 @@ if __name__ == '__main__':
                                        U_mag = Umag,
                                        alpha = 0.0*np.pi/180.0,
                                        theta = 0.0,
-                                       ZetaDotTest = 0.0,
                                        WakeLength = WakeLength,
                                        ctrlSurf = ctrlSurf)
     # Unsteady aero inputs.
@@ -776,7 +775,7 @@ if __name__ == '__main__':
                               InertialAxis = InertialAxis,
                               AirDensity = 1.02,
                               Tight = False,
-                              ImpStart = True)
+                              ImpStart = False)
     
     # Live output options.
     writeDict = OrderedDict()
@@ -786,7 +785,7 @@ if __name__ == '__main__':
     writeDict['M_z (root)'] = 0
     
     Settings.OutputDir = Settings.SharPyProjectDir + "output/MPC/Goland/testControl/"
-    Settings.OutputFileRoot = "3noded_15rads_KJ"
+    Settings.OutputFileRoot = "3noded_30rads_KJ"
     
     # Solve nonlinear dynamic simulation.
     Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, AELAOPTS,

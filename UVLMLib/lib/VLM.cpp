@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <fstream>
 #include <datatypesx.hpp>
 #include <triads.hpp>
 #include <vorticity.hpp>
@@ -831,6 +832,15 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 			k = i*VMOPTS.N + j;
 			Gamma_tm1_[i][j] = Gamma(k);
 		}
+	}
+
+
+	bool writeDebug = false;
+	if (writeDebug == true) {
+		std::ofstream myfile;
+		myfile.open("/home/rjs10/git/SHARPy/output/temp/rhs.dat");
+		myfile << RHS;
+		myfile.close();
 	}
 
 	//solve for gamma
