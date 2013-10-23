@@ -115,7 +115,24 @@ def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
                    Gamma.ctypes.data_as(ct.POINTER(ct.c_double)), \
                    GammaStar.ctypes.data_as(ct.POINTER(ct.c_double)), \
                    AIC.ctypes.data_as(ct.POINTER(ct.c_double)), \
-                   BIC.ctypes.data_as(ct.POINTER(ct.c_double))) 
+                   BIC.ctypes.data_as(ct.POINTER(ct.c_double)))
+
+def Colloc(zeta_G_panel):
+    """@brief Collocation from grid position.
+        
+    @param zeta_G_panel A (2,2,3) array of (i,j) panel corner points.
+    @return colloc panel collocation point.
+    """
+    
+    if zeta_G_panel.shape[0] > 2 or zeta_G_panel.shape[1] > 2:
+        raise TypeError("Extent of corner point array greater than 2x2(x3).")
+    elif zeta_G_panel.shape[0] < 2 or zeta_G_panel.shape[1] < 2:
+        raise TypeError("Extent of corner point array less than 2x2(x3).")
+    
+    return ( 0.25 * (zeta_G_panel[0,0,:] +
+                     zeta_G_panel[0,1,:] +
+                     zeta_G_panel[1,1,:] +
+                     zeta_G_panel[1,0,:]  ) )
     
 
 if __name__ == '__main__':

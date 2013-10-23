@@ -90,15 +90,28 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
             AeroForces[:,:,:] = 0.0
             
             # Calculate aero loads.
-            CoincidentGrid(PosDefor, PsiDefor, Section, VelA_A, 
-                           OmegaA_A, PosDotDef, PsiDotDef, XBINPUT,
-                           Zeta, ZetaDot,
-                           ctrlSurf = VMINPUT.ctrlSurf)
-            # Set any velocities (for example from a control surface to zero)
-            ZetaDot[:,:,:] = 0.0
+            if hasattr(XBINPUT, 'ForcedVel'):
+                CoincidentGrid(PosDefor,
+                               PsiDefor,
+                               Section,
+                               XBINPUT.ForcedVel[0,:3],
+                               XBINPUT.ForcedVel[0,3:],
+                               PosDotDef,
+                               PsiDotDef,
+                               XBINPUT,
+                               Zeta,
+                               ZetaDot,
+                               ctrlSurf = VMINPUT.ctrlSurf)
+            else:
+                CoincidentGrid(PosDefor, PsiDefor, Section, VelA_A, 
+                               OmegaA_A, PosDotDef, PsiDotDef, XBINPUT,
+                               Zeta, ZetaDot,
+                               ctrlSurf = VMINPUT.ctrlSurf)
             
-            
-            ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)
+            if hasattr(XBINPUT,'ForcedVel'):
+                ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta,XBINPUT.ForcedVel[0,:3])
+            else:
+                ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)
             
             # Solve for AeroForces.
             UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, 
@@ -231,7 +244,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                     sys.stderr.write(' STOP\n')
                     sys.stderr.write(' The max residual is %e\n' %(ResLog10))
                     exit(1)
-                elif Res_DeltaX < 1.e-15:
+                elif Res_DeltaX < 1.e-14:
                     break
                 
             # END Newton iteration
@@ -386,14 +399,14 @@ if __name__ == '__main__':
                                      ImageMethod = True,
                                      Mstar = Mstar,
                                      Steady = True,
-                                     KJMeth = False,
+                                     KJMeth = True,
                                      NewAIC = True)
     # Aero inputs.
     iMin = M - M/4
     iMax = M
     jMin = N - N/4
     jMax = N
-    typeMotion = 'cos'
+    typeMotion = 'sin'
     betaBar = 1.0*np.pi/180.0
     omega = 30.0
     ctrlSurf = ControlSurf(iMin,
@@ -409,7 +422,6 @@ if __name__ == '__main__':
                                        U_mag = Umag,
                                        alpha = 0.0*np.pi/180.0,
                                        theta = 0.0,
-                                       ZetaDotTest = 0.0,
                                        WakeLength = WakeLength,
                                        ctrlSurf = ctrlSurf)
     

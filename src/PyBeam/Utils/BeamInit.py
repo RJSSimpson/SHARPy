@@ -188,16 +188,21 @@ def Dynamic(XBINPUT,XBOPTS):
         assert False, 'ForcingType not recognised'
         
     
-    "Create default forced velocities and accelerations."
-    ForcedVel = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
-    ForcedVelDot = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
-    
-    "Rates of Dof Arrays"
+    # Create default forced velocities and accelerations if not specified.
+    if hasattr(XBINPUT, 'ForcedVel'):
+        assert XBINPUT.ForcedVel.shape[0] == NumSteps.value+1    +2
+        ForcedVel = XBINPUT.ForcedVel.copy('F')
+        ForcedVelDot = XBINPUT.ForcedVelDot.copy('F')
+    else:
+        ForcedVel = np.zeros((NumSteps.value+1  +2,6),ct.c_double,'F')
+        ForcedVelDot = np.zeros((NumSteps.value+1  +2,6),ct.c_double,'F')
+
+    # Rates of Dof Arrays.
     PosDotDef  = np.zeros((XBINPUT.NumNodesTot,3),ct.c_double,'F')
     PsiDotDef  = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                            ct.c_double, 'F')
     
-    "Create Outgrids and check only 1 node specified"
+    # Create Outgrids and check only 1 node specified.
     OutGrids = np.zeros(XBINPUT.NumNodesTot, ct.c_bool, 'F')
     OutGrids[-1] = True #at tip
     Nonzeros = np.nonzero(OutGrids)
@@ -206,12 +211,12 @@ def Dynamic(XBINPUT,XBOPTS):
     elif len(Nonzeros[0]) > 1:
         raise Exception('Too many Outgrid output nodes: max is 1.')
     
-    "Position/rotation history at Outgrids = True element"
+    # Position/rotation history at Outgrids = True element.
     PosPsiTime = np.zeros((NumSteps.value+1,6), ct.c_double, 'F')
     VelocTime  = np.zeros((NumSteps.value+1,XBINPUT.NumNodesTot),
                            ct.c_double, 'F')
     
-    "Position of all nodes at all times"
+    # Position of all nodes at all times.
     DynOut     = np.zeros(((NumSteps.value+1)*XBINPUT.NumNodesTot,3),
                            ct.c_double, 'F')
     
