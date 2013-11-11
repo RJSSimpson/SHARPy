@@ -27,7 +27,7 @@ Then build a Debug configuration of the project.
 ### Dependencies ###
 
 * Python 3.2
-* numpy
+* numpy (1.7.x+)
 * scipy
 * slycot (routines for preditive controller design)
 * muAO-MPC (MPC controller design and C-code generation)
