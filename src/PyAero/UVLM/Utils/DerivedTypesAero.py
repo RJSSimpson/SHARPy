@@ -198,16 +198,16 @@ class Gust:
     @details Gusts are specified in the G-frame (inertial).
     """
     
-    def __init__(self, uMag, h, r):
+    def __init__(self, uMag, l, r):
         """@brief Initialise a gust.
         
         @param uMag Reference velocity for the gust.
-        @param h Gust half-length.
+        @param h Gust length.
         @param r Location of gust on G-frame (inertial) y-axis.
         """
         
         self.uMag = uMag
-        self.h = h
+        self.l = l
         self.r = r
     
     def _vel(self, xGust):
@@ -218,11 +218,11 @@ class Gust:
         """
         
         vel = np.zeros((3),ct.c_double,'C')
-        if xGust < 0.0 or xGust > 2.0*self.h:
+        if xGust < 0.0 or xGust > self.l:
             return vel
         else:
             # 1 - cos gust
-            vel[2] = self.uMag * (1.0 - np.cos( (np.pi * xGust) / (self.h) ))
+            vel[2] = 0.5*self.uMag*(1.0-np.cos((2.0*np.pi*xGust)/(self.l)))
             return vel
     
     def _getxGust(self, zeta):
@@ -235,7 +235,7 @@ class Gust:
         return (zeta[1] - self.r)
     
     def Vels(self, zeta):
-        """@brief Calculate gust velocities at grid collocation points.
+        """@brief Calculate gust velocities at grid points.
         
         @param zeta array of grid coordinates (M+1,N+1,3).
         @return uExt array of collocation point gust velocities (M,N,3).

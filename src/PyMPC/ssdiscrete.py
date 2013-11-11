@@ -43,7 +43,7 @@ class StateSpace(lti):
             # Save the path for later
             self._matPath = args[0]
             # extract discrete system matrices
-            Dict = loadmat(args[0], variable_names = ['disSys'])
+            Dict = loadmat(args[0], variable_names = ['disSys','T'])
             disSys = Dict['disSys'][0,0]
             sysMat = [disSys['a'],disSys['b'],disSys['c'],disSys['d']]
             self._A, self._B, self._C, self._D = abcd_normalize(*sysMat)
@@ -51,6 +51,7 @@ class StateSpace(lti):
             self.inputs = self.B.shape[-1]
             self.outputs = self.C.shape[0]
             self._isDiscrete = True
+            self._T = np.array(Dict['T'])
             #self._updateDiscrete()
         elif N <= 4:
             super(StateSpace, self).__init__(*args, **kwords)
@@ -197,6 +198,11 @@ class StateSpace(lti):
     def dt(self):
         """@brief timestep."""
         return self._Ts
+    
+    @property
+    def T(self):
+        """@brief Full-order to reduced state transformation."""
+        return self._T
     
 def pltContEig(self, A):
     """@brief Plot continuous time eigenvalues.

@@ -34,6 +34,8 @@ import re
 from math import pow
 from PyBeam.Utils.XbeamLib import Skew
 from PyAero.UVLM.Utils.DerivedTypesAero import Gust
+import PyMPC.MPC as MPC
+from PyCoupled.Utils.CoupledIO import OpenOutFile, WriteToOutFile
 
 def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
     """@brief Nonlinear dynamic solver using Python to solve aeroelastic
@@ -213,6 +215,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
     
     # Init external velocities.  
     Ufree = InitSteadyExternalVels(VMOPTS,VMINPUT)
+    
+    # Init uninit vars if an impulsive start is specified.
     if AELAOPTS.ImpStart == True:
         Zeta = np.zeros((Section.shape[0],PosDefor.shape[0],3),ct.c_double,'C')             
         Gamma = np.zeros((VMOPTS.M.value,VMOPTS.N.value),ct.c_double,'C')
@@ -223,6 +227,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
                        VMINPUT.ctrlSurf)
         # init wake grid and gamma matrix.
         ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta,ForcedVel[0,:3])
+        
+    # Init GammaDot
+    GammaDot = np.zeros_like(Gamma, ct.c_double, 'C')
           
     # Define tecplot stuff
     if Settings.PlotTec==True:
@@ -244,76 +251,19 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
     
     # Open output file for writing
     if 'writeDict' in kwords and Settings.WriteOut == True:
-        writeDict = kwords['writeDict']
-        ofile = Settings.OutputDir + \
-                Settings.OutputFileRoot + \
-                '_SOL312_out.dat'
-        fp = open(ofile,'w')
-        fp.write("{:<14}".format("Time"))
-        for output in writeDict.keys():
-            fp.write("{:<14}".format(output))
-        fp.write("\n")
-        fp.flush()
+        fp = OpenOutFile(writeDict, XBOPTS, Settings)
         
     # Write initial outputs to file.
     if 'writeDict' in kwords and Settings.WriteOut == True:
-        locForces = None # Stops recalculation of forces
-        fp.write("{:<14,e}".format(Time[0]))
-        for myStr in writeDict.keys():
-            if re.search(r'^R_.',myStr):
-                if re.search(r'^R_._.', myStr):
-                    index = int(myStr[4])
-                elif re.search(r'root', myStr):
-                    index = 0
-                elif re.search(r'tip', myStr):
-                    index = -1
-                else:
-                    raise IOError("Node index not recognised.")
-                
-                if myStr[2] == 'x':
-                    component = 0
-                elif myStr[2] == 'y':
-                    component = 1
-                elif myStr[2] == 'z':
-                    component = 2
-                else:
-                    raise IOError("Displacement component not recognised.")
-                
-                fp.write("{:<14,e}".format(PosDefor[index,component]))
-                
-            elif re.search(r'^M_.',myStr):
-                if re.search(r'^M_._.', myStr):
-                    index = int(myStr[4])
-                elif re.search(r'root', myStr):
-                    index = 0
-                elif re.search(r'tip', myStr):
-                    index = -1
-                else:
-                    raise IOError("Node index not recognised.")
-                
-                if myStr[2] == 'x':
-                    component = 0
-                elif myStr[2] == 'y':
-                    component = 1
-                elif myStr[2] == 'z':
-                    component = 2
-                else:
-                    raise IOError("Moment component not recognised.")
-                
-                if locForces == None:
-                    locForces = BeamIO.localElasticForces(PosDefor,
-                                                          PsiDefor,
-                                                          PosIni,
-                                                          PsiIni,
-                                                          XBELEM,
-                                                          [index])
-                
-                fp.write("{:<14,e}".format(locForces[0,3+component]))
-            else:
-                raise IOError("writeDict key not recognised.")
-        # END for myStr
-        fp.write("\n")
-        fp.flush()
+        WriteToOutFile(writeDict,
+                       fp,
+                       Time[0],
+                       PosDefor,
+                       PsiDefor,
+                       PosIni,
+                       PsiIni,
+                       XBELEM,
+                       ctrlSurf)
     # END if write
 
     # Time loop.
@@ -322,15 +272,14 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
         if XBOPTS.PrintInfo.value==True:
             sys.stdout.write('Time: %-10.4e\n' %(Time[iStep+1]))
             sys.stdout.write('   SubIter DeltaF     DeltaX     ResLog10\n')
-            
-        if iStep == 180 or iStep > 301:
-            debug = 'here'
-            del debug
         
         dt = Time[iStep+1] - Time[iStep]
         
         # Set dt for aero force calcs.
         VMOPTS.DelTime = ct.c_double(dt)
+        
+        # Save Gamma at iStep.
+        GammaSav = Gamma.copy(order = 'C')
         
         # Force at current time-step
         if iStep > 0 and AELAOPTS.Tight == False:
@@ -346,7 +295,12 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
             
             # Update control surface deflection.
             if VMINPUT.ctrlSurf != None:
-                VMINPUT.ctrlSurf.update(Time[iStep])
+                if 'mpcCont' in kwords:
+                    uOpt = kwords['mpcCont'].getUopt(
+                            getState(Gamma,GammaStar,GammaDot,X,dXdt) )
+                    VMINPUT.ctrlSurf.update(Time[iStep],uOpt[0,0])
+                else:
+                    VMINPUT.ctrlSurf.update(Time[iStep])
             
             # Generate surface grid.
             CoincidentGrid(PosDefor, PsiDefor, Section, ForcedVel[iStep,:3], 
@@ -369,11 +323,14 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
             else:
                 Utot = Ufree
             
-            # Solve for AeroForces
+            # Solve for AeroForces.
             UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Utot, ZetaStar, VMOPTS, 
                            AeroForces, Gamma, GammaStar, AIC, BIC)
             
-            # Apply density scaling"
+            # Get GammaDot.
+            GammaDot[:] = Gamma[:] - GammaSav[:]
+            
+            # Apply density scaling.
             AeroForces[:,:,:] = AELAOPTS.AirDensity*AeroForces[:,:,:]
             
             if Settings.PlotTec==True:
@@ -407,8 +364,6 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
             PsiA_G = BeamLib.Cbeam3_quat2psi(Quat)
             # Origin at iStep+1
             OriginA_G[:] = OriginA_G[:] + ForcedVel[iStep,:3]*dt
-            # Save Gamma at iStep.
-            GammaSav = Gamma.copy(order = 'C')
             
         # Predictor step.
         X        = X + dt*dXdt + (0.5-beta)*dXddt*pow(dt,2.0)
@@ -582,68 +537,21 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
         
         # Write selected outputs
         if 'writeDict' in kwords and Settings.WriteOut == True:
-            locForces = None # Stops recalculation of forces
-            fp.write("{:<14,e}".format(Time[iStep+1]))
-            for myStr in writeDict.keys():
-                if re.search(r'^R_.',myStr):
-                    if re.search(r'^R_._.', myStr):
-                        index = int(myStr[4])
-                    elif re.search(r'root', myStr):
-                        index = 0
-                    elif re.search(r'tip', myStr):
-                        index = -1
-                    else:
-                        raise IOError("Node index not recognised.")
-                    
-                    if myStr[2] == 'x':
-                        component = 0
-                    elif myStr[2] == 'y':
-                        component = 1
-                    elif myStr[2] == 'z':
-                        component = 2
-                    else:
-                        raise IOError("Displacement component not recognised.")
-                    
-                    fp.write("{:<14,e}".format(PosDefor[index,component]))
-                    
-                elif re.search(r'^M_.',myStr):
-                    if re.search(r'^M_._.', myStr):
-                        index = int(myStr[4])
-                    elif re.search(r'root', myStr):
-                        index = 0
-                    elif re.search(r'tip', myStr):
-                        index = -1
-                    else:
-                        raise IOError("Node index not recognised.")
-                    
-                    if myStr[2] == 'x':
-                        component = 0
-                    elif myStr[2] == 'y':
-                        component = 1
-                    elif myStr[2] == 'z':
-                        component = 2
-                    else:
-                        raise IOError("Moment component not recognised.")
-                    
-                    if locForces == None:
-                        locForces = BeamIO.localElasticForces(PosDefor,
-                                                              PsiDefor,
-                                                              PosIni,
-                                                              PsiIni,
-                                                              XBELEM,
-                                                              [index])
-                    
-                    fp.write("{:<14,e}".format(locForces[0,3+component]))
-                else:
-                    raise IOError("writeDict key not recognised.")
-            # END for myStr
-            fp.write("\n")
-            fp.flush()
-                    
-            
+            WriteToOutFile(writeDict,
+                           fp,
+                           Time[iStep+1],
+                           PosDefor,
+                           PsiDefor,
+                           PosIni,
+                           PsiIni,
+                           XBELEM,
+                           ctrlSurf)
+        # END if write.
         
         # 'Rollup' due to external velocities. TODO: Must add gusts here!
         ZetaStar[:,:] = ZetaStar[:,:] + VMINPUT.U_infty*dt
+        if VMINPUT.gust != None:
+            ZetaStar[:,:,:] = ZetaStar[:,:,:] + VMINPUT.gust.Vels(ZetaStar)*dt
     
     # END Time loop
     
@@ -687,6 +595,39 @@ def panellingFromFreq(freq,c=1.0,Umag=1.0):
     DelTime = c/(Umag*M) #get resulting DelTime
     return M, DelTime
 
+def getState(Gamma,GammaStar,GammaDot,X,dXdt):
+    """@brief Get full (coupled aeroelastic) state vector.
+    @param Bound circulation strengths.
+    @param Wake circulation strengths.
+    @param Bound rate of circulation change.
+    @param Strutural DoF.
+    @returns x state vector.
+    """
+    
+    # Get size of each group
+    nG = Gamma.size
+    nGs = GammaStar.size
+    nGd = GammaDot.size
+    nX = X.size
+    nXd = dXdt.size
+    xSize = nG + nGs + nGd + nX + nXd
+    
+    # Print if you want to cross reference.
+    check = False
+    if check == True:
+        print('Gamma     = ',nG)
+        print('GammaStar = ',nGs)
+        print('GammaDot  = ',nGd)
+        print('eta+etaDot= ',nX + nXd)
+        print('total     = ',xSize)
+        
+    x = np.zeros((xSize),ct.c_double,'C')
+    x[:nG] = Gamma.flatten()
+    x[nG:nG+nGs] = GammaStar.flatten()
+    x[nG+nGs:nG+nGs+nGd] = GammaDot.flatten()
+    x[nG+nGs+nGd:nG+nGs+nGd+nX] = X
+    x[nG+nGs+nGd+nX:nG+nGs+nGd+nX+nXd] = dXdt
+    return x
 
 if __name__ == '__main__':
     # Beam options.
@@ -698,7 +639,7 @@ if __name__ == '__main__':
                                  MinDelta = ct.c_double(1e-5),
                                  NewmarkDamp = ct.c_double(5e-3))
     # beam inputs.
-    XBINPUT = DerivedTypes.Xbinput(3,14)
+    XBINPUT = DerivedTypes.Xbinput(3,10)
     XBINPUT.BeamLength = 6.096
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -732,7 +673,7 @@ if __name__ == '__main__':
     
     # Get suggested panelling.
     Umag = 140.0
-    M = 16
+    M = 8
 #     M, delTime = panellingFromFreq(70,c,Umag)
     delTime = c/(Umag*M)
     # Unsteady parameters.
@@ -748,7 +689,7 @@ if __name__ == '__main__':
     XBINPUT.ForcedVelDot = np.zeros((NumSteps,6),ct.c_double,'F')
      
     # aero params.
-    WakeLength = 30.0*c
+    WakeLength = 15.0*1.8#c
     Mstar = int(WakeLength/(delTime*Umag))
     # aero options.
     N = XBINPUT.NumNodesTot - 1
@@ -764,11 +705,11 @@ if __name__ == '__main__':
     # Aero inputs.
     iMin = M - M/4
     iMax = M
-    jMin = N - N/4
+    jMin = 16#N - N/4
     jMax = N
-    typeMotion = 'sin'
-    betaBar = 1.0*np.pi/180.0
-    omega = 30.0
+    typeMotion = 'asInput'
+    betaBar = 0.0*np.pi/180.0
+    omega = 15.0
     ctrlSurf = ControlSurf(iMin,
                            iMax,
                            jMin,
@@ -779,7 +720,7 @@ if __name__ == '__main__':
     
     # Gust inputs
     gust = Gust(uMag = 0.01*Umag,
-                h = 10.0,
+                l = 10.0,
                 r = 0.0)
     
     VMINPUT = DerivedTypesAero.VMinput(c = c,
@@ -789,25 +730,30 @@ if __name__ == '__main__':
                                        theta = 0.0,
                                        WakeLength = WakeLength,
                                        ctrlSurf = ctrlSurf,
-                                       gust = None)
+                                       gust = gust)
     
-    # Aerolastic simulation results.
+    # Aerolastic simulation.
     AELAOPTS = AeroelasticOps(ElasticAxis = ElasticAxis,
                               InertialAxis = InertialAxis,
                               AirDensity = 1.02,
                               Tight = False,
-                              ImpStart = False)
+                              ImpStart = True)
+    
+    mpcCont = MPC.MPC('golandControl','/home/rjs10/git/SHARPy/src/PyMPC/systems/')
     
     # Live output options.
     writeDict = OrderedDict()
-    writeDict['R_z (tip)'] = 0
-    writeDict['M_x (root)'] = 0
-    writeDict['M_y (root)'] = 0
-    writeDict['M_z (root)'] = 0
+    writeDict['R_z_tip'] = 0
+    writeDict['kappa_x_root'] = 0
+    writeDict['kappa_y_root'] = 0
+    writeDict['kappa_z_root'] = 0
+    writeDict['u_opt_1'] = 0
+    writeDict['du_opt_1'] = 0
     
-    Settings.OutputDir = Settings.SharPyProjectDir + "output/MPC/Goland/testControl/"
-    Settings.OutputFileRoot = "3noded_30rads_KJ_ZetaDot"
+    Settings.OutputDir = Settings.SharPyProjectDir + "output/MPC/Goland/testMPC/"
+    Settings.OutputFileRoot = "M8N20_CS80_n50"
     
     # Solve nonlinear dynamic simulation.
     Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, AELAOPTS,
-             writeDict =  writeDict)
+             writeDict =  writeDict,
+             mpcCont = mpcCont)

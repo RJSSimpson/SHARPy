@@ -10,17 +10,16 @@ import cvxopt
 
 if __name__ == '__main__':
     
-    sys.path.append(os.getcwd() + '/systems')
+    sys.path.append(os.getcwd() + '/systems/')
     
     # set-up MPC problem
-    mpc = setup_mpc_problem('sys_aircraftLargeSys')
+    mpc = setup_mpc_problem('sys_aircraft')
     mpc.generate_c_files()
     
     # Configure optimizer
-    ctl = mpc.ctl
-    ctl.conf.in_iter = 24 # Internal iterations in augmented Lagrangian method
-    ctl.conf.ex_iter  =2  # External iteration in augmented Lagrangian method
-    ctl.conf.warmstart = True
+    mpc.ctl.conf.in_iter = 24 # Internal iterations in augmented Lagrangian method
+    mpc.ctl.conf.ex_iter  = 2  # External iteration in augmented Lagrangian method
+    mpc.ctl.conf.warmstart = True
     
     # Initialize state
     x = np.zeros([mpc.size.states, 1])
@@ -28,21 +27,39 @@ if __name__ == '__main__':
     
     # Set point
     setPoint = np.zeros([mpc.size.states,1])
-    # setPoint[3] = 400.0
-    setPoint[3::5] = 400.0
+    setPoint[3] = 400.0
+    
+    print("set point = ",setPoint)
     
     for i in range(mpc.N):
-        ctl.x_ref[mpc.size.states*i:mpc.size.states*(i+1)] = setPoint
+        mpc.ctl.x_ref[mpc.size.states*i:mpc.size.states*(i+1)] = setPoint
+        
+    print("x_ref = ",mpc.ctl.x_ref)
+    print("shape x_ref",np.shape(mpc.ctl.x_ref))
         
     # form QP data at Initial condition
-    ctl.form_qp(x)
-    
-
-        
+    mpc.ctl.form_qp(x)
+       
     # Number of timesteps
-    s = 40
+    s = 100
     for i in range(s):
-        ctl.solve_problem(x)
-        print("step:", i, "\t u[0] = ", ctl.u_opt[0], "\t x = ", x[:4].T)
-        x = ctl.sys.Ad.dot(x) + ctl.sys.Bd.dot(ctl.u_opt[:mpc.size.inputs])
-    print("SUCCESS!")
+        
+        # calculate disturbance
+        w = [[0.0],
+             [0.0],
+             [0.0],
+             [1.0],
+             [0.0]] #np.random.randn()
+        
+        if i == 50:
+            setPoint[3] = 800 
+            print("Set point change = ",setPoint)
+        for j in range(mpc.N):
+            mpc.ctl.x_ref[mpc.size.states*j:mpc.size.states*(j+1)] = (setPoint - w)
+        # solve MPC problem.
+        
+        mpc.ctl.solve_problem(x)
+        
+        print("step:", i, "\t u[0] = ", mpc.ctl.u_opt[0], "\t x = ", x[:4].T)
+        x = mpc.ctl.sys.Ad.dot(x) + mpc.ctl.sys.Bd.dot(mpc.ctl.u_opt[:mpc.size.inputs]) + w
+    print("FINISHED!")

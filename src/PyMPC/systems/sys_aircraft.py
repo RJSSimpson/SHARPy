@@ -2,7 +2,7 @@
 @author: rjs10
 '''
 import numpy as np
-import ssdiscrete
+import PyMPC.ssdiscrete as ssdiscrete
 
 A = np.array([[-1.2822,       0.0,      0.98,     0.0],
                  [    0.0,       0.0,       1.0,     0.0],
@@ -40,10 +40,10 @@ Ad[:Ad.shape[0]-1,:Ad.shape[1]-1] = np.array(dSys.A, copy=True)
 
 Bd = np.array(dSys.B, copy=True)
 Bd.resize((Bd.shape[0]+1, Bd.shape[1]))
-Bd[dSys.nX():,:] = np.eye(dSys.nU())
+Bd[dSys.nX:,:] = np.eye(dSys.nU)
 
 # Weighting matrices
-Q = np.eye(Ad.shape[0])
+Q = 10.0*np.eye(Ad.shape[0])
 Q[4,4] = 0.0 #Auxiliary state for slew rates
 P = Q # Terminal constraint
 R = np.eye(Bd.shape[1])

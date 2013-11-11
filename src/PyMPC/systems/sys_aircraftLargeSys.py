@@ -2,7 +2,7 @@
 @author: rjs10
 '''
 import numpy as np
-import ssdiscrete
+import PyMPC.ssdiscrete
 
 sizeFactor = 10
 
@@ -28,7 +28,7 @@ Dc = np.array([[  0.0],
                  [  0.0]])
 
 # Define state-space system.
-dSys = ssdiscrete.StateSpace(Ac,Bc,Cc,Dc) # First create a continuous time.
+dSys = PyMPC.ssdiscrete.StateSpace(Ac,Bc,Cc,Dc) # First create a continuous time.
 
 dt = 0.5
 dSys.cont2discrete(dt) # Convert to discrete.
@@ -43,7 +43,7 @@ AdSmall[:AdSmall.shape[0]-1,:AdSmall.shape[1]-1] = np.array(dSys.A, copy=True)
 
 BdSmall = np.array(dSys.B, copy=True)
 BdSmall.resize((BdSmall.shape[0]+1, BdSmall.shape[1]))
-BdSmall[dSys.nX():,:] = np.eye(dSys.nU())
+BdSmall[dSys.nX:,:] = np.eye(dSys.nU)
 
 # Make system large
 Ad = np.zeros([AdSmall.shape[0]*sizeFactor,AdSmall.shape[0]*sizeFactor])

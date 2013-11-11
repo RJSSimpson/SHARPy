@@ -14,9 +14,9 @@ import numpy as np
 import ctypes as ct
 import BeamIO
 import BeamLib
-import Input
+# import Input
 
-def Static(XBINPUT,XBOPTS):
+def Static(XBINPUT,XBOPTS,moduleName = None):
     """@brief Initialise everything needed for Static beam simulation."""
     
     # Declare variables that are not dependent on NumNodes_tot.
@@ -24,8 +24,16 @@ def Static(XBINPUT,XBOPTS):
     NumDof      = ct.c_int()
     PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                            dtype=ct.c_double, order='F')
+    
+    # Check if custom Input module has been specified and import
+    if moduleName != None:
+        Input = __import__(moduleName)
+    else:
+        Input = __import__('Input')
+    
     # Check inputs.
     XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS)
+        
     # Set-up element properties
     NumNodes_tot, XBELEM = Input.Elem(XBINPUT, XBOPTS, XBELEM)
     # Set-up nodal properties.
