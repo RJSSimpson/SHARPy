@@ -612,7 +612,7 @@ def getState(Gamma,GammaStar,GammaDot,X,dXdt):
     nXd = dXdt.size
     xSize = nG + nGs + nGd + nX + nXd
     
-    # Print if you want to cross reference.
+    # Print if you want to cross reference state sizes with MATLAB.
     check = False
     if check == True:
         print('Gamma     = ',nG)
@@ -679,7 +679,7 @@ if __name__ == '__main__':
     # Unsteady parameters.
     XBINPUT.dt = delTime
     XBINPUT.t0 = 0.0
-    XBINPUT.tfin = 0.5
+    XBINPUT.tfin = 1.0
     
     # Set motion of wing.
     NumSteps = np.ceil( (XBINPUT.tfin + XBINPUT.dt - XBINPUT.t0) / XBINPUT.dt) + 2
@@ -709,7 +709,7 @@ if __name__ == '__main__':
     jMax = N
     typeMotion = 'asInput'
     betaBar = 0.0*np.pi/180.0
-    omega = 15.0
+    omega = 30.0
     ctrlSurf = ControlSurf(iMin,
                            iMax,
                            jMin,
@@ -719,7 +719,7 @@ if __name__ == '__main__':
                            omega)
     
     # Gust inputs
-    gust = Gust(uMag = 0.01*Umag,
+    gust = Gust(uMag = 17.07,
                 l = 10.0,
                 r = 0.0)
     
@@ -751,9 +751,8 @@ if __name__ == '__main__':
     writeDict['du_opt_1'] = 0
     
     Settings.OutputDir = Settings.SharPyProjectDir + "output/MPC/Goland/testMPC/"
-    Settings.OutputFileRoot = "M8N20_CS80_n50"
+    Settings.OutputFileRoot = "Q140_M8N20_CS80_L10_Nmod8_wUnit_NH100_uFree"
     
     # Solve nonlinear dynamic simulation.
     Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, AELAOPTS,
-             writeDict =  writeDict,
-             mpcCont = mpcCont)
+             writeDict =  writeDict,mpcCont = mpcCont)

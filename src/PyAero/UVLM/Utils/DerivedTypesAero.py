@@ -202,7 +202,7 @@ class Gust:
         """@brief Initialise a gust.
         
         @param uMag Reference velocity for the gust.
-        @param h Gust length.
+        @param l Gust length.
         @param r Location of gust on G-frame (inertial) y-axis.
         """
         

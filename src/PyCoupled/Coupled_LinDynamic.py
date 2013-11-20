@@ -13,7 +13,8 @@ from scipy.io import loadmat
 from scipy.interpolate import interp1d
 import SharPySettings as Settings
 from collections import OrderedDict
-
+from PyAero.UVLM.Utils.DerivedTypesAero import Gust
+from PyMPC import MPC
 
 # Flag for some interactive routines
 Interactive = True
@@ -54,6 +55,7 @@ def Solve_Py(*args, **kwords):
             disSys = args[0]
         else:
             raise TypeError("First argument (of 4) not recognised.")
+        
         # check input sequence
         try:
             disSys._Ts.shape[1] #check array has 2 dimensions
@@ -61,7 +63,11 @@ def Solve_Py(*args, **kwords):
         except:
             arg2d = np.atleast_2d(args[1]) #make 2d for comparison with nU
             arg2d = arg2d.T
-        if args[1] == None:
+            
+        # assign time to local var
+        t = args[2]
+        
+        if (args[1] == None or 'mpcCont' in kwords) and t == None:
             if Interactive == True:
                 userNumber = input('Enter number of time steps (dt = %f):'\
                                    % disSys._Ts)
@@ -69,7 +75,7 @@ def Solve_Py(*args, **kwords):
                 assert (userNumber > 0 and userNumber < 1000000),\
                        IOError("Number of steps must be > 0 and < 10^6.")
             else:
-                userNumber = 100
+                userNumber = np.ceil(1.0/disSys.dt)
             
             U = np.zeros((userNumber, disSys.nU))
         elif disSys.nU != arg2d.shape[1]:
@@ -78,7 +84,8 @@ def Solve_Py(*args, **kwords):
             U = arg2d
             
         # Run simulation
-        if 'writeDict' in kwords or 'plotDict' in kwords:
+        if 'writeDict' in kwords or 'plotDict' in kwords \
+        or 'mpcCont' in kwords or 'gust' in  kwords:
             # Determine whether to write and/or plot
             if 'writeDict' in kwords and Settings.WriteOut == True:
                 write = True
@@ -107,8 +114,10 @@ def Solve_Py(*args, **kwords):
                 xout[0,:] = np.asarray(args[3])
         
             # Pre-interpolate inputs into the desired time steps
-            if t is None:
+            if t is None and U[0,0] is not None:
                 u_dt = U
+            elif U[0,0] is None and 'mpcCont' in kwords:
+                u_dt = np.zeros((t.shape[0],disSys.nU))
             else:
                 if len(U.shape) == 1:
                     U = U[:, np.newaxis]
@@ -134,6 +143,15 @@ def Solve_Py(*args, **kwords):
                 
             # Simulate the system
             for i in range(0, out_samples - 1):
+                
+                # get optimal control action
+                if 'mpcCont' in kwords:             
+                    u_dt[i,:kwords['mpcCont'].mpcU] = kwords['mpcCont'].getUopt(xout[i],True)
+                    
+                # get gust velocity at current time step
+                if 'gust' in kwords:
+                    raise NotImplementedError()
+                
                 xout[i+1,:] = np.dot(disSys.A, xout[i,:]) + np.dot(disSys.B, u_dt[i,:])
                 yout[i,:] = np.dot(disSys.C, xout[i,:]) + np.dot(disSys.D, u_dt[i,:])
                 
@@ -229,21 +247,31 @@ def removeGustInputs(disSys):
     
 if __name__ == '__main__':
     
-    matPath = '/home/rjs10/git/SHARP/output/Goland/Goland_ss_Q140_M16N28_wake27_ROM_Py'
+    matPath = '/home/rjs10/git/SHARP/output/Goland/TorsionBending/Q140_N8_Py'
     # Test remove gust inputs
     disSys = StateSpace(matPath)
-    disSysBc = removeGustInputs(disSys)
+    #disSys = removeGustInputs(disSys)
     # Define 1 degree sinusoidal control input
     betaHat = 1.0*np.pi/180.0
     omega = 30.0 # rads-1
-    t = np.arange(0,0.5,disSysBc.dt)
+    t = np.arange(0,0.5,disSys.dt)
     U = betaHat*np.sin(omega*t)
     # Define names and indices of outputs.
     writeDict = OrderedDict()
-    writeDict['R_z (tip)'] = 0
-    writeDict['M_x (root)'] = 1
-    writeDict['M_y (root)'] = 2
-    writeDict['M_z (root)'] = 3
-    tout, yout, xout = Solve_Py(disSysBc, U, None, None, writeDict = writeDict)
+    writeDict['kappa_x_root'] = 0
+    writeDict['kappa_y_root'] = 1
+    # Initialize gusts.
+    gust = Gust(uMag = 0.01*140.0,
+                l = 10.0,
+                r = 0.0)
+    # Initialize MPC controller.
+    mpcCont = MPC.MPC('golandControl','/home/rjs10/git/SHARPy/src/PyMPC/systems/')
+    # Initial conditions
+    x0 = np.zeros((disSys.A.shape[0]))
+    x0[0] = 1
+    # Run solver
+    tout, yout, xout = Solve_Py(disSys, None, t, x0,
+                                writeDict = writeDict,
+                                mpcCont = mpcCont)
     plotOutputs(tout, yout, xout, youtJ = None)
     

@@ -5,10 +5,11 @@ Created on 24 Oct 2013
 '''
 import PyMPC.ssdiscrete as ssdiscrete
 import numpy as np
+import ctypes as ct
 
 # load reduced system from matlab
 
-matPath = '/home/rjs10/git/SHARP/output/Goland/TorsionBending_M8N20_CS80/Q140_N50_Py'
+matPath = '/home/rjs10/git/SHARP/output/Goland/TorsionBending_M8N20_CS80/Q140_N8_Py'
 disSys = ssdiscrete.StateSpace(matPath)
 
 n = disSys.nX # Number of states.
@@ -37,13 +38,13 @@ if nAux > 0:
     Bd[n:,:] = np.eye(m)
     
 # Weighting matrices
-Q = 100.0*np.eye(Ad.shape[0])
+Q = 1.0*np.eye(Ad.shape[0])
 Q[n:,n:] = 1.0 #Auxiliary state for slew rates
-P = 10.0*Q[:,:] # Terminal constraint
+P = 1.0*Q[:,:] # Terminal constraint
 R = 1.0*np.eye(Bd.shape[1])
 
 # Input constraints
-eui = 15.0*np.pi/180.0
+eui = 360.0*np.pi/180
 u_lb = [[-eui]]
 u_ub = [[eui]]
 
@@ -57,12 +58,13 @@ e_lb = np.zeros((c+nAux,1))
 e_ub = np.zeros((c+nAux,1))
 
 if nAux > 0:
-    Kx[-1] = -1.0
-    Ku[-1] = 1.0
-    inputRate = 30.0*np.pi/180.0*dt
-    e_lb[-1,0] = -inputRate
-    e_ub[-1,0] = inputRate
+#     Kx[-1,-1] = -1.0
+#     Ku[-1,-1] = 1.0
+#     inputRate = 300.0*np.pi/180.0*dt
+#     e_lb[-1,0] = -inputRate
+#     e_ub[-1,0] = inputRate
+    pass
     
 f_lb = e_lb
 f_ub = e_ub
-F = Kx # Terminal constraint matrix
+F = Kx #np.zeros_like(Kx,ct.c_double,'C') # Terminal constraint matrix
