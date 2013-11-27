@@ -21,7 +21,7 @@ void PanelNormal(const double* p1, const double* p2, \
 	double N[3];
 
 	// define A and B triads
-	SubTriad(p3,p4,A);
+	SubTriad(p3,p1,A);
 	SubTriad(p2,p4,B);
 
 	// calculate cross product

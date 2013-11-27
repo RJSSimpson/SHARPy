@@ -2099,6 +2099,9 @@ module lib_cbeam3
   real(8) :: invT02(3,3)! Inverse of T02.
   real(8) :: S21n(3,3)  ! Transformation matrix master-to-slave for the current node.
 
+! Initialise
+  S21(:,:)=0.d0
+
 ! Loop in the elements nodes.
   i1=0
   do iNode=1,NNE
@@ -2122,10 +2125,6 @@ module lib_cbeam3
         if (Info.ne.0) STOP 'Error: Could not compute the inverse of the tangent operator (77921)'
 
         S21n= matmul(invT02,matmul(transpose(C_12),T01))
-
-! Compute stiffness.
-!        Knode= rotvect_a2(Psi01,matmul(C_12,matmul(transpose(invT02),Qelem(i1+4:i1+6)))) &
-!&            - matmul(transpose(S21n),matmul(rotvect_a2(Psi02_t,matmul(transpose(invT02),Qelem(i1+4:i1+6))),S21n))
       end if
     end if
 

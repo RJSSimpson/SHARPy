@@ -200,26 +200,23 @@ def InitSection(VMOPTS,VMINPUT,ElasticAxis):
     
     Section = np.zeros((VMOPTS.M.value+1,3),ct.c_double,'C')
     
-    "calculate rotation due to twist"
+    # Calculate rotation due to twist.
     Psi = np.zeros((3))
     Psi[0] = VMINPUT.theta
     
-    "get transformation matrix"
+    # Get transformation matrix.
     R = Psi2TransMat(Psi)
     
-    
-    "get delta chord"
+    # Get delta chord.
     DeltaC = VMINPUT.c/VMOPTS.M.value
     
-    
-    "get UVLM discretisation offset"
+    # Get UVLM discretisation offset.
     Offset = 0.25*DeltaC
     
-    
-    "based on elastic axis at (z= 0, y = 0) get leading edge position"
+    # based on elastic axis at (z= 0, y = 0) get leading edge position.
     LeadingEdge = 0.5*VMINPUT.c + ElasticAxis*0.5*VMINPUT.c - Offset
     
-    "calculate section coordinates"
+    # calculate section coordinates.
     for j in range(VMOPTS.M.value+1):
         Section[j,:] = np.dot(R,[0.0,LeadingEdge-j*DeltaC,0.0])
         

@@ -13,6 +13,7 @@ import SharPySettings as Settings
 import DerivedTypes
 import BeamIO
 import BeamLib
+import XbeamLib
 import BeamInit
 import numpy as np
 import ctypes as ct
@@ -159,7 +160,7 @@ def Solve_F90_steps(XBINPUT,XBOPTS):
     return PosDefor, PsiDefor
 
 
-def Solve_Py(XBINPUT,XBOPTS):
+def Solve_Py(XBINPUT,XBOPTS, moduleName = None):
     """Nonlinear static solver using Python to solve residual
     equation. Assembly of matrices is carried out with Fortran subroutines."""
     
@@ -169,7 +170,7 @@ def Solve_Py(XBINPUT,XBOPTS):
     
     "Initialise beam"
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
-                = BeamInit.Static(XBINPUT,XBOPTS)
+                = BeamInit.Static(XBINPUT,XBOPTS, moduleName)
     
     
     "Set initial conditions as undef config"
@@ -180,12 +181,20 @@ def Solve_Py(XBINPUT,XBOPTS):
     if XBOPTS.PrintInfo.value==True:
         sys.stdout.write('Solve nonlinear static case in Python ... \n')
 
+    "Initialise rotation operators"
+    Unit = np.zeros((3,3), ct.c_double, 'F')
+    for i in range(3):
+        Unit[i,i] = 1.0
+        
+    Cao = Unit.copy('F')
     
     "Initialise structural eqn tensors"
     KglobalFull = np.zeros((NumDof.value,NumDof.value),\
                             ct.c_double, 'F'); ks = ct.c_int()
+    KglobalFull_foll = np.zeros((NumDof.value,NumDof.value),\
+                            ct.c_double, 'F'); 
     FglobalFull = np.zeros((NumDof.value,NumDof.value),\
-                            ct.c_double, 'F'); fs = ct.c_int()
+                            ct.c_double, 'F'); fs = ct.c_int()    
     
     DeltaS  = np.zeros(NumDof.value, ct.c_double, 'F')
     Qglobal = np.zeros(NumDof.value, ct.c_double, 'F')
@@ -202,16 +211,19 @@ def Solve_Py(XBINPUT,XBOPTS):
         
         "Reset convergence parameters"
         Iter = 0
-        ResLog10 = 0.0
+        ResLog10 = 1.0
         
+        "General load case"
         iForceStep = XBINPUT.ForceStatic*float( (iLoadStep+1) /                \
                                                 XBOPTS.NumLoadSteps.value)
+        
         if XBOPTS.PrintInfo.value == True:
             sys.stdout.write('  iLoad: %-10d\n' %(iLoadStep+1))
             sys.stdout.write('   SubIter DeltaF     DeltaX     ResLog10\n')
             
+
         "Newton Iteration"
-        while( (ResLog10 > np.log10(XBOPTS.MinDelta.value)) \
+        while( (ResLog10 > XBOPTS.MinDelta.value) \
              & (Iter < XBOPTS.MaxIterations.value) ):
             
             "Increment iteration counter"
@@ -222,6 +234,7 @@ def Solve_Py(XBINPUT,XBOPTS):
             
             "Set structural eqn tensors to zero"
             KglobalFull[:,:] = 0.0; ks = ct.c_int()
+            KglobalFull_foll[:,:] = 0.0; 
             FglobalFull[:,:] = 0.0; fs = ct.c_int()
             Qglobal[:] = 0.0
             
@@ -252,9 +265,20 @@ def Solve_Py(XBINPUT,XBOPTS):
                               iForceStep_Dof.ctypes.data_as(ct.POINTER(ct.c_double)),\
                               XBNODE.Vdof.ctypes.data_as(ct.POINTER(ct.c_int)) )
             
+            
             "Calculate \Delta RHS"
             Qglobal = Qglobal - np.dot(FglobalFull, iForceStep_Dof)
             
+            
+            "Separate assembly of follower and dead loads"
+            Qforces, KglobalFull_foll = \
+                        XbeamLib.LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
+                                              PosIni, PsiIni, PosDefor, PsiDefor, \
+                                              XBINPUT.ForceStatic_foll,XBINPUT.ForceStatic_dead, \
+                                              Cao, float((iLoadStep+1)/XBOPTS.NumLoadSteps.value))[:2]
+                        
+            KglobalFull += KglobalFull_foll
+            Qglobal -= Qforces
             
             "Calculate \Delta State Vector"    
             DeltaS = - np.dot(np.linalg.inv(KglobalFull), Qglobal)
@@ -268,26 +292,26 @@ def Solve_Py(XBINPUT,XBOPTS):
             BeamLib.Cbeam3_Solv_Update_Static(XBINPUT, NumNodes_tot, XBELEM,\
                                               XBNODE, NumDof, DeltaS,\
                                               PosIni, PsiIni, PosDefor,PsiDefor)
-            
-            
+
+                                    
             "Residual at first iteration"
             if(Iter == 1):
-                Res0_Qglobal = max(abs(Qglobal)) + 1.e-16
-                Res0_DeltaX  = max(abs(DeltaS)) + 1.e-16
+                Res0_Qglobal = max(max(abs(Qglobal)),1)
+                Res0_DeltaX  = max(max(abs(DeltaS)),1)
 
             "Update residual and compute log10"
-            Res_Qglobal = max(abs(Qglobal)) + 1.e-16
-            Res_DeltaX  = max(abs(DeltaS)) + 1.e-16
+            Res_Qglobal = max(abs(Qglobal))
+            Res_DeltaX  = max(abs(DeltaS))
 
-            ResLog10 = max([np.log10(Res_Qglobal/Res0_Qglobal), \
-                            np.log10(Res_DeltaX/Res0_DeltaX)])
-            
-            
+            ResLog10 = max(Res_Qglobal/Res0_Qglobal, Res_DeltaX/Res0_DeltaX)
+           
+                        
             if XBOPTS.PrintInfo.value == True:
                 sys.stdout.write('%8.4f\n' %(ResLog10))
-                
+        
+            
             "Stop the solution"
-            if(ResLog10 > 10.):
+            if(ResLog10 > 1.e10):
                 sys.stderr.write(' STOP\n')
                 sys.stderr.write(' The max residual is %e\n' %(ResLog10))
                 exit(1)

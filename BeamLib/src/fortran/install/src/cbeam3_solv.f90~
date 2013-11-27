@@ -520,7 +520,11 @@ module cbeam3_solv
   use lib_lu
   use lib_out
   use lib_sparse
+#ifdef NOLAPACK
   use lib_lu
+#else
+  use interface_lapack
+#endif
   use cbeam3_asbly
   use lib_xbeam
 
@@ -680,8 +684,11 @@ module cbeam3_solv
       call sparse_addsparse(0,0,ms,Mglobal,as,Asys,Factor=1.d0/(beta*dt*dt))
 
 ! Calculation of the correction.
+#ifdef NOLAPACK
       call lu_sparse(as,Asys,-Qglobal,DX)
-
+#else
+      call lapack_sparse (as,Asys,-Qglobal,DX)
+#endif
       X    = X     + DX
       dXdt = dXdt  + gamma/(beta*dt)*DX
       dXddt= dXddt + 1.d0/(beta*dt*dt)*DX
@@ -920,7 +927,6 @@ module cbeam3_solv
 
 ! Solve equation.
     call lu_sparse(as,Asys,Qglobal,DXDDt)
-
     DX    = DX   + beta *dt*dt*DXDDt
     DXDt  = DXDt + gamma*dt   *DXDDt
 

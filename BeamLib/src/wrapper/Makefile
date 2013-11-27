@@ -10,14 +10,15 @@
 # Remarks:
 #   -g can be used for debugging (optional)
 #   -cpp is used for preprocessing
+#   -finit-local-zero to initialise all undeclared variables to zero
 #-------------------------------------------------------------------------------
 
 # Define dynamic library name
 DYNLIB=../../bin/BeamLib.so
 
 # Define flags
-F90FLAG=-fPIC -Wextra -cpp -O3 #-g
-LIBFLAG=-fPIC -shared -ffree-form -O3 #-g
+F90FLAG=-finit-local-zero -fPIC -Wextra -cpp -O3 -g
+LIBFLAG=-finit-local-zero -fPIC -shared -ffree-form -O3 -g
 
 # Define path relative to cwd
 PATHFOR=../fortran
@@ -39,6 +40,9 @@ F90SRC=$(PATHFOR)/install/src/xbeam_shared.f90 \
        $(PATHFOR)/install/src/cbeam3_solv.f90 \
        $(PATHLIB)/src/lib_out.f90 \
        $(PATHFOR)/install/src/xbeam_asbly.f90 \
+       $(PATHFOR)/install/src/xbeam_solv.f90 \
+       $(PATHLIB)/src/lib_perturb.f90 \
+       $(PATHFOR)/install/src/xbeam_perturb.f90 \
        FxInput_PyFx.f90 \
        FxWrapper_PyFx.f90
 

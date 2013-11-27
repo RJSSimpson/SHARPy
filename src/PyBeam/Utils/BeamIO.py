@@ -13,6 +13,9 @@ import sys, os
 import ctypes as ct
 import numpy as np
 import SharPySettings as Settings
+from PyBeam.Utils.Misc import iNode2iElem
+import PyBeam.Utils.XbeamLib as XbeamLib
+from PyBeam.Utils.BeamLib import Cbeam3_strainz
 
 BeamPath = Settings.BeamLibDir + Settings.BeamLibName
 BeamLib = ct.cdll.LoadLibrary(BeamPath)
@@ -20,6 +23,130 @@ BeamLib = ct.cdll.LoadLibrary(BeamPath)
 f_fem_glob2loc_extract = BeamLib.__test_MOD_wrap_fem_glob2loc_extract
 
 f_fem_glob2loc_extract.restype = None
+
+def localStrains(PosDef, PsiDef,
+                   PosIni, PsiIni,
+                   XBELEM, NodeList,
+                   SO3 = False):
+    """@brief Approximate strains at the midpoint of nodes.
+    
+    @param PosDef Deformed nodal coordinates.
+    @param PsiDef Deformed nodal rotation vectors.
+    @param PosIni Initial (undeformed) nodal coordinates.
+    @param PsiIni Initial (undeformed) nodal rotation vectors.
+    @param XBELEM Xbeam element derived type containing element data.
+    @param NodeList List of node numbers for strain approximation at adjacent
+            midpoint in the direction of increasing node index,
+            starts from zero:
+            0---x---1---x---2---x---3-- ... --(NumNodes-1)
+            Strains are calculated at the x to the right of selected nodes.
+    @param SO3 Flag for use of the SO(3) manifold in CRV interpolation.
+    
+    @details Assumes that all nodes are either two- or three- noded. 
+    @warning Untested.
+    """
+    
+    strains = np.zeros((len(NodeList),6))
+    NumNodes = PosDef.shape[0]-1
+    NumNodesElem = XBELEM.NumNodes[0]
+    iOut = 0 # Output index
+    for iNode in NodeList:
+        if iNode == NumNodes or iNode == -1:
+            raise ValueError("Midpoint strain requested beyond final node.")
+        
+        iElem, iiElem = iNode2iElem(iNode, NumNodes, NumNodesElem)
+        
+        if NumNodesElem == 2:
+            if SO3 == True:
+                # Consistent calculation of midpoint strains using SO(3) manifold.
+                raise NotImplementedError("SO(3) manifold strains.")
+            else:
+                # Using fortran routines
+                R0 = np.zeros((2,6))
+                R0[0,:3] = PosIni[iNode,:]
+                R0[0,3:] = PsiIni[iElem,iiElem,:]
+                R0[1,:3] = PosIni[iNode+1,:]
+                R0[1,3:] = PsiIni[iElem,iiElem+1,:]
+                
+                Ri = np.zeros((2,6))
+                Ri[0,:3] = PosDef[iNode,:]
+                Ri[0,3:] = PsiDef[iElem,iiElem,:]
+                Ri[1,:3] = PosDef[iNode+1,:]
+                Ri[1,3:] = PsiDef[iElem,iiElem+1,:]
+            
+                # Midpoint
+                z = 0.0
+                
+                strainz = Cbeam3_strainz(R0, Ri, z)
+            # END if SO3            
+            
+        elif NumNodesElem == 3:
+            if SO3 == True:
+                raise NotImplementedError("Only available for 2-noded just now.")
+            else:
+                # Using fortran routines
+                R0 = np.zeros((3,6))
+                R0[0,:3] = PosIni[2*iElem,:]
+                R0[1,:3] = PosIni[2*iElem+2,:]
+                R0[2,:3] = PosIni[2*iElem+1,:]
+                R0[:,3:] = PsiIni[iElem]
+                
+                Ri = np.zeros((3,6))
+                Ri[0,:3] = PosDef[2*iElem,:]
+                Ri[1,:3] = PosDef[2*iElem+2,:]
+                Ri[2,:3] = PosDef[2*iElem+1,:]
+                Ri[:,3:] = PsiDef[iElem]
+                
+                if iiElem == 0:
+                    z = -0.5 # mid-point adjacent to node iNode
+                elif iiElem == 1:
+                    z = 0.5 # mid-point adjacent to node iNode
+                elif iiElem == 2:
+                    raise ValueError("iiElem only 0, 1 for adjacent midpoint" +
+                                     "calculation.")
+                else:
+                    raise ValueError("iiElem can only take 0, 1 or 2 for " +
+                                     "3-noded elements.")
+                
+                strainz = Cbeam3_strainz(R0, Ri, z)
+            # END if SO(3)
+        else:
+            raise ValueError("Only 2- or 3-noded elements are supported.")
+        
+        strains[iOut,:] = strainz
+        
+        iOut += 1
+    # END for iElem
+    return strains
+    
+def localElasticForces(PosDef, PsiDef, 
+                          PosIni, PsiIni,
+                          XBELEM, NodeList):
+    """@brief Approximate shear force and moments from local strain and
+    stiffness matrix.
+    
+    @param PosDef Deformed nodal coordinates.
+    @param PsiDef Deformed nodal rotation vectors.
+    @param XBELEM Xbeam element derived type containing element data.
+    @param NodeList List of element numbers for strain approximation,
+            starts from zero.
+    @warning Untested.
+    """
+    
+    F = np.zeros((len(NodeList),6))
+    strains = localStrains(PosDef, PsiDef, 
+                           PosIni, PsiIni,
+                           XBELEM, NodeList)
+    iOut = 0 # Output index
+    for iNode in NodeList:
+        iElem, iiElem = iNode2iElem(iNode, PosDef.shape[0]-1, XBELEM.NumNodes[0])
+        del iiElem
+        elemStrain = strains[iOut,:]
+        elemK = XBELEM.Stiff[iElem*6:(iElem+1)*6,:]
+        F[iOut,:] = np.dot(elemK,elemStrain)
+        iOut += 1
+    # END of iElem
+    return F
 
 #-------------------------------------------------------------------------------
 # START - DisplayProgressCounter
@@ -136,9 +263,9 @@ def Write_dyn_File(fp,Time,PosPsiTime):
     
     nr1 = np.size(PosPsiTime,0); nr2 = np.size(PosPsiTime,1)
 
-    fp.write('TITLE="Wing-tip dynamic response"\n')
-    fp.write('VARIABLES="T" "PX" "PY" "PZ" "RX" "RY" "RZ"\n')
-    fp.write('ZONE I=%d T="%s"\n' %(nr1,'dyn'))
+#     fp.write('TITLE="Wing-tip dynamic response"\n')
+#     fp.write('VARIABLES="T" "PX" "PY" "PZ" "RX" "RY" "RZ"\n')
+#     fp.write('ZONE I=%d T="%s"\n' %(nr1,'dyn'))
 
     for i1 in range(nr1):
         fp.write(' %12.5e ' %(Time[i1]))
@@ -176,11 +303,11 @@ def Write_shape_File(fp,TotNrSteps,TotNrNodes,Time,DynOut):
     """
     """
     
-    fp.write('TITLE="Deformed shape function of time"\n')
-    fp.write('VARIABLES="T" "PX" "PY" "PZ"\n')
+#     fp.write('TITLE="Deformed shape function of time"\n')
+#     fp.write('VARIABLES="T" "PX" "PY" "PZ"\n')
     
     for i1 in range(TotNrSteps):
-        fp.write('ZONE I=%d T="iStep: %d"\n' %(TotNrNodes,i1))
+#         fp.write('ZONE I=%d T="iStep: %d"\n' %(TotNrNodes,i1))
         for i2 in range(TotNrNodes):
             i3 = i1*TotNrNodes + i2
             fp.write(' %12.5e %12.5e %12.5e %12.5e\n' \
@@ -200,9 +327,9 @@ def Write_rigid_File(fp,Time,RefVel,RefVelDot):
     
     nr1 = np.size(RefVel,0); nr2 = np.size(RefVel,1)
     
-    fp.write('TITLE="Rigid body velocity/acceleration"\n')
-    fp.write('VARIABLES="T" "V1" "V2" "V3" "V4" "V5" "V6" "A1" "A2" "A3" "A4" "A5" "A6"\n')
-    fp.write('ZONE I=%d T=""\n' %(nr1))
+#     fp.write('TITLE="Rigid body velocity/acceleration"\n')
+#     fp.write('VARIABLES="T" "V1" "V2" "V3" "V4" "V5" "V6" "A1" "A2" "A3" "A4" "A5" "A6"\n')
+#     fp.write('ZONE I=%d T=""\n' %(nr1))
 
     for i1 in range(nr1):
         fp.write(' %12.5e ' %(Time[i1]))

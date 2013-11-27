@@ -12,33 +12,33 @@ import numpy as np
 from PyBeam.Utils.XbeamLib import Psi2TransMat
 
 def GetCoeffs(VMOPTS, Forces, VMINPUT, VelA_G = None):
-    """@brief Calculate force coefficients from UVLM solution."""
+    """@brief Calculate force coefficients from UVLM solution.
     
-    "declare temp traids"
+    @returns force coefficients in frame defined by free-stream AoA."""
+    
+    # Declare temp traids.
     Psi = np.zeros((3))
     Coeff = np.zeros((3))
     
-    "sum all forces"
+    # Sum all forces.
     for i in range(VMOPTS.M.value+1):
         for j in range(VMOPTS.N.value+1):
             Coeff[:] += Forces[i,j,:]
         #end for j
     #end for i
     
-    "divide by denom"        
-    if  VMINPUT.ZetaDotTest != 0.0:
-        denom = 0.5*(np.linalg.norm(VMINPUT.U_infty)+VMINPUT.ZetaDotTest)**2.0*VMINPUT.area
-    elif VelA_G != None:
+    # divide by denom.
+    if VelA_G != None:
         denom = 0.5*(np.linalg.norm(VMINPUT.U_infty-VelA_G))**2.0*VMINPUT.area
     else:
         denom = 0.5*np.linalg.norm(VMINPUT.U_infty)**2.0*VMINPUT.area
     
     Coeff[:] = Coeff[:]/denom
     
-    "account for rotation of aerodynamic FoR (freestream velocity)"
+    # account for rotation of aerodynamic FoR (freestream velocity)
     Psi[0] = VMINPUT.alpha
     
-    "get transformation matrix"
+    # get transformation matrix.
     CalphaG = Psi2TransMat(Psi)
     
     return np.dot(CalphaG,Coeff)

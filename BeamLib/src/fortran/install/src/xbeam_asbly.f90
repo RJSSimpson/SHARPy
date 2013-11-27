@@ -13,6 +13,8 @@
 !
 !-> Remarks.-
 !
+!  2) HH (01.11.2013) Need to use full integration in assembly of mass matrix.
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module xbeam_asbly
  use xbeam_shared
@@ -79,6 +81,7 @@ subroutine xbeam_asbly_dynamic (Elem,Node,Coords,Psi0,PosDefor,PsiDefor,PosDefor
   integer:: iElem                          ! Counter on the finite elements.
   integer:: NumE                           ! Number of elements in the model.
   integer:: NumNE                          ! Number of nodes in an element.
+  integer:: NumGaussMass                   ! Number of Gaussian points in the inertia terms.
 
   real(8):: CRSelem (6,6*MaxElNod)        ! Element damping matrix.
   real(8):: Felem (6,6*MaxElNod)          ! Element force influence coefficients.
@@ -121,8 +124,15 @@ subroutine xbeam_asbly_dynamic (Elem,Node,Coords,Psi0,PosDefor,PsiDefor,PosDefor
 ! CHECK LINEARISED FORM
 !    call fdiff_check (NumNE,rElem0,rElem,rElemDot,rElemDDot,Vrel,VrelDot,Elem(iElem)%Mass,Elem(iElem)%Stiff,Options%NumGauss)
 
+! Use full integration for mass matrix.
+    if (NumNE.eq.2) then
+        NumGaussMass=NumNE
+    elseif (NumNE.eq.3) then
+        NumGaussMass=NumNE+1
+    end if
+
 ! Compute linearized inertia matrices.
-    call xbeam_mrs  (NumNE,rElem0,rElem,                                Elem(iElem)%Mass,MRSelem,Options%NumGauss)
+    call xbeam_mrs  (NumNE,rElem0,rElem,                                Elem(iElem)%Mass,MRSelem,NumGaussMass)
     call xbeam_cgyr (NumNE,rElem0,rElem,rElemDot,Vrel,                  Elem(iElem)%Mass,CRSelem,Options%NumGauss)
     call xbeam_kgyr (NumNE,rElem0,rElem,rElemDot,rElemDDot,Vrel,VrelDot,Elem(iElem)%Mass,KRSelem,Options%NumGauss)
 
@@ -130,10 +140,10 @@ subroutine xbeam_asbly_dynamic (Elem,Node,Coords,Psi0,PosDefor,PsiDefor,PosDefor
     call xbeam_fgyr (NumNE,rElem0,rElem,rElemDot,Vrel,Elem(iElem)%Mass,Qelem,Options%NumGauss)
 
 ! Compute the element mass tangent stiffness matrix (can be neglected).
-    call xbeam_kmass  (NumNE,rElem0,rElem,rElemDDot,VrelDot,Elem(iElem)%Mass,KRSelem,Options%NumGauss)
+    call xbeam_kmass  (NumNE,rElem0,rElem,rElemDDot,VrelDot,Elem(iElem)%Mass,KRSelem,NumGaussMass)
 
 ! Compute the element contribution to the mass and damping in the motion of the reference frame.
-    call xbeam_mrr  (NumNE,rElem0,rElem              ,Elem(iElem)%Mass,MRRelem,Options%NumGauss)
+    call xbeam_mrr  (NumNE,rElem0,rElem              ,Elem(iElem)%Mass,MRRelem,NumGaussMass)
     call xbeam_crr  (NumNE,rElem0,rElem,rElemDot,Vrel,Elem(iElem)%Mass,CRRelem,Options%NumGauss)
 
 ! Add contributions of non-structural (lumped) mass.
@@ -270,6 +280,94 @@ subroutine xbeam_asbly_orient (Elem,Node,PosDefor,PsiDefor,Vrel,Quat,CQR,CQQ,fs,
   return
  end subroutine xbeam_asbly_orient
 
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-> Subroutine XBEAM_ASBLY_FRIGID
+!
+!-> Description:
+!
+!   Separate assembly of influence coefficients matrix for
+!   applied follower and dead loads
+!
+!-> Remarks.-
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ subroutine xbeam_asbly_Frigid (Elem,Node,Coords,Psi0,PosDefor,PsiDefor,           &
+&                               frf,Frigid_foll,frd,Frigid_dead,CAG)
+  use lib_rotvect
+  use lib_fem
+  use lib_sparse
+  use lib_xbeam
+
+! I/O variables.
+  type(xbelem), intent(in) :: Elem(:)           ! Element information.
+  type(xbnode), intent(in) :: Node(:)           ! List of independent nodes.
+  real(8),      intent(in) :: Coords    (:,:)   ! Initial coordinates of the grid points.
+  real(8),      intent(in) :: Psi0      (:,:,:) ! Initial CRV of the nodes in the elements.
+  real(8),      intent(in) :: PosDefor  (:,:)   ! Current coordinates of the grid points
+  real(8),      intent(in) :: PsiDefor  (:,:,:) ! Current CRV of the nodes in the elements.
+  integer,      intent(out):: frf               ! Size of the sparse force matrix, Frigid_foll.
+  type(sparse), intent(out):: Frigid_foll (:)  ! Influence coefficients matrix for follower forces.
+  integer,      intent(out):: frd               ! Size of the sparse force matrix, Frigid_dead.
+  type(sparse), intent(out):: Frigid_dead (:)  ! Influence coefficients matrix for dead forces.
+  real(8),      intent(in) :: CAG       (:,:)   ! Rotation operator
+
+! Local variables.
+  logical:: Flags(MaxElNod)                     ! Auxiliary flags.
+  integer:: i,j,i1,j1                           ! Counters.
+  integer:: iElem                               ! Counter on the finite elements.
+  integer:: NumE                                ! Number of elements in the model.
+  integer:: NumNE                               ! Number of nodes in an element.
+  real(8):: Kelem_foll (6*MaxElNod,6*MaxElNod)  ! Element tangent stiffness matrix.
+  real(8):: Felem_foll (6*MaxElNod,6*MaxElNod)  ! Element force influence coefficients.
+  real(8):: Felem_dead (6*MaxElNod,6*MaxElNod)  ! Element force influence coefficients.
+  real(8):: rElem0(MaxElNod,6)                  ! Initial Coordinates/CRV of nodes in the element.
+  real(8):: rElem (MaxElNod,6)                  ! Current Coordinates/CRV of nodes in the element.
+  real(8):: ForceElem (MaxElNod,6)              ! Current forces/moments of nodes in the element.
+  real(8):: SB2B1 (6*MaxElNod,6*MaxElNod)       ! Transformation from master to global node orientations.
+
+! Initialise
+  call sparse_zero(frf,Frigid_foll)
+  call sparse_zero(frd,Frigid_dead)
+
+! Loop in all elements in the model.
+  NumE=size(Elem)
+
+  do iElem=1,NumE
+    Felem_foll=0.d0; Felem_dead=0.d0;
+
+    ! Determine if the element nodes are master (Flag=T) or slave.
+    Flags=.false.
+    do i=1,Elem(iElem)%NumNodes
+      if (Node(Elem(iElem)%Conn(i))%Master(1).eq.iElem) Flags(i)=.true.
+    end do
+
+    ! Extract components of the displacement and rotation vector at the element nodes
+    ! and for the reference and current configurations.
+    call fem_glob2loc_extract (Elem(iElem)%Conn,Coords, rElem0(:,1:3),NumNE)
+    call fem_glob2loc_extract (Elem(iElem)%Conn,PosDefor,rElem(:,1:3),NumNE)
+
+    rElem0(:,4:6)= Psi0    (iElem,:,:)
+    rElem (:,4:6)= PsiDefor(iElem,:,:)
+    call rotvect_boundscheck2(rElem(1,4:6),rElem(2,4:6))
+    if (NumNE.eq.3) call rotvect_boundscheck2(rElem(3,4:6),rElem(2,4:6))
+
+    ! Compute the influence coefficients multiplying the vector of external forces.
+    call xbeam_fext (NumNE,rElem,Flags(1:NumNE),Felem_foll,.true.,.true.,CAG)
+    call xbeam_fext (NumNE,rElem,Flags(1:NumNE),Felem_dead,.false.,.false.,CAG)
+
+    ! Add to global matrix. Remove columns and rows at clamped points.
+    do i=1,NumNE
+      i1=Node(Elem(iElem)%Conn(i))%Vdof
+      call sparse_addmat (0,6*(i1),Felem_foll(:,6*(i-1)+1:6*i),frf,Frigid_foll)
+      call sparse_addmat (0,6*(i1),Felem_dead(:,6*(i-1)+1:6*i),frd,Frigid_dead)
+    end do
+
+  end do
+
+  return
+ end subroutine xbeam_asbly_Frigid
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 end module xbeam_asbly

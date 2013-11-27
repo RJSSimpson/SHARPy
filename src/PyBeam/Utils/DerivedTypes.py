@@ -86,8 +86,12 @@ class Xbinput:
     @param dt Timestep.
     @param Omega Angular velocity of oscillatory motions.
     @param NumNodesTot total number of nodes in the model.
-    @param ForceStatic NumNodes-6 static force vector at nodes.
-    @param ForceDyn Numnodes-6 dynamic forces at nodes.
+    @param ForceStatic NumNodes static force vector at nodes.
+    @param ForceStatic_foll NumNodes static force vector of follower loads at nodes.
+    @param ForceStatic_dead NumNodes static force vector of dead loads at nodes.
+    @param ForceDyn Numnodes dynamic forces at nodes.
+    @param ForceDyn_foll Numnodes dynamic forces of follower loads  at nodes.
+    @param ForceDyn_dead Numnodes dynamic forces of dead loads at nodes.
     @param ForcingType Type of dynamic forcing.
     @param g acceleration due to gravity.
     """
@@ -105,7 +109,7 @@ class Xbinput:
                  Omega = 0.0,
                  ForcingType = 'Const',
                  RampTime = 0.0,
-                 g = 0.0,
+                 g = 9.81,
                  PsiA_G = np.array([0.0,0.0,0.0])):
         """@brief NumNodesElem and NumElems must be specified for initialisation
                   of force arrays.
@@ -142,7 +146,11 @@ class Xbinput:
         
         # Initialise nodal arrays.
         self.ForceStatic = np.zeros((NumNodesTot,6),ct.c_double,'F')
+        self.ForceStatic_foll = np.zeros((NumNodesTot,6),ct.c_double,'F')
+        self.ForceStatic_dead = np.zeros((NumNodesTot,6),ct.c_double,'F')
         self.ForceDyn = np.zeros((NumNodesTot,6),ct.c_double,'F')
+        self.ForceDyn_foll = np.zeros((NumNodesTot,6),ct.c_double,'F')
+        self.ForceDyn_dead = np.zeros((NumNodesTot,6),ct.c_double,'F')
         
         
 def dump(obj):

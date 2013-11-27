@@ -10,6 +10,7 @@
 
 import ctypes as ct
 import numpy as np
+from PyAero.UVLM.Utils.UVLMLib import Colloc
 
 class VMopts:
     """@brief options for UVLM
@@ -53,9 +54,10 @@ class VMinput:
     @param ctrlSurf ControlSurf object.
     """
     
-    def __init__(self, c, b, U_mag, alpha, theta, ZetaDotTest=0.0,
+    def __init__(self, c, b, U_mag, alpha, theta,
                   WakeLength = 50.0,
-                  ctrlSurf = None):
+                  ctrlSurf = None,
+                  gust = None):
         self.c = c
         self.b = b
         self.area = c*b
@@ -63,9 +65,9 @@ class VMinput:
         self.U_infty[:] = [0.0, -U_mag*np.cos(alpha), U_mag*np.sin(alpha)]
         self.alpha = alpha
         self.theta = theta
-        self.ZetaDotTest = ZetaDotTest
         self.WakeLength = WakeLength
         self.ctrlSurf = ctrlSurf
+        self.gust = gust
         
 class ControlSurf:
     """@brief Control surface data and member functions.
@@ -144,7 +146,109 @@ class ControlSurf:
             else:
                 raise Exception('beta specified and typeMotion not ' +
                                 'recognised')
+        
+class VMUnsteadyInput:
+    """@brief Contains data for unsteady run of UVLM.
     
+    @param WakeLength Length of wake in chordlengths.
+    @param DelS non-dim timestep s = omega*c/U.
+    @param NumChordLengths Number of chord lengths to travel 
+    in prescribed simulation.
+    @param VelA_G Velocity of reference frame.
+    @param OmegaA_G Initial angular vel of reference frame.
+    @param OriginA_G Origin of reference frame in G-frame.
+    @param PsiA_G Orientation of reference frame in G-frame."""
+    
+    def __init__(self, VMOPTS, VMINPUT, WakeLength,
+                 DelS, NumChordLengths,
+                 VelA_G, OmegaA_G,
+                 OriginA_G = np.zeros((3),ct.c_double),
+                 PsiA_G = np.zeros((3),ct.c_double)):
+        
+        self.WakeLength = WakeLength
+        self.NumChordLengths = NumChordLengths
+        self.VelA_G = VelA_G
+        self.OmegaA_G = OmegaA_G
+        self.OriginA_G = OriginA_G
+        self.PsiA_G = PsiA_G
+        
+        # Physical time step information.
+        try:
+            self.NumSteps = NumChordLengths/DelS
+        except ZeroDivisionError:
+            self.NumSteps = 1
+        
+        self.FinalTime = NumChordLengths*VMINPUT.c / \
+                    np.linalg.norm(VMINPUT.U_infty-VelA_G)
+        self.DelTime = self.FinalTime/self.NumSteps
+        
+        # Check Mstar is high enough to discretize wake.
+        if self.DelTime != self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value:
+            print("DelTime requested is ",self.DelTime,\
+                  "\nDelWakePanel is ",self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value,\
+                  "\nChanging Mstar to ", self.WakeLength*VMINPUT.c/self.DelTime)
+            VMOPTS.Mstar.value = int(self.WakeLength*VMINPUT.c/self.DelTime)
+            
+        # Set DelTime for VMOPTS
+        VMOPTS.DelTime = ct.c_double(self.DelTime)
+        
+class Gust:
+    """@brief Gust.
+    
+    @details Gusts are specified in the G-frame (inertial).
+    """
+    
+    def __init__(self, uMag, h, r):
+        """@brief Initialise a gust.
+        
+        @param uMag Reference velocity for the gust.
+        @param h Gust half-length.
+        @param r Location of gust on G-frame (inertial) y-axis.
+        """
+        
+        self.uMag = uMag
+        self.h = h
+        self.r = r
+    
+    def _vel(self, xGust):
+        """@brief Gust velocity.
+        
+        @param xGust Penetration length into the gust.
+        @return vel Velocity at xGust.
+        """
+        
+        vel = np.zeros((3),ct.c_double,'C')
+        if xGust < 0.0 or xGust > 2.0*self.h:
+            return vel
+        else:
+            # 1 - cos gust
+            vel[2] = self.uMag * (1.0 - np.cos( (np.pi * xGust) / (self.h) ))
+            return vel
+    
+    def _getxGust(self, zeta):
+        """@brief Penetration length at grid points.
+        
+        @param zeta Aerodynamic grid point.
+        @return xGust penetration length.
+        """
+        
+        return (zeta[1] - self.r)
+    
+    def Vels(self, zeta):
+        """@brief Calculate gust velocities at grid collocation points.
+        
+        @param zeta array of grid coordinates (M+1,N+1,3).
+        @return uExt array of collocation point gust velocities (M,N,3).
+        """
+        
+        uExt = np.zeros((zeta.shape[0],zeta.shape[1],3),ct.c_double,'C')
+        for i in range(zeta.shape[0]):
+            for j in range(zeta.shape[1]):
+                uExt[i,j,:] = self._vel(self._getxGust(zeta[i,j,:]))
+            # END for j
+        # END for i
+        return uExt
+        
 
 if __name__ == '__main__':
     c = 1
@@ -153,3 +257,9 @@ if __name__ == '__main__':
     alpha = 2*np.pi/180.0
     VMINPUT = VMinput(c, b, U_mag, alpha, 0.0, 0.0, 15.0)
     print(VMINPUT.U_infty)
+    
+    # Testing gust stuff
+    GUST = Gust(1.0,1.0,0.0)
+    zeta = np.array([[[0.0,0.0,0.0]]])
+    print(GUST.Vels(zeta))
+    

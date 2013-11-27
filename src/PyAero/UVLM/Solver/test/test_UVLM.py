@@ -282,7 +282,6 @@ class Test_v_TheoGarrick(unittest.TestCase):
         # Run from Joukowski method.
         VMOPTS.KJMeth.value = True
         CoeffHistoryJouk = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
-        print(CoeffHistoryJouk)
         
         # Set parameters for analytical result.
         alphaBar = 0.0
@@ -324,8 +323,8 @@ class Test_v_TheoGarrick(unittest.TestCase):
         self.assertAlmostEqual(rmsCl, 0.0241589106969,6,'RMS error in lift.')
         self.assertAlmostEqual(rmsCd, 0.136290106597,5,'RMS error in drag.')
     
-        
-        if True:
+        Plotting = False
+        if Plotting == True:
             # Define beta here for plotting purposes.
             betaSim = betaBar * np.sin(omega * CoeffHistoryKatz[:,0])
             

@@ -14,16 +14,23 @@ import numpy as np
 import ctypes as ct
 import BeamIO
 import BeamLib
-import Input
 
-def Static(XBINPUT,XBOPTS):
+def Static(XBINPUT,XBOPTS, moduleName = None):
     """@brief Initialise everything needed for Static beam simulation."""
-    
+
     # Declare variables that are not dependent on NumNodes_tot.
     XBELEM      = DerivedTypes.Xbelem(XBINPUT.NumElems,Settings.MaxElNod)
     NumDof      = ct.c_int()
     PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                            dtype=ct.c_double, order='F')
+        
+    # Load customised inputs
+    if moduleName != None:
+        Input = __import__(moduleName)
+    else:
+        Input = __import__('Input')
+        
+    
     # Check inputs.
     XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS)
     # Set-up element properties
@@ -105,17 +112,30 @@ def Static(XBINPUT,XBOPTS):
             XBNODE, NumDof
             
 
-def Dynamic(XBINPUT,XBOPTS):
+def Dynamic(XBINPUT,XBOPTS, moduleName = None):
     """@brief Initialise everything for dynamic analysis."""
     
-    "Create time vector"
+    
+    # Load customised inputs
+    if moduleName != None:
+        Input = __import__(moduleName)
+        #Set up dynamic testcase.
+        try: 
+            XBINPUT, XBOPTS = Input.DynSetup(XBINPUT, XBOPTS)
+        finally: 
+            pass
+    else:
+        Input = __import__('Input')
+    
+    
+    #Create time vector.
     Time = np.arange(XBINPUT.t0,XBINPUT.tfin  + XBINPUT.dt, XBINPUT.dt,
                      ct.c_double)
     
-    "Calculate number of timesteps"
+    #Calculate number of timesteps.
     NumSteps = ct.c_int(len(Time) - 1)
     
-    "Create force-amp-in-time array"
+    #Create force-amp-in-time array.
     ForceTime = np.zeros(NumSteps.value+1,ct.c_double,'F')
     if XBINPUT.ForcingType == 'Const':
         ForceTime[:] = 1.0
@@ -148,12 +168,12 @@ def Dynamic(XBINPUT,XBOPTS):
         assert Time.__contains__(XBINPUT.RampTime),('RampTime is not equal to '+
                                                     'element in Time array')
         
-        "Define sinusoid"
+        #Define sinusoid.
         SinVect = np.zeros_like(ForceTime, ct.c_double, 'F')
         for i in np.arange(len(Time)):
             SinVect[i] = np.sin(XBINPUT.Omega * Time[i])
             
-        "Define ramp"
+        #Define ramp.
         RampVect = np.zeros_like(ForceTime, ct.c_double, 'F')
         RampVect[:] = 1.0
         Gradient = 1.0/(XBINPUT.RampTime - XBINPUT.t0)
@@ -164,7 +184,7 @@ def Dynamic(XBINPUT,XBOPTS):
             i += 1
             t += XBINPUT.dt
             
-        "Combine"
+        #Combine.
         for i in np.arange(len(ForceTime)):
             ForceTime[i] = RampVect[i] * SinVect[i]
             
@@ -188,16 +208,21 @@ def Dynamic(XBINPUT,XBOPTS):
         assert False, 'ForcingType not recognised'
         
     
-    "Create default forced velocities and accelerations."
-    ForcedVel = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
-    ForcedVelDot = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
-    
-    "Rates of Dof Arrays"
+    # Create default forced velocities and accelerations if not specified.
+    if hasattr(XBINPUT, 'ForcedVel'):
+        assert XBINPUT.ForcedVel.shape[0] == NumSteps.value+1
+        ForcedVel = XBINPUT.ForcedVel.copy('F')
+        ForcedVelDot = XBINPUT.ForcedVelDot.copy('F')
+    else:
+        ForcedVel = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
+        ForcedVelDot = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
+
+    # Rates of Dof Arrays.
     PosDotDef  = np.zeros((XBINPUT.NumNodesTot,3),ct.c_double,'F')
     PsiDotDef  = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                            ct.c_double, 'F')
     
-    "Create Outgrids and check only 1 node specified"
+    # Create Outgrids and check only 1 node specified.
     OutGrids = np.zeros(XBINPUT.NumNodesTot, ct.c_bool, 'F')
     OutGrids[-1] = True #at tip
     Nonzeros = np.nonzero(OutGrids)
@@ -206,12 +231,12 @@ def Dynamic(XBINPUT,XBOPTS):
     elif len(Nonzeros[0]) > 1:
         raise Exception('Too many Outgrid output nodes: max is 1.')
     
-    "Position/rotation history at Outgrids = True element"
+    # Position/rotation history at Outgrids = True element.
     PosPsiTime = np.zeros((NumSteps.value+1,6), ct.c_double, 'F')
     VelocTime  = np.zeros((NumSteps.value+1,XBINPUT.NumNodesTot),
                            ct.c_double, 'F')
     
-    "Position of all nodes at all times"
+    # Position of all nodes at all times.
     DynOut     = np.zeros(((NumSteps.value+1)*XBINPUT.NumNodesTot,3),
                            ct.c_double, 'F')
     

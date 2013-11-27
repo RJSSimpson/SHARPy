@@ -35,6 +35,13 @@ cpp_test_biotsegment.restype = None
 c_test_biotsegment.restype = None
 cpp_solver_vlm.restype = None
 
+def AreEqual(arg1,arg2):
+    """@brief Returns true if argumants are equal."""
+    if arg1 == arg2:
+        return True
+    else:
+        return False
+
 def Cpp_Vorticity_BiotSegment(xP,x1,x2,Gamma,Uind):
     """@brief Wrapper for c_vorticity_biotsegment."""
     
@@ -82,7 +89,7 @@ def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
     """@details wrapper for cpp_solver_vlm."""
     
     "If memory for AIC and BIC is not allocated, allocate here."
-    if AIC == None or BIC == None:
+    if AIC == None and BIC == None:
         AIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,\
                         VMOPTS.M.value*VMOPTS.N.value), \
                         ct.c_double,'C')
@@ -109,6 +116,23 @@ def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
                    GammaStar.ctypes.data_as(ct.POINTER(ct.c_double)), \
                    AIC.ctypes.data_as(ct.POINTER(ct.c_double)), \
                    BIC.ctypes.data_as(ct.POINTER(ct.c_double)))
+
+def Colloc(zeta_G_panel):
+    """@brief Collocation from grid position.
+        
+    @param zeta_G_panel A (2,2,3) array of (i,j) panel corner points.
+    @return colloc panel collocation point.
+    """
+    
+    if zeta_G_panel.shape[0] > 2 or zeta_G_panel.shape[1] > 2:
+        raise TypeError("Extent of corner point array greater than 2x2(x3).")
+    elif zeta_G_panel.shape[0] < 2 or zeta_G_panel.shape[1] < 2:
+        raise TypeError("Extent of corner point array less than 2x2(x3).")
+    
+    return ( 0.25 * (zeta_G_panel[0,0,:] +
+                     zeta_G_panel[0,1,:] +
+                     zeta_G_panel[1,1,:] +
+                     zeta_G_panel[1,0,:]  ) )
     
 
 if __name__ == '__main__':
