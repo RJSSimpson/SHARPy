@@ -1,5 +1,5 @@
 '''
-Created on 24 Oct 2013
+Created on 21 Nov 2013
 
 @author: rjs10
 '''
@@ -34,14 +34,28 @@ Ad[:n,:n] = disSys.A.copy('C')
 Bd = np.zeros((n+nAux,m)) # MPC model input matrix.
 Bd[:n,:m] = disSys.B.copy('C')
 
+Cd = np.zeros((p+nAux,n+nAux)) # used for output weighting only.
+Cd[:p,:n] = disSys.C.copy('C')
+Cd[-nAux:-nAux] = np.eye(nAux) # keep input rates as outputs
+
+Dd = np.zeros((p+nAux,m)) # no feed-through, used for output weighting only.
+Dd[:p,:] = disSys.D.copy('C')
+
 if nAux > 0:
     Bd[n:,:] = np.eye(m)
     
-# Weighting matrices
-Q = 1.0*np.eye(Ad.shape[0])
-Q[n:,n:] = 1.0 #Auxiliary state for slew rates
+# Define desired output weighting
+Q_out = np.eye(p+nAux)
+#Q_out[0,0] = 0.0 # bending only
+Q_out[-nAux:,-nAux:] = np.zeros((nAux,nAux))
+R_out = np.eye(m)
+    
+# Weighting matrices based on input weighting
+Q = np.dot(Cd.T,np.dot(Q_out,Cd))
+R = np.dot(Dd.T,np.dot(Q_out,Dd)) + R_out
+Q = Q/np.linalg.norm(Q) # normalize to give scale as with state weights
+R = R/np.linalg.norm(R)
 P = 1.0*Q[:,:] # Terminal constraint
-R = 1.0*np.eye(Bd.shape[1])
 
 # Input constraints
 eui = 10.0*np.pi/180

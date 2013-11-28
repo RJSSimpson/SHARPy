@@ -9,6 +9,7 @@ import muaompc
 import numpy as np
 import os
 from scipy.io import loadmat
+from PyBeam.Utils.Misc import milliTimer as Timer
 
 class MPC:
     """@brief MPC functions."""
@@ -37,6 +38,9 @@ class MPC:
         self.nAux = mod.nAux
         self.matPath = mod.matPath
         
+        # Set up timer init is timed first, then subsequent u_opt solves.
+        self.contTime = 0.0
+        
         # Do LQR?
         self.LQR = LQR
         if self.LQR == True:
@@ -45,20 +49,26 @@ class MPC:
             self.e_lb = mod.e_lb[-self.nAux:] # mixed constraints corresponding
             self.e_ub = mod.e_ub[-self.nAux:] # to inputs rates.
             # get gain matrix
-            matDir = self.matPath.rsplit('/',1)
-            kPath = matDir[0] + "/Q140_FullSystem_GustInputs_L10_lqrCont_lqrKforPy"
-            Dict = loadmat(kPath,variable_names = ['K'])
-            K = np.zeros((self.mpcU,self.Ad.shape[0]))
-            K[:,:-self.nAux] = Dict['K'].copy('C')
-            self.K = K
+            with Timer() as t:
+                matDir = self.matPath.rsplit('/',1)
+                kPath = matDir[0] + "/Q140_FullSystem_GustInputs_L20_lqrOutCont_lqrKforPy"#"/Q140_FullSystem_GustInputs_L10_lqrCont_lqrKforPy"
+                Dict = loadmat(kPath,variable_names = ['K'])
+                K = np.zeros((self.mpcU,self.Ad.shape[0]))
+                K[:,:-self.nAux] = Dict['K'].copy('C')
+                self.K = K
+            
+            self.contTime = t.interval
             
             # data to saturate input rates
             self.u_sav = 0.0
             
         else:
-            # Generate MPC control law and files.
-            self.mpc = muaompc.ltidt.setup_mpc_problem(moduleName)
-            self.mpc.generate_c_files()
+            # Generate MPC control law and files
+            with Timer() as t:
+                self.mpc = muaompc.ltidt.setup_mpc_problem(moduleName)
+                self.mpc.generate_c_files()
+            
+            self.contTime = t.interval
         
             # Configure optimizer.
             self.ctl = self.mpc.ctl
@@ -89,12 +99,17 @@ class MPC:
             xRed[:xFull.shape[0]] = xFull.copy('C')
             
         if self.LQR == True:
-            u_opt = -np.dot(self.K,xRed)
+            with Timer() as t:
+                u_opt = -np.dot(self.K,xRed)
+            
+            # save time info
+            self.contTime = t.interval
+            
             # apply saturation
-#             if u_opt[0] < self.u_lb[0][0]:
-#                 u_opt[0] = self.u_lb[0][0]
-#             elif u_opt[0] > self.u_ub[0][0]:
-#                 u_opt[0] = self.u_ub[0][0]
+            if u_opt[0] < self.u_lb[0][0]:
+                u_opt[0] = self.u_lb[0][0]
+            elif u_opt[0] > self.u_ub[0][0]:
+                u_opt[0] = self.u_ub[0][0]
                 
             # apply rate saturation
 #             d_u_opt = u_opt - self.u_sav
@@ -117,7 +132,11 @@ class MPC:
     #                                                         (self.setPoint.flatten() - xDist)
                                                             
             # Solve optimization problem.
-            self.ctl.solve_problem(xRed)
+            with Timer() as t:
+                self.ctl.solve_problem(xRed)
+                
+            # save time info
+            self.contTime = t.interval
             
             # Predict expected output at next time step.
             self.x_opt_kp1 = np.dot(self.Ad,xRed) + np.dot(self.Bd,self.ctl.u_opt[:self.mpc.size.inputs].flatten())

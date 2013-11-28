@@ -51,7 +51,10 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
     @param VMINPUT UVLM solver inputs (for initialization in Python).
     @param VMUNST Unsteady input information for aero solver.
     @param AELAOPTS Options relevant to coupled aeroelastic simulations.
-    @param writeDict OrderedDict of 'name':tuple of outputs to write.
+    
+    kwords:
+    @param writeDict OrderedDict of of outputs to write.
+    @param mpcCont Instance of PyMPC.MPC class.
     """
         
     # Check correct solution code.
@@ -247,15 +250,15 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
                                    TimeStep = 0,
                                    NumTimeSteps = XBOPTS.NumLoadSteps.value,
                                    Time = 0.0,
-                                   Text = True)
+                                   Text = False)
     
     # Open output file for writing
     if 'writeDict' in kwords and Settings.WriteOut == True:
-        fp = OpenOutFile(writeDict, XBOPTS, Settings)
+        fp = OpenOutFile(kwords['writeDict'], XBOPTS, Settings)
         
     # Write initial outputs to file.
     if 'writeDict' in kwords and Settings.WriteOut == True:
-        WriteToOutFile(writeDict,
+        WriteToOutFile(kwords['writeDict'],
                        fp,
                        Time[0],
                        PosDefor,
@@ -263,7 +266,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
                        PosIni,
                        PsiIni,
                        XBELEM,
-                       ctrlSurf)
+                       ctrlSurf,
+                       kwords['mpcCont'].contTime)
     # END if write
 
     # Time loop.
@@ -335,14 +339,14 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
             
             if Settings.PlotTec==True:
                 PostProcess.WriteUVLMtoTec(FileObject,
-                                           Zeta,
-                                           ZetaStar,
+                                           Zeta - OriginA_G[:],
+                                           ZetaStar - OriginA_G[:],
                                            Gamma,
                                            GammaStar,
                                            TimeStep = iStep,
                                            NumTimeSteps = XBOPTS.NumLoadSteps.value,
                                            Time = Time[iStep],
-                                           Text = True)
+                                           Text = False)
 
             # map AeroForces to beam.
             CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
@@ -545,7 +549,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
                            PosIni,
                            PsiIni,
                            XBELEM,
-                           ctrlSurf)
+                           ctrlSurf,
+                           kwords['mpcCont'].contTime)
         # END if write.
         
         # 'Rollup' due to external velocities. TODO: Must add gusts here!
@@ -720,7 +725,7 @@ if __name__ == '__main__':
     
     # Gust inputs
     gust = Gust(uMag = 17.07,
-                l = 10.0,
+                l = 20.0,
                 r = 0.0)
     
     VMINPUT = DerivedTypesAero.VMinput(c = c,
@@ -749,10 +754,11 @@ if __name__ == '__main__':
     writeDict['kappa_z_root'] = 0
     writeDict['u_opt_1'] = 0
     writeDict['du_opt_1'] = 0
+    writeDict['contTime'] = 0
     
     Settings.OutputDir = Settings.SharPyProjectDir + "output/MPC/Goland/testMPC/"
-    Settings.OutputFileRoot = "Q140_M8N20_CS80_L10_Nmod8_wUnit_NH100_uFree"
+    Settings.OutputFileRoot = "Q140_M8N20_CS80_L20_Nmod8_wUnit_NH100_CAM"
     
     # Solve nonlinear dynamic simulation.
     Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, AELAOPTS,
-             writeDict =  writeDict,mpcCont = mpcCont)
+             writeDict =  writeDict, mpcCont = mpcCont)

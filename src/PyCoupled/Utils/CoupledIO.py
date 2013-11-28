@@ -39,7 +39,8 @@ def WriteToOutFile(writeDict,
                      PosIni,
                      PsiIni,
                      XBELEM,
-                     ctrlSurf):
+                     ctrlSurf = None,
+                     contTime = None):
     """@brief Write simulation outputs to file object.
     
     @param writeDict An ordered dict of outputs to write.
@@ -51,6 +52,7 @@ def WriteToOutFile(writeDict,
     @param PsiIni Initial element CRVs.
     @param XBELEM Element info derived type from PyBeam.
     @param ctrlSurf Control surface derived type.
+    @param contTime controller timing data.
     """
     
     fp.write("{:<14,e}".format(Time_iStep))
@@ -145,6 +147,10 @@ def WriteToOutFile(writeDict,
                 fp.write("{:<14,e}".format(ctrlSurf.betaDot))
             else:
                 raise IOError("du_opt output format not recognised")
+            
+        elif re.search(r'^contTime',myStr):
+            fp.write("{:<14,e}".format(contTime))
+            
         else:
             ErrorMsg = "writeDict key not recognised. (" + myStr + ")"
             raise IOError(ErrorMsg)

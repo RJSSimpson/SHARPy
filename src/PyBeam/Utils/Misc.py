@@ -10,10 +10,11 @@
 
 import time
 import math
+import datetime as dt
 
 
 class Timer:
-    """timer class to be used with 'with' statements to time
+    """@brief timer class to be used with 'with' statements to time
     function calls."""    
     def __enter__(self):
         self.start = time.clock()
@@ -22,6 +23,18 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.clock()
         self.interval = self.end - self.start
+
+class milliTimer:
+    """@brief microsecond precision timer class."""
+    def __enter__(self):
+        self.start = dt.datetime.now()
+        return self
+    
+    def __exit__(self, *args):
+        self.end = dt.datetime.now()
+        self.interval = (self.end - self.start).microseconds/1.0e6
+     
+     
         
 def isodd(num):
     """@brief returns True if Num is odd"""
@@ -66,8 +79,7 @@ if __name__ == '__main__':
         for i in range(500):
             for j in range(500):
                 print(math.sqrt(float(i*j)))
-    
-    
+        
     with Timer() as t:
         test()
     
