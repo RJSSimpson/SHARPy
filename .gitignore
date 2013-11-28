@@ -43,6 +43,7 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+.cproject
 
 # Ignore all .pdfs
 *.pdf
