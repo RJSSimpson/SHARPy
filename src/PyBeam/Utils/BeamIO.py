@@ -263,9 +263,9 @@ def Write_dyn_File(fp,Time,PosPsiTime):
     
     nr1 = np.size(PosPsiTime,0); nr2 = np.size(PosPsiTime,1)
 
-    fp.write('TITLE="Wing-tip dynamic response"\n')
-    fp.write('VARIABLES="T" "PX" "PY" "PZ" "RX" "RY" "RZ"\n')
-    fp.write('ZONE I=%d T="%s"\n' %(nr1,'dyn'))
+#     fp.write('TITLE="Wing-tip dynamic response"\n')
+#     fp.write('VARIABLES="T" "PX" "PY" "PZ" "RX" "RY" "RZ"\n')
+#     fp.write('ZONE I=%d T="%s"\n' %(nr1,'dyn'))
 
     for i1 in range(nr1):
         fp.write(' %12.5e ' %(Time[i1]))
@@ -303,11 +303,11 @@ def Write_shape_File(fp,TotNrSteps,TotNrNodes,Time,DynOut):
     """
     """
     
-    fp.write('TITLE="Deformed shape function of time"\n')
-    fp.write('VARIABLES="T" "PX" "PY" "PZ"\n')
+#     fp.write('TITLE="Deformed shape function of time"\n')
+#     fp.write('VARIABLES="T" "PX" "PY" "PZ"\n')
     
     for i1 in range(TotNrSteps):
-        fp.write('ZONE I=%d T="iStep: %d"\n' %(TotNrNodes,i1))
+#         fp.write('ZONE I=%d T="iStep: %d"\n' %(TotNrNodes,i1))
         for i2 in range(TotNrNodes):
             i3 = i1*TotNrNodes + i2
             fp.write(' %12.5e %12.5e %12.5e %12.5e\n' \
@@ -327,9 +327,9 @@ def Write_rigid_File(fp,Time,RefVel,RefVelDot):
     
     nr1 = np.size(RefVel,0); nr2 = np.size(RefVel,1)
     
-    fp.write('TITLE="Rigid body velocity/acceleration"\n')
-    fp.write('VARIABLES="T" "V1" "V2" "V3" "V4" "V5" "V6" "A1" "A2" "A3" "A4" "A5" "A6"\n')
-    fp.write('ZONE I=%d T=""\n' %(nr1))
+#     fp.write('TITLE="Rigid body velocity/acceleration"\n')
+#     fp.write('VARIABLES="T" "V1" "V2" "V3" "V4" "V5" "V6" "A1" "A2" "A3" "A4" "A5" "A6"\n')
+#     fp.write('ZONE I=%d T=""\n' %(nr1))
 
     for i1 in range(nr1):
         fp.write(' %12.5e ' %(Time[i1]))

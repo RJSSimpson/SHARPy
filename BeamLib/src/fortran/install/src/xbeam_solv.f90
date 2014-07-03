@@ -14,6 +14,8 @@
 !   -xbeam_solv_rigidlindyn:        Linear rigid-body dynamic solution
 !   -xbeam_solv_rigidnlindyn:       Nonlinear rigid-body dynamic solution
 !
+!-> Modifications.-
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module xbeam_solv
  use xbeam_shared
@@ -48,7 +50,7 @@ module xbeam_solv
   use lib_sparse
   use lib_out
   use lib_xbeam
-  use interface_lapack
+  use lib_lu
   use cbeam3_asbly
   use cbeam3_solv
   use xbeam_asbly
@@ -231,7 +233,7 @@ module xbeam_solv
   Qtotal(NumDof+1:NumDof+6) = Qrigid
   Qtotal(NumDof+7:NumDof+10)=-matmul(CQQ,DQDt(NumDof+7:NumDof+10))
 
-  call lapack_sparse (mtot,Mtotal,Qtotal,DQDDt)
+  call lu_sparse(mtot,Mtotal,Qtotal,DQDDt)
 
 ! Loop in the time steps. 
   do iStep=1,size(Time)-1
@@ -288,7 +290,8 @@ module xbeam_solv
     call sparse_addsparse(0,0,ktot,Ktotal,as,Asys,Factor=beta*dt*dt)
 
 ! Solve equation.
-    call lapack_sparse (as,Asys,Qtotal,DQDDt)
+    call lu_sparse(as,Asys,Qtotal,DQDDt)
+
     DQ    = DQ   + beta *dt*dt*DQDDt
     DQDt  = DQDt + gamma*dt   *DQDDt
 
@@ -355,7 +358,7 @@ module xbeam_solv
   use lib_out
   use lib_sparse
   use lib_xbeam
-  use interface_lapack
+  use lib_lu
   use cbeam3_asbly
   use cbeam3_solv
   use xbeam_asbly
@@ -543,7 +546,7 @@ module xbeam_solv
   call sparse_addmat    (NumDof+6,NumDof+6,Unit4,mtot,Mtotal)
 
 ! Solve matrix system
-!  call lapack_sparse (mtot,Mtotal,-Qtotal,dQddt)
+  call lu_sparse(mtot,Mtotal,-Qtotal,dQddt)
 
 ! Loop in the time steps.
   do iStep=1,size(Time)-1
@@ -644,7 +647,7 @@ module xbeam_solv
       call sparse_addsparse(0,0,mtot,Mtotal,as,Asys,Factor=1.d0/(beta*dt*dt))
 
 ! Calculation of the correction.
-      call lapack_sparse (as,Asys,-Qtotal,DQ)
+      call lu_sparse(as,Asys,-Qtotal,DQ)
 
       Q     = Q     + DQ
       dQdt  = dQdt  + gamma/(beta*dt)*DQ
@@ -709,7 +712,7 @@ module xbeam_solv
   use lib_sparse
   use lib_out
   use lib_xbeam
-  use interface_lapack
+  use lib_lu
   use cbeam3_asbly
   use cbeam3_solv
   use xbeam_asbly
@@ -835,7 +838,7 @@ module xbeam_solv
   call sparse_addmat (0,0,MRR,mtot,Mtotal)
   call sparse_addmat (6,6,Unit4,mtot,Mtotal)
 
-  call lapack_sparse (mtot,Mtotal,Qtotal,DQDDt)
+  call lu_sparse(mtot,Mtotal,Qtotal,DQDDt)
 
 ! Loop in the time steps.
   do iStep=1,size(Time)-1
@@ -876,7 +879,8 @@ module xbeam_solv
     call sparse_addsparse(0,0,ctot,Ctotal,as,Asys,Factor=gamma*dt)
 
 ! Solve equation.
-    call lapack_sparse (as,Asys,Qtotal,DQDDt)
+    call lu_sparse(as,Asys,Qtotal,DQDDt)
+
     DQ    = DQ   + beta *dt*dt*DQDDt
     DQDt  = DQDt + gamma*dt   *DQDDt
 
@@ -926,7 +930,7 @@ module xbeam_solv
   use lib_out
   use lib_sparse
   use lib_xbeam
-  use interface_lapack
+  use lib_lu
   use cbeam3_asbly
   use cbeam3_solv
   use xbeam_asbly
@@ -1058,7 +1062,7 @@ module xbeam_solv
   call sparse_addmat (0,0,MRR,mtot,Mtotal)
   call sparse_addmat (6,6,Unit4,mtot,Mtotal)
 
-  call lapack_sparse (mtot,Mtotal,-Qtotal,dQddt)
+  call lu_sparse(mtot,Mtotal,-Qtotal,dQddt)
 
 ! Loop in the time steps.
   do iStep=1,size(Time)-1
@@ -1125,7 +1129,7 @@ module xbeam_solv
       call sparse_addsparse(0,0,mtot,Mtotal,as,Asys,Factor=1.d0/(beta*dt*dt))
 
 ! Calculation of the correction.
-      call lapack_sparse (as,Asys,-Qtotal,DQ)
+      call lu_sparse(as,Asys,-Qtotal,DQ)
 
       Q     = Q     + DQ
       dQdt  = dQdt  + gamma/(beta*dt)*DQ

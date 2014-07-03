@@ -46,7 +46,6 @@
 !  3) Update 20.04.2011: Added subroutines for lumped mass contributions.
 !
 !-> Modifications.-
-! 20120317 A.Da Ronch Conditional Compilation added (NOLAPACK)
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module lib_cbeam3
@@ -136,11 +135,6 @@ module lib_cbeam3
       Ri_g(i) = dot_product (ShapeFun(1:NumNodesElem),Ri(1:NumNodesElem,i))
       dRi_g(i)= dot_product (ShapeDer(1:NumNodesElem),Ri(1:NumNodesElem,i))
     end do
-
-! Interpolation of finite rotation
-!    Ri_g(4:6) = rotvect_mat2psi (0.5d0*(rotvect_psi2mat  (Ri(1,4:6))+rotvect_psi2mat  (Ri(2,4:6))))
-!    CBa = matmul(cbeam3_sqrtM(matmul(rotvect_psi2mat(Ri(2,4:6)),transpose(rotvect_psi2mat(Ri(1,4:6))))),rotvect_psi2mat(Ri(1,4:6)))
-!    Ri_g(4:6) = rotvect_mat2psi(CBa)
 
 ! Compute element shape function.
     N =0.d0
@@ -403,11 +397,6 @@ module lib_cbeam3
       Ri_g(i) = dot_product (ShapeFun(1:NumNodesElem),Ri(1:NumNodesElem,i))
       dRi_g(i)= dot_product (ShapeDer(1:NumNodesElem),Ri(1:NumNodesElem,i))
     end do
-
-! Interpolation of finite rotation
-!    R=cbeam3_sqrtM(matmul(rotvect_psi2mat(Ri(2,4:6)),transpose(rotvect_psi2mat(Ri(1,4:6)))))
-!    CBa = matmul(R,rotvect_psi2mat(Ri(1,4:6)))
-!    Ri_g(4:6) = rotvect_mat2psi(CBa)
 
 ! Compute element shape function.
     N =0.d0
@@ -1566,9 +1555,9 @@ module lib_cbeam3
 
     DTYpN=matmul(matmul(transpose(D),Yp),N)
 
+    dVdotdvrel=0.d0
     dVdotdvrel(1:3,1:3)= CBa
     dVdotdvrel(1:3,4:6)=-matmul(CBa,rot_skew(Ri_g(1:3)))
-    dVdotdvrel(4:6,1:3)= 0.d0
     dVdotdvrel(4:6,4:6)= CBa
 
 ! Compute mass tangent stiffness.
@@ -1638,6 +1627,7 @@ module lib_cbeam3
 
     DTYpN=matmul(matmul(transpose(D),Yp),N)
 
+    dVdotdvrel=0.d0
     dVdotdvrel(1:3,1:3)= CBa
     dVdotdvrel(1:3,4:6)=-matmul(CBa,rot_skew(Ri(iNode,1:3)))
     dVdotdvrel(4:6,4:6)= CBa
@@ -1934,20 +1924,17 @@ module lib_cbeam3
 
 !--> Case of follower forces.
   if (FollowerForceRig) then
-
     if (FollowerForce) then
-
-! Loop in the element nodes.
+     ! Loop in the element nodes.
      do iNode=1,NumNodesElem
-
       if (Flags(iNode)) then
-! Compute shape function at the current node.
+        ! Compute shape function at the current node.
         N =0.d0
         do i=1,6
           N (i,i+(iNode-1)*6)= 1.d0
         end do
 
-! Operators to project the forces on the dofs.
+        ! Operators to project the forces on the dofs.
         D=0.d0
         D(1:3,1:3)=transpose(rotvect_psi2mat(Ri(iNode,4:6)))
         D(4:6,4:6)=Unit
@@ -1956,10 +1943,9 @@ module lib_cbeam3
         Yp(1:3,1:3)=Unit
         Yp(4:6,4:6)=rotvect_psi2rot(Ri(iNode,4:6))
 
-! Compute influence coefficients for follower forces.
+        ! Compute influence coefficients for follower forces.
         Fmat(:,6*(iNode-1)+1:6*iNode)= Fmat(:,6*(iNode-1)+1:6*iNode) &
  &                                   + matmul(transpose(matmul(Yp,N)),D)
-
       end if
      end do
 
@@ -1967,9 +1953,18 @@ module lib_cbeam3
     else
      do iNode=1,NumNodesElem
       if (Flags(iNode)) then
+        ! Compute shape function at the current node.
+        N =0.d0
         do i=1,6
-         Fmat(6*(iNode-1)+i,6*(iNode-1)+i)=1.d0
+          N (i,i+(iNode-1)*6)= 1.d0
         end do
+
+        Yp=0.d0
+        Yp(1:3,1:3)=Unit
+        Yp(4:6,4:6)=rotvect_psi2rot(Ri(iNode,4:6))
+
+        ! Compute influence coefficients for follower forces.
+        Fmat(:,6*(iNode-1)+1:6*iNode)= Fmat(:,6*(iNode-1)+1:6*iNode) + transpose(matmul(transpose(Yp),N))
       end if
     end do
   end if
@@ -1991,8 +1986,12 @@ module lib_cbeam3
         D(1:3,1:3)=Cao
         D(4:6,4:6)=Cao
 
-! Compute influence coefficients for follower forces.
-        Fmat(:,6*(iNode-1)+1:6*iNode)= Fmat(:,6*(iNode-1)+1:6*iNode) + matmul(transpose(N),D)
+        Yp=0.d0
+        Yp(1:3,1:3)=Unit
+        Yp(4:6,4:6)=rotvect_psi2rot(Ri(iNode,4:6))
+
+        ! Compute influence coefficients for follower forces.
+        Fmat(:,6*(iNode-1)+1:6*iNode)= Fmat(:,6*(iNode-1)+1:6*iNode) + matmul(transpose(matmul(transpose(Yp),N)),D)
 
       end if
      end do
@@ -2077,11 +2076,7 @@ module lib_cbeam3
  subroutine cbeam3_slave2master (NNE,TreeConn,Psi02_0,AllPsi_0,Psi02_t, &
 &                                AllPsi_t,S21)
   use lib_rotvect
-#ifdef NOLAPACK
   use lib_lu
-#else
-  use interface_lapack
-#endif
 
 ! I/O Variables.
   integer,intent(in) :: NNE                ! Number of nodes in the element.
@@ -2104,6 +2099,9 @@ module lib_cbeam3
   real(8) :: invT02(3,3)! Inverse of T02.
   real(8) :: S21n(3,3)  ! Transformation matrix master-to-slave for the current node.
 
+! Initialise
+  S21(:,:)=0.d0
+
 ! Loop in the elements nodes.
   i1=0
   do iNode=1,NNE
@@ -2123,18 +2121,10 @@ module lib_cbeam3
         T02= rotvect_psi2rot(Psi02_t(iNode,:))
         T01= rotvect_psi2rot(Psi01)
 
-#ifdef NOLAPACK
-        call lu_invers(T02,invT02); Info=0
-#else
-        call lapack_inv (3,T02,invT02,Info)
-#endif
+        call lu_invers(T02,invT02); Info=0        
         if (Info.ne.0) STOP 'Error: Could not compute the inverse of the tangent operator (77921)'
 
         S21n= matmul(invT02,matmul(transpose(C_12),T01))
-
-! Compute stiffness.
-!        Knode= rotvect_a2(Psi01,matmul(C_12,matmul(transpose(invT02),Qelem(i1+4:i1+6)))) &
-!&            - matmul(transpose(S21n),matmul(rotvect_a2(Psi02_t,matmul(transpose(invT02),Qelem(i1+4:i1+6))),S21n))
       end if
     end if
 
@@ -2162,11 +2152,7 @@ module lib_cbeam3
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  subroutine cbeam3_projs2m (NumNodesElem,TreeConn,Psi02,AllPsi,Telem)
   use lib_rotvect
-#ifdef NOLAPACK
   use lib_lu
-#else
-  use interface_lapack
-#endif
 
 ! I/O Variables.
   integer,intent(in) :: NumNodesElem       ! Number of nodes in the element.
@@ -2201,11 +2187,7 @@ module lib_cbeam3
       T02= rotvect_psi2rot(Psi02(iNode,:))
       T01= rotvect_psi2rot(Psi01)
 
-#ifdef NOLAPACK
-      call lu_invers(T02,invT02); Info=0
-#else
-      call lapack_inv (3,T02,invT02,Info)
-#endif
+      call lu_invers(T02,invT02); Info=0      
       if (Info.ne.0) STOP 'Error: Could not compute the inverse of the tangent operator (7921)'
 
       Tnode=matmul(invT02,matmul(transpose(C_12),T01))
@@ -2323,11 +2305,7 @@ module lib_cbeam3
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  subroutine cbeam3_glob2loc (NumNodesElem,Psi_ga,Psi_aB,Sga)
-#ifdef NOLAPACK
   use lib_lu
-#else
-  use interface_lapack
-#endif
   use lib_rotvect
 
 ! I/O Variables.
@@ -2356,11 +2334,7 @@ module lib_cbeam3
     TgB= rotvect_psi2rot(rotvect_addpsi(Psi_ga,Psi_aB(i,:)))
     TaB= rotvect_psi2rot(Psi_aB(i,:))
 
-#ifdef NOLAPACK
     call lu_invers(TaB,invTaB); Info=0
-#else
-    call lapack_inv (3,TaB,invTaB,Info)
-#endif
     if (Info.ne.0) STOP 'Error: Could not compute the inverse of the tangent operator (7921)'
 
     Sga(i1+1:i1+3,i1+1:i1+3)= transpose(matmul(invTaB,TgB))

@@ -54,6 +54,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         x       = np.zeros(NumDof.value, ct.c_double, 'F')
         dxdt    = np.zeros(NumDof.value, ct.c_double, 'F')
         # Beam Load Step tensors
+        Force = np.zeros((XBINPUT.NumNodesTot,6),ct.c_double,'F')
         iForceStep     = np.zeros((NumNodes_tot.value,6), ct.c_double, 'F')
         iForceStep_Dof = np.zeros(NumDof.value, ct.c_double, 'F')
         
@@ -82,13 +83,16 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                                                     Variables)
         
         # Start Load Loop.
-        for iLoadStep in range(XBOPTS.NumLoadSteps.value):
+#         for iLoadStep in range(XBOPTS.NumLoadSteps.value):
+        for iLoadStep in range(XBOPTS.MaxIterations.value):
             # Reset convergence parameters and loads.
             Iter = 0
             ResLog10 = 0.0
-            XBINPUT.ForceStatic[:,:] = 0.0
+            Force[:,:] = 0.0
             AeroForces[:,:,:] = 0.0
-            
+            oldPos = PosDefor.copy(order='F')
+            oldPsi = PsiDefor.copy(order='F')    
+                    
             # Calculate aero loads.
             if hasattr(XBINPUT, 'ForcedVel'):
                 CoincidentGrid(PosDefor,
@@ -132,15 +136,19 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
             
             # Map AeroForces to beam.
             CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
-                                XBINPUT.ForceStatic)
+                                Force)
             
             # Add gravity loads.
-            AddGravityLoads(XBINPUT.ForceStatic,XBINPUT,XBELEM,AELAOPTS,
+            AddGravityLoads(Force,XBINPUT,XBELEM,AELAOPTS,
                             PsiDefor,VMINPUT.c)
             
             # Apply factor corresponding to force step.
-            iForceStep = XBINPUT.ForceStatic*float( (iLoadStep+1) ) / \
-                                                XBOPTS.NumLoadSteps.value
+            if iLoadStep < XBOPTS.NumLoadSteps.value:
+                iForceStep = (Force + XBINPUT.ForceStatic)*float( (iLoadStep+1) ) / \
+                                                    XBOPTS.NumLoadSteps.value
+            else:
+                # continue at full loading until equilibrium 
+                iForceStep = Force + XBINPUT.ForceStatic
             
             if XBOPTS.PrintInfo.value == True:
                 sys.stdout.write('  iLoad: %-10d\n' %(iLoadStep+1))
@@ -238,16 +246,23 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                 
                 if XBOPTS.PrintInfo.value == True:
                     sys.stdout.write('%8.4f\n' %(ResLog10))
-                    
-                # Stop the solution.
+                
+                # Stop the solution.                
                 if(ResLog10 > 10.):
                     sys.stderr.write(' STOP\n')
                     sys.stderr.write(' The max residual is %e\n' %(ResLog10))
                     exit(1)
                 elif Res_DeltaX < 1.e-14:
                     break
-                
             # END Newton iteration
+            
+            # After incremental loading continue until equilibrium reached
+            if iLoadStep >= XBOPTS.NumLoadSteps.value:
+                Pos_error = PosDefor - oldPos
+                Psi_error = PsiDefor - oldPsi
+                if( (np.linalg.norm(Pos_error)<=XBOPTS.MinDelta) & \
+                    (np.linalg.norm(Psi_error)<=XBOPTS.MinDelta) ):
+                    break
         # END Load step loop
     
     
@@ -357,7 +372,7 @@ if __name__ == '__main__':
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
                                  MaxIterations = ct.c_int(50),
                                  PrintInfo = ct.c_bool(True),
-                                 NumLoadSteps = ct.c_int(25),
+                                 NumLoadSteps = ct.c_int(5),
                                  Solution = ct.c_int(112),
                                  MinDelta = ct.c_double(1e-4))
     # beam inputs.
@@ -407,7 +422,7 @@ if __name__ == '__main__':
     jMin = N - N/4
     jMax = N
     typeMotion = 'sin'
-    betaBar = 1.0*np.pi/180.0
+    betaBar = 0.0*np.pi/180.0
     omega = 30.0
     ctrlSurf = ControlSurf(iMin,
                            iMax,
@@ -420,7 +435,7 @@ if __name__ == '__main__':
     VMINPUT = DerivedTypesAero.VMinput(c = c,
                                        b = XBINPUT.BeamLength,
                                        U_mag = Umag,
-                                       alpha = 0.0*np.pi/180.0,
+                                       alpha = 5.0*np.pi/180.0,
                                        theta = 0.0,
                                        WakeLength = WakeLength,
                                        ctrlSurf = ctrlSurf)

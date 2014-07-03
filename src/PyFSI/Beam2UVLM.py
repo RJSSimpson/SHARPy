@@ -62,7 +62,7 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
             # the B-frame.
             Omega_B_B = (np.dot(Tangential(PsiDefor[iElem,iiElem,:]),
                                 PsiDotDef[iElem,iiElem,:])
-                         + np.dot(CaB.T, OmegaA_A))
+                         + np.dot(CaB.T, OmegaA_A)) #Warning: this line might be an error? The velocity due to a-frame rotation is included seperately?
                         
             # Calculate inertial velocity at grid points (projected in A-frame).                             
             AeroVels[jSection,iNode,:] = (VelA_A
@@ -108,7 +108,11 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
                 # of the hinge, with reference frame Bnew. Hence, 
                 # CBBnew * ( Omega_Bnew_Bnew X Point__Bnew), which is the
                 # velocity at a point on the flap due to the rotation
-                # of the hinge projected in the B-frame. is added. 
+                # of the hinge projected in the B-frame. is added.
+                # Note: Skew(hingeRotDot) is an acceptable definition of the
+                # angular rate as it corresponds to planar motion within the
+                # section.
+                # Warning: should omega_Bnew_Bnew be calculated by summing all the angular velocities of the parent frames too?
                 AeroVels[jSection,iNode,:] = (VelA_A
                         + np.dot(Skew(OmegaA_A),PosDefor[iNode,:])
                         + PosDotDef[iNode,:]

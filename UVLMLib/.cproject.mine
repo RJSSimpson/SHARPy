@@ -32,9 +32,9 @@
 								<option id="gnu.cpp.compiler.so.debug.option.optimization.level.576461098" name="Optimization Level" superClass="gnu.cpp.compiler.so.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.so.debug.option.debugging.level.1661214483" name="Debug Level" superClass="gnu.cpp.compiler.so.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.435369449" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/rjs10/Downloads/Eigen"/>
-									<listOptionValue builtIn="false" value="/home/rjs10/Downloads/boost_1_50_0"/>
-									<listOptionValue builtIn="false" value="/home/rjs10/SharPyProject/UVLMLib/include"/>
+									<listOptionValue builtIn="false" value="/usr/local/include/eigen3/Eigen"/>
+									<listOptionValue builtIn="false" value="/home/henrik/Work/SHARPy/UVLMLib/include"/>
+									<listOptionValue builtIn="false" value="/home/henrik/Work/Libraries/Libs4SHARPy/"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.other.pic.1427609692" name="Position Independent Code (-fPIC)" superClass="gnu.cpp.compiler.option.other.pic" value="true" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.other.other.802296393" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
@@ -50,7 +50,7 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.so.debug.845313447" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.so.debug">
 								<option defaultValue="true" id="gnu.cpp.link.so.debug.option.shared.36853938" name="Shared (-shared)" superClass="gnu.cpp.link.so.debug.option.shared" value="true" valueType="boolean"/>
-								<option id="gnu.cpp.link.option.flags.1081708851" superClass="gnu.cpp.link.option.flags" value="-fopenmp" valueType="string"/>
+								<option id="gnu.cpp.link.option.flags.1081708851" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="-fopenmp" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.326053579" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>

@@ -102,9 +102,9 @@ module xbeam_fdiff
 !    call xbeam_CRR  (NumNE,rElem0,rElem,rElemDot,Vrel,ElemMass,DERIV,NumGauss)
 !    call fdiff_CRR  (NumNE,rElem0,rElem,rElemDot,Vrel,ElemMass,FDIFF,NumGauss)
 
-    open (unit=12,file='finite.txt',ACCESS='append')
-     write (12,'(1P18E12.3)') transpose(DERIV-FDIFF)/(maxval(abs(DERIV))-1)
-    close (12)
+!    open (unit=12,file='finite.txt',ACCESS='append')
+!     write (12,'(1P18E12.3)') transpose(DERIV-FDIFF)/(maxval(abs(DERIV))-1)
+!    close (12)
 
   return
  end subroutine fdiff_check

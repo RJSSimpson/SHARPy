@@ -14,23 +14,22 @@ import numpy as np
 import ctypes as ct
 import BeamIO
 import BeamLib
-# import Input
 
-def Static(XBINPUT,XBOPTS,moduleName = None):
+def Static(XBINPUT,XBOPTS, moduleName = None):
     """@brief Initialise everything needed for Static beam simulation."""
-    
+
     # Declare variables that are not dependent on NumNodes_tot.
     XBELEM      = DerivedTypes.Xbelem(XBINPUT.NumElems,Settings.MaxElNod)
     NumDof      = ct.c_int()
     PsiIni      = np.zeros((XBINPUT.NumElems,Settings.MaxElNod,3),
                            dtype=ct.c_double, order='F')
-    
-    # Check if custom Input module has been specified and import
+        
+    # Load customised inputs
     if moduleName != None:
         Input = __import__(moduleName)
     else:
         Input = __import__('Input')
-    
+        
     # Check inputs.
     XBINPUT, XBOPTS = Input.Setup(XBINPUT, XBOPTS)
         
@@ -113,17 +112,37 @@ def Static(XBINPUT,XBOPTS,moduleName = None):
             XBNODE, NumDof
             
 
-def Dynamic(XBINPUT,XBOPTS):
-    """@brief Initialise everything for dynamic analysis."""
+def Dynamic(XBINPUT,XBOPTS, moduleName = None):
+    """@brief Initialise everything for dynamic analysis.
     
-    "Create time vector"
+    @param moduleName Full path to module containing custom PyBeam setup
+            scripts. E.g "/home/rjs10/git/SHARPy/output/DancingFrame/PyBeamInput
+            "
+            """
+    
+    
+    # Load customised inputs
+    if moduleName != None:
+        Input = __import__(moduleName)
+        #Set up dynamic testcase.
+        try: 
+            XBINPUT, XBOPTS = Input.DynSetup(XBINPUT, XBOPTS)
+        except AttributeError: 
+            Input = __import__('Input')
+        else:
+            raise
+    else:
+        Input = __import__('Input')
+    
+    
+    #Create time vector.
     Time = np.arange(XBINPUT.t0,XBINPUT.tfin  + XBINPUT.dt, XBINPUT.dt,
                      ct.c_double)
     
-    "Calculate number of timesteps"
+    #Calculate number of timesteps.
     NumSteps = ct.c_int(len(Time) - 1)
     
-    "Create force-amp-in-time array"
+    #Create force-amp-in-time array.
     ForceTime = np.zeros(NumSteps.value+1,ct.c_double,'F')
     if XBINPUT.ForcingType == 'Const':
         ForceTime[:] = 1.0
@@ -156,12 +175,12 @@ def Dynamic(XBINPUT,XBOPTS):
         assert Time.__contains__(XBINPUT.RampTime),('RampTime is not equal to '+
                                                     'element in Time array')
         
-        "Define sinusoid"
+        #Define sinusoid.
         SinVect = np.zeros_like(ForceTime, ct.c_double, 'F')
         for i in np.arange(len(Time)):
             SinVect[i] = np.sin(XBINPUT.Omega * Time[i])
             
-        "Define ramp"
+        #Define ramp.
         RampVect = np.zeros_like(ForceTime, ct.c_double, 'F')
         RampVect[:] = 1.0
         Gradient = 1.0/(XBINPUT.RampTime - XBINPUT.t0)
@@ -172,7 +191,7 @@ def Dynamic(XBINPUT,XBOPTS):
             i += 1
             t += XBINPUT.dt
             
-        "Combine"
+        #Combine.
         for i in np.arange(len(ForceTime)):
             ForceTime[i] = RampVect[i] * SinVect[i]
             
@@ -180,11 +199,6 @@ def Dynamic(XBINPUT,XBOPTS):
         ForceTime[0] = 1.0
         
     elif  XBINPUT.ForcingType == '1-cos':
-        """do i=1,NumSteps+1
-             if ((Time(i).ge.0.d0).and.(Time(i).le.1.d-2)) then
-             ForceTime(i)=(1.d0-cos(Pi*dble(Time(i)-0.d0)/dble(1.d-2)))/2.d0
-             end if
-           end do"""
         GustTime = 0.01
         for iStep in range(len(ForceTime)):
             if (Time[iStep] > 0.0 and Time[iStep] < GustTime):
@@ -193,17 +207,17 @@ def Dynamic(XBINPUT,XBOPTS):
         #END iStep
             
     else:
-        assert False, 'ForcingType not recognised'
+        raise ValueError('ForcingType not recognised')
         
     
     # Create default forced velocities and accelerations if not specified.
     if hasattr(XBINPUT, 'ForcedVel'):
-        assert XBINPUT.ForcedVel.shape[0] == NumSteps.value+1    +2
+        assert XBINPUT.ForcedVel.shape[0] == NumSteps.value+1
         ForcedVel = XBINPUT.ForcedVel.copy('F')
         ForcedVelDot = XBINPUT.ForcedVelDot.copy('F')
     else:
-        ForcedVel = np.zeros((NumSteps.value+1  +2,6),ct.c_double,'F')
-        ForcedVelDot = np.zeros((NumSteps.value+1  +2,6),ct.c_double,'F')
+        ForcedVel = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
+        ForcedVelDot = np.zeros((NumSteps.value+1,6),ct.c_double,'F')
 
     # Rates of Dof Arrays.
     PosDotDef  = np.zeros((XBINPUT.NumNodesTot,3),ct.c_double,'F')

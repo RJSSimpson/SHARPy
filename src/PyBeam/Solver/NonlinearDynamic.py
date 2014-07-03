@@ -18,6 +18,7 @@ import numpy as np
 import ctypes as ct
 import XbeamLib
 from DerivedTypes import dump
+from PyBeam.Solver.NonlinearStatic import Solve_Py as Solve_Py_Static
 
 def Solve_F90(XBINPUT,XBOPTS):
     """@brief Nonlinear dynamic structural solver using f90 solve routine."""
@@ -248,7 +249,7 @@ def Solve_F90_steps(XBINPUT,XBOPTS):
     fp.close()
     
 
-def Solve_Py(XBINPUT,XBOPTS):
+def Solve_Py(XBINPUT,XBOPTS, moduleName = None):
     """Nonlinear dynamic structural solver in Python. Assembly of matrices 
     is carried out with Fortran subroutines."""
     
@@ -258,19 +259,12 @@ def Solve_Py(XBINPUT,XBOPTS):
     
     "Initialise beam"
     XBINPUT, XBOPTS, NumNodes_tot, XBELEM, PosIni, PsiIni, XBNODE, NumDof \
-                = BeamInit.Static(XBINPUT,XBOPTS)
+                = BeamInit.Static(XBINPUT,XBOPTS, moduleName)
     
-    
-    "Set initial conditions as undef config"
-    PosDefor = PosIni.copy(order='F')
-    PsiDefor = PsiIni.copy(order='F')
-    
-    
-    "Solve static"
-    BeamLib.Cbeam3_Solv_NonlinearStatic(XBINPUT, XBOPTS, NumNodes_tot, XBELEM,\
-                            PosIni, PsiIni, XBNODE, NumDof,\
-                            PosDefor, PsiDefor)
-    
+    # Solve static solution
+    XBOPTS.Solution.value = 112 
+    PosDefor, PsiDefor = Solve_Py_Static(XBINPUT,XBOPTS, moduleName)
+    XBOPTS.Solution.value = 312 
     
     "Write deformed configuration to file"
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL312_def.dat'
@@ -292,7 +286,10 @@ def Solve_Py(XBINPUT,XBOPTS):
     Time, NumSteps, ForceTime, ForcedVel, ForcedVelDot,\
     PosDotDef, PsiDotDef,\
     OutGrids, PosPsiTime, VelocTime, DynOut\
-        = BeamInit.Dynamic(XBINPUT,XBOPTS)
+        = BeamInit.Dynamic(XBINPUT,XBOPTS, moduleName)
+        
+    # Delete unused vars
+    del OutGrids, VelocTime
     
     
     "Write _force file"
@@ -329,7 +326,6 @@ def Solve_Py(XBINPUT,XBOPTS):
     Mvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     Cvel = np.zeros((NumDof.value,6), ct.c_double, 'F')
     
-    X0    = np.zeros(NumDof.value, ct.c_double, 'F')
     X     = np.zeros(NumDof.value, ct.c_double, 'F')
     DX    = np.zeros(NumDof.value, ct.c_double, 'F')
     dXdt  = np.zeros(NumDof.value, ct.c_double, 'F')
@@ -397,6 +393,17 @@ def Solve_Py(XBINPUT,XBOPTS):
     Qglobal += -np.dot(FglobalFull, Force_Dof)
     
     
+    #Separate assembly of follower and dead loads"   
+    tmpForceTime=ForceTime[0].copy('F')  
+    Qforces = XbeamLib.LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
+                                    PosIni, PsiIni, PosDefor, PsiDefor, \
+                                    (XBINPUT.ForceStatic_foll + XBINPUT.ForceDyn_foll*tmpForceTime), \
+                                    (XBINPUT.ForceStatic_dead + XBINPUT.ForceDyn_dead*tmpForceTime), \
+                                    Cao, 1)[0]
+                         
+    Qglobal -= Qforces
+            
+                 
     "Initial Accel"
     dXddt[:] = np.dot(np.linalg.inv(MglobalFull), -Qglobal)
     
@@ -411,7 +418,7 @@ def Solve_Py(XBINPUT,XBOPTS):
     
     "Get gamma and beta for Newmark scheme"
     gamma = 0.5 + XBOPTS.NewmarkDamp.value
-    beta = 0.25*(gamma + 0.5)**2
+    beta = 0.25*np.power((gamma + 0.5),2.0)
     
     
     "Time loop"
@@ -446,11 +453,11 @@ def Solve_Py(XBINPUT,XBOPTS):
     
         "Reset convergence parameters"
         Iter = 0
-        ResLog10 = 0.0
+        ResLog10 = 1.0
         
         
         "Newton-Raphson loop"        
-        while ( (ResLog10 > np.log10(XBOPTS.MinDelta.value)) \
+        while ( (ResLog10 > XBOPTS.MinDelta.value) \
                 & (Iter < XBOPTS.MaxIterations.value) ):
             
             "set tensors to zero"
@@ -503,7 +510,17 @@ def Solve_Py(XBINPUT,XBOPTS):
                      - np.dot(FglobalFull, Force_Dof)
                               
             
-             
+            #Separate assembly of follower and dead loads  
+            tmpForceTime=ForceTime[iStep+1].copy('F') 
+            Qforces = XbeamLib.LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
+                                            PosIni, PsiIni, PosDefor, PsiDefor, \
+                                            (XBINPUT.ForceStatic_foll + XBINPUT.ForceDyn_foll*tmpForceTime), \
+                                            (XBINPUT.ForceStatic_dead + XBINPUT.ForceDyn_dead*tmpForceTime), \
+                                            Cao,1)[0]
+                           
+            Qglobal -= Qforces
+            
+            
             if XBOPTS.PrintInfo.value==True:                 
                 sys.stdout.write('%-10.4e ' %(max(abs(Qglobal))))
             
@@ -511,7 +528,7 @@ def Solve_Py(XBINPUT,XBOPTS):
             "Calculate system matrix for update calculation"
             Asys = KglobalFull + \
                       CglobalFull*gamma/(beta*dt) + \
-                      MglobalFull/(beta*dt**2)
+                      MglobalFull/(beta*np.power(dt,2.0))
                       
             
             "Solve for update"
@@ -522,19 +539,19 @@ def Solve_Py(XBINPUT,XBOPTS):
             X += DX
             dXdt += DX*gamma/(beta*dt)
             dXddt += DX/(beta*dt**2)
-            
-            
+
+
             "Residual at first iteration"
             if(Iter == 1):
-                Res0_Qglobal = max(abs(Qglobal)) + 1.e-16
-                Res0_DeltaX  = max(abs(DX)) + 1.e-16
+                Res0_Qglobal = max(max(abs(Qglobal)),1)
+                Res0_DeltaX  = max(max(abs(DX)),1)
             
             "Update residual and compute log10"
-            Res_Qglobal = max(abs(Qglobal)) + 1.e-16
-            Res_DeltaX  = max(abs(DX)) + 1.e-16
+            Res_Qglobal = max(abs(Qglobal))
+            Res_DeltaX  = max(abs(DX))
             
-            ResLog10 = max([np.log10(Res_Qglobal/Res0_Qglobal),\
-                            np.log10(Res_DeltaX/Res0_DeltaX)])
+            ResLog10 = max(Res_Qglobal/Res0_Qglobal,Res_DeltaX/Res0_DeltaX)
+            
             
             if XBOPTS.PrintInfo.value==True:
                 sys.stdout.write('%-10.4e %8.4f\n' %(max(abs(DX)),ResLog10))
@@ -544,11 +561,11 @@ def Solve_Py(XBINPUT,XBOPTS):
         
         "update to converged nodal displacements and velocities"
         BeamLib.Cbeam3_Solv_State2Disp(XBINPUT, NumNodes_tot, XBELEM, XBNODE,
-                           PosIni, PsiIni, NumDof, X, dXdt,\
+                           PosIni, PsiIni, NumDof, X, dXdt,
                            PosDefor, PsiDefor, PosDotDef, PsiDotDef)
         
         
-        PosPsiTime[iStep+1,:3] = PosDefor[-1,:]
+        PosPsiTime[iStep+1,:3] = PosDefor[(NumNodes_tot.value-1)/2+1,:]
         PosPsiTime[iStep+1,3:] = PsiDefor[-1,XBELEM.NumNodes[-1]-1,:]
         
         "Position of all grid points in global FoR"
@@ -574,8 +591,7 @@ def Solve_Py(XBINPUT,XBOPTS):
         sys.stdout.write(' ... done\n')
         
     
-    
-    
+
 
 if __name__ == '__main__':
     """Main"""
@@ -592,26 +608,26 @@ if __name__ == '__main__':
          
     """Set up Xbinput for nonlinear static analysis defined in 
     NonlinearStatic/testcases.pdf case 1.1."""
-    XBINPUT = DerivedTypes.Xbinput(2,20)
-    XBINPUT.BeamLength = 5.0
-    XBINPUT.BeamStiffness[0,0] = 4.8e+08
-    XBINPUT.BeamStiffness[1,1] = 3.231e+08
-    XBINPUT.BeamStiffness[2,2] = 3.231e+08
-    XBINPUT.BeamStiffness[3,3] = 1.0e+06
-    XBINPUT.BeamStiffness[4,4] = 9.346e+06
-    XBINPUT.BeamStiffness[5,5] = 9.346e+06
-    XBINPUT.BeamMass[0,0] = 100
-    XBINPUT.BeamMass[1,1] = 100
-    XBINPUT.BeamMass[2,2] = 100
-    XBINPUT.BeamMass[3,3] = 10
-    XBINPUT.BeamMass[4,4] = 0.001 #Must be non-zero
-    XBINPUT.BeamMass[5,5] = 0.001 #Must be non-zero
-    XBINPUT.ForceStatic[-1,2] = 6.0e+05
-    XBINPUT.tfin = 0.1
-    XBINPUT.dt = 0.001
-    
-    XBINPUT.ForceDyn[-1,2] = 7.0e+05
+    XBINPUT = DerivedTypes.Xbinput(2,32)
+#     XBINPUT.BeamLength = 5.0
+#     XBINPUT.BeamStiffness[0,0] = 4.8e+08
+#     XBINPUT.BeamStiffness[1,1] = 3.231e+08
+#     XBINPUT.BeamStiffness[2,2] = 3.231e+08
+#     XBINPUT.BeamStiffness[3,3] = 1.0e+06
+#     XBINPUT.BeamStiffness[4,4] = 9.346e+06
+#     XBINPUT.BeamStiffness[5,5] = 9.346e+06
+#     XBINPUT.BeamMass[0,0] = 100
+#     XBINPUT.BeamMass[1,1] = 100
+#     XBINPUT.BeamMass[2,2] = 100
+#     XBINPUT.BeamMass[3,3] = 10
+#     XBINPUT.BeamMass[4,4] = 0.001 #Must be non-zero
+#     XBINPUT.BeamMass[5,5] = 0.001 #Must be non-zero
+#     XBINPUT.ForceStatic[-1,2] = 6.0e+05
+#     XBINPUT.tfin = 0.1
+#     XBINPUT.dt = 0.001
+#     
+#     XBINPUT.ForceDyn[-1,2] = 7.0e+05
     
     #Solve_F90(XBINPUT,XBOPTS)
     #Solve_F90_steps(XBINPUT,XBOPTS)
-    Solve_Py(XBINPUT,XBOPTS)
+    Solve_Py(XBINPUT,XBOPTS,'Input_DANC')

@@ -51,10 +51,15 @@ class MPC:
             # get gain matrix
             with Timer() as t:
                 matDir = self.matPath.rsplit('/',1)
-                kPath = matDir[0] + "/Q140_FullSystem_GustInputs_L20_lqrOutCont_lqrKforPy"#"/Q140_FullSystem_GustInputs_L10_lqrCont_lqrKforPy"
+                kPath = matDir[0] + "/Q28_N8_omega1pi_lqrOutCont_lqrKforPy"#"/Q140_FullSystem_GustInputs_L10_lqrCont_lqrKforPy"
                 Dict = loadmat(kPath,variable_names = ['K'])
                 K = np.zeros((self.mpcU,self.Ad.shape[0]))
-                K[:,:-self.nAux] = Dict['K'].copy('C')
+                if self.nAux > 0:
+                    K[:,:-self.nAux] = Dict['K'].copy('C')
+                elif self.nAux == 0:
+                    K[:,:] = Dict['K'].copy('C')
+                else:
+                    raise ValueError("nAux must be positive integer or zero.")
                 self.K = K
             
             self.contTime = t.interval
@@ -73,7 +78,7 @@ class MPC:
             # Configure optimizer.
             self.ctl = self.mpc.ctl
             self.ctl.conf.in_iter = 24 # Internal iterations in augmented Lagr method
-            self.ctl.conf.ex_iter  =2  # External iteration in augmented Lagr method
+            self.ctl.conf.ex_iter = 2  # External iteration in augmented Lagr method
             self.ctl.conf.warmstart = True
             
             # initialise prediction from previous timestep as zero
@@ -126,10 +131,10 @@ class MPC:
         else:
             xDist = xRed - self.x_opt_kp1 # Calculate disturbance based on previous estimate.
             
-            # Apply disturbance along prediction horizon.
-    #         for i in range(self.mpc.N):
-    #             self.ctl.x_ref[self.mpc.size.states*i:self.mpc.size.states*(i+1),0] =\
-    #                                                         (self.setPoint.flatten() - xDist)
+            #Apply disturbance along prediction horizon.
+            for i in range(self.mpc.N):
+                self.ctl.x_ref[self.mpc.size.states*i:self.mpc.size.states*(i+1),0] =\
+                                                            (self.setPoint.flatten() - xDist)
                                                             
             # Solve optimization problem.
             with Timer() as t:

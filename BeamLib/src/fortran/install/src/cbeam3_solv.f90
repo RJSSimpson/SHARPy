@@ -23,7 +23,6 @@
 !-> Remarks.-
 !
 !-> Modifications.-
-! 20120317 A.Da Ronch Conditional compilation added (NOLAPACK)
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module cbeam3_solv
@@ -53,11 +52,7 @@ module cbeam3_solv
 &                                  PosDefor,PsiDefor,Options)
   use lib_fem
   use lib_sparse
-#ifdef NOLAPACK
   use lib_lu
-#else
-  use interface_lapack
-#endif
   use cbeam3_asbly
 
 ! I/O Variables.
@@ -122,13 +117,7 @@ module cbeam3_solv
 &              sparse_matvmul(fs,Fglobal,NumDof,fem_m2v(AppForces,NumDof,Filter=ListIN))
 
 ! Solve equation and update the global vectors.
-!      call sparse_precond(ks,Kglobal,Qglobal,Options%MinDelta)
-
-#ifdef NOLAPACK
       call lu_sparse(ks,Kglobal,-Qglobal,DeltaX)
-#else
-      call lapack_sparse (ks,Kglobal,-Qglobal,DeltaX)
-#endif
       call cbeam3_solv_update_static (Elem,Node,Psi0,DeltaX,PosDefor,PsiDefor)
 
 ! Convergence parameter.
@@ -161,11 +150,7 @@ module cbeam3_solv
 
   use lib_fem
   use lib_sparse
-#ifdef NOLAPACK
   use lib_lu
-#else
-  use interface_lapack
-#endif
   use cbeam3_asbly
 
 ! I/O Variables.
@@ -216,11 +201,7 @@ module cbeam3_solv
   Qglobal= sparse_matvmul(fs,Fglobal,NumDof,fem_m2v(AppForces,NumDof,Filter=ListIN))
 
 ! Solve equation and update the global vectors.
-#ifdef NOLAPACK
   call lu_sparse(ks,Kglobal,Qglobal,DeltaX)
-#else
-  call lapack_sparse (ks,Kglobal,Qglobal,DeltaX)
-#endif
   call cbeam3_solv_update_static (Elem,Node,Psi0,DeltaX,PosDefor,PsiDefor)
 
   deallocate (Kglobal,Qglobal,DeltaX)
@@ -244,9 +225,6 @@ module cbeam3_solv
 &                               PosDefor,PsiDefor,Options)
   use lib_fem
   use lib_sparse
-#ifndef NOLAPACK
-  use interface_lapack
-#endif
   use cbeam3_asbly
 
 ! I/O Variables.
@@ -324,11 +302,7 @@ module cbeam3_solv
   use lib_lu
   use lib_out
   use lib_sparse
-#ifdef NOLAPACK
   use lib_lu
-#else
-  use interface_lapack
-#endif
   use cbeam3_asbly
   use lib_xbeam
 
@@ -434,11 +408,7 @@ module cbeam3_solv
   Qglobal= Qglobal - sparse_matvmul(fs,Fglobal,NumDof,fem_m2v(F0+Ftime(1)*Fa,NumDof,Filter=ListIN))
 
   call sparse_addsparse(0,0,ms,Mglobal,as,Asys)
-#ifdef NOLAPACK
   call lu_sparse(as,Asys,-Qglobal,dXddt)
-#else
-  call lapack_sparse (as,Asys,-Qglobal,dXddt)
-#endif
 
 ! Loop in the time steps.
   do iStep=1,size(Time)-1
@@ -499,11 +469,8 @@ module cbeam3_solv
       call sparse_addsparse(0,0,ms,Mglobal,as,Asys,Factor=1.d0/(beta*dt*dt))
 
 ! Calculation of the correction.
-#ifdef NOLAPACK
       call lu_sparse(as,Asys,-Qglobal,DX)
-#else
-      call lapack_sparse (as,Asys,-Qglobal,DX)
-#endif
+
       X    = X     + DX
       dXdt = dXdt  + gamma/(beta*dt)*DX
       dXddt= dXddt + 1.d0/(beta*dt*dt)*DX
@@ -511,37 +478,6 @@ module cbeam3_solv
 
 ! Update nodal positions and velocities on the current converged time step.
     call cbeam3_solv_state2disp (Elem,Node,Coords,Psi0,X,dXdt,PosDefor,PsiDefor,PosDotDefor,PsiDotDefor)
-
-
-!!! Postprocesing (for single cantilever beams) !!!
-! Store data in output variables (V_B, Omega_B).
-!    if (any(OutGrids)) then
-!      Veloc=0.d0
-!      Displ=0.d0
-!
-!      do k=1,NumN
-!        Displ(k,1:3)= PosDefor(k,1:3)-Coords(k,1:3)
-!      end do
-!
-!      Veloc(1,1:3)= PosDotDefor(1,:)+rot_cross(Vrel(iStep,4:6), PosDefor(1,:))+Vrel(iStep,1:3)
-!      do k=2,NumN
-!        Displ(k,4:6)=PsiDefor(k-1,2,:)
-!        CBa=rotvect_psi2mat(PsiDefor(k-1,2,:))
-!        Veloc(k,1:3)= matmul(CBa, PosDotDefor(k,:) + Vrel(iStep,1:3)      &
-!&                               + rot_cross(Vrel(iStep,4:6),PosDefor(k,:)))
-!        Veloc(k,4:6)= matmul(rotvect_psi2rot(PsiDefor(k-1,2,:)),PsiDotDefor(k-1,2,:)) &
-!&                   + matmul(CBa,Vrel(iStep,4:6))
-!      end do
-!
-!!  Write output information in output file.
-!      OutOptions%PrintDispl=.true.
-!      OutOptions%PrintVeloc=.true.
-!      call out_title   (iOut,trim(Text))
-!      call out_outgrid (iOut,'NODE',OutOptions,1,NumE,6,OutGrids,DISPL=Displ,VELOC=Veloc)
-!
-!! Write output to export to main program (obsolete!).
-!      VelocTime (iStep+1,:)= Veloc (1:NumN,3)
-!    end if
 
 ! Write output to export to main program (obsolete!).
     PosPsiTime(iStep+1,1:3)= PosDefor(NumN,:)
@@ -584,11 +520,7 @@ module cbeam3_solv
   use lib_lu
   use lib_out
   use lib_sparse
-#ifdef NOLAPACK
   use lib_lu
-#else
-  use interface_lapack
-#endif
   use cbeam3_asbly
   use lib_xbeam
 
@@ -748,11 +680,8 @@ module cbeam3_solv
       call sparse_addsparse(0,0,ms,Mglobal,as,Asys,Factor=1.d0/(beta*dt*dt))
 
 ! Calculation of the correction.
-#ifdef NOLAPACK
       call lu_sparse(as,Asys,-Qglobal,DX)
-#else
-      call lapack_sparse (as,Asys,-Qglobal,DX)
-#endif
+
       X    = X     + DX
       dXdt = dXdt  + gamma/(beta*dt)*DX
       dXddt= dXddt + 1.d0/(beta*dt*dt)*DX
@@ -836,9 +765,6 @@ module cbeam3_solv
   use lib_sparse
   use lib_out
   use lib_lu
-#ifndef NOLAPACK
-  use interface_lapack
-#endif
   use cbeam3_asbly
   use lib_xbeam
 
@@ -951,11 +877,7 @@ module cbeam3_solv
 &          - sparse_matvmul(cs,Cglobal,NumDof,DXDt) - sparse_matvmul(ks,Kglobal,NumDof,DX)
 
   call sparse_addsparse(0,0,ms,Mglobal,as,Asys)
-#ifdef NOLAPACK
   call lu_sparse(as,Asys,Qglobal,DXDDt)
-#else
-  call lapack_sparse (as,Asys,Qglobal,DXDDt)
-#endif
 
 ! Loop in the time steps.
   do iStep=1,size(Time)-1
@@ -997,11 +919,8 @@ module cbeam3_solv
     call sparse_addsparse(0,0,ks,Kglobal,as,Asys,Factor=beta*dt*dt)
 
 ! Solve equation.
-#ifdef NOLAPACK
     call lu_sparse(as,Asys,Qglobal,DXDDt)
-#else
-    call lapack_sparse (as,Asys,Qglobal,DXDDt)
-#endif
+
     DX    = DX   + beta *dt*dt*DXDDt
     DXDt  = DXDt + gamma*dt   *DXDDt
 

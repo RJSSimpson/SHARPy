@@ -45,6 +45,9 @@ module test
     use lib_xbeam
     use lib_out
     use xbeam_asbly
+    use xbeam_solv
+    use xbeam_perturb
+    use lib_perturb
     
     implicit none
     
@@ -397,7 +400,7 @@ module test
     end subroutine vec2mat_int
     
     !---------------------------------------------------------------------------
-    ! Convert a Fortran ordered array into a matrix of dimension (nx,ny)
+    ! Convert a matrix of dimension (nx,ny) into a Fortran ordered array
     ! Vector elements are of type real(8)
     !---------------------------------------------------------------------------
     subroutine mat2vec_double(mat,vec,nx,ny)
@@ -959,11 +962,11 @@ module test
     &           PosIni_Array,PsiIni_Array,PosDefor_Array,PsiDefor_Array,&
     &           ForceStatic_Array,DimMat,NumDof,&
     &           ks,Kglobal_Array,fs,Fglobal_Array,Qglobal,&
-	&			FollowerForce, FollowerForceRig,		&!for pack_xbopts
-	&			PrintInfo, OutInBframe, OutInaframe,	&!for pack_xbopts
-	&			ElemProj, MaxIterations, NumLoadSteps,	&!for pack_xbopts
-	&			NumGauss, Solution, DeltaCurved, 		&!for pack_xbopts
-	&			MinDelta, NewmarkDamp)					 !for pack_xbopts)
+    &           FollowerForce, FollowerForceRig,        &!for pack_xbopts
+    &           PrintInfo, OutInBframe, OutInaframe,    &!for pack_xbopts
+    &           ElemProj, MaxIterations, NumLoadSteps,  &!for pack_xbopts
+    &           NumGauss, Solution, DeltaCurved,        &!for pack_xbopts
+    &           MinDelta, NewmarkDamp)                   !for pack_xbopts)
         
         integer,intent(in)   :: NumElems
         integer,intent(in)   :: NumNodes_tot
@@ -994,7 +997,7 @@ module test
         integer,intent(inout):: fs
         real(8),intent(inout):: Fglobal_Array(NumDof*NumDof)
         real(8),intent(inout):: Qglobal(NumDof)
-		logical,intent(in) :: FollowerForce
+        logical,intent(in) :: FollowerForce
         logical,intent(in) :: FollowerForceRig
         logical,intent(in) :: PrintInfo
         logical,intent(in) :: OutInBframe
@@ -1039,14 +1042,14 @@ module test
         &       Length,PreCurv,Psi,Vector,Mass_Array,Stiff_Array,&
         &       InvStiff_Array,RBMass_Array)
         
-		! Convert PY data to F90 data
+        ! Convert PY data to F90 data
         call pack_xbnode(NumNodes_tot,Node,Nod_Master,Nod_Vdof,Nod_Fdof)
 
-		! Convert PY data to F90 data
-		call pack_xbopts(Options,FollowerForce,FollowerForceRig,			&
-&					PrintInfo,OutInBframe,OutInaframe,ElemProj,				&
-&					MaxIterations,NumLoadSteps,								&
-&					NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
+        ! Convert PY data to F90 data
+        call pack_xbopts(Options,FollowerForce,FollowerForceRig,            &
+&                   PrintInfo,OutInBframe,OutInaframe,ElemProj,             &
+&                   MaxIterations,NumLoadSteps,                             &
+&                   NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
         
         call vec2mat_double(PosIni_Array,Coords,NumNodes_tot,3)
         call vec2mat3d_double(PsiIni_Array,Psi0,NumElems,MaxElNod,3)
@@ -1061,7 +1064,7 @@ module test
         ! Convert F90 data to PY data
         call sparse2full_rank(ks,Kglobal,NumDof,NumDof,Kglobal_Full)
         call sparse2full_rank(fs,Fglobal,NumDof,NumDof,Fglobal_Full)
-        
+
         call mat2vec_double(Kglobal_Full,Kglobal_Array,NumDof,NumDof)
         call mat2vec_double(Fglobal_Full,Fglobal_Array,NumDof,NumDof)
         
@@ -1080,7 +1083,8 @@ module test
         return
         
     end subroutine wrap_cbeam3_asbly_static
-    
+
+
     !---------------------------------------------------------------------------
     ! Update global vectors 
     !---------------------------------------------------------------------------
@@ -1729,338 +1733,7 @@ module test
         return 
         
     end subroutine wrap_cbeam3_solv_update_lindyn
-    
-    !---------------------------------------------------------------------------
-    ! Wrapper to xbeam_asbly_orient
-    !---------------------------------------------------------------------------
-    subroutine wrap_xbeam_asbly_orient(&
-    &           NumElems,NumNodes_tot,NumNodes,&
-    &           MemNo,Conn,Master_Array,Length,PreCurv,Psi,Vector,Mass_Array,&
-    &           Stiff_Array,InvStiff_Array,RBMass_Array,&
-    &           Nod_Master,Nod_Vdof,Nod_Fdof,&
-    &           PosDefor_Array,PsiDefor_Array,Vrel,Quat,&
-    &           CQR_Array,CQQ_Array,NumDof,DimMat,fs,Frigid_Array,Cao_Array,&
-	&			FollowerForce, FollowerForceRig,		&!for pack_xbopts
-	&			PrintInfo, OutInBframe, OutInaframe,	&!for pack_xbopts
-	&			ElemProj, MaxIterations, NumLoadSteps,	&!for pack_xbopts
-	&			NumGauss, Solution, DeltaCurved, 		&!for pack_xbopts
-	&			MinDelta, NewmarkDamp)					 !for pack_xbopts
-        
-        integer,intent(in) :: NumElems
-        integer,intent(in) :: NumNodes_tot
-        integer,intent(in) :: NumNodes(NumElems)
-        integer,intent(in) :: MemNo(NumElems)
-        integer,intent(in) :: Conn(MaxElNod*NumElems)
-        integer,intent(in) :: Master_Array(MaxElNod*NumElems*2)
-        real(8),intent(in) :: Length(NumElems)
-        real(8),intent(in) :: PreCurv(3*NumElems)
-        real(8),intent(in) :: Psi(3*NumElems)
-        real(8),intent(in) :: Vector(3*NumElems)
-        real(8),intent(in) :: Mass_Array(6*NumElems*6)
-        real(8),intent(in) :: Stiff_Array(6*NumElems*6)
-        real(8),intent(in) :: InvStiff_Array(6*NumElems*6)
-        real(8),intent(in) :: RBMass_Array(MaxElNod*NumElems*6*6)
-        integer,intent(in) :: Nod_Master(2*NumNodes_tot)
-        integer,intent(in) :: Nod_Vdof(NumNodes_tot)
-        integer,intent(in) :: Nod_Fdof(NumNodes_tot)
-        real(8),intent(in) :: PosDefor_Array(NumNodes_tot*3)
-        real(8),intent(in) :: PsiDefor_Array(NumElems*MaxElNod*3)
-        real(8),intent(in) :: Vrel(6)
-        real(8),intent(in) :: Quat(4)
-        real(8),intent(out):: CQR_Array(4*6)
-        real(8),intent(out):: CQQ_Array(4*4)
-        integer,intent(in) :: NumDof
-        integer,intent(in) :: DimMat
-        integer,intent(out):: fs
-        real(8),intent(out):: Frigid_Array(6*(NumDof+6))
-        real(8),intent(in) :: Cao_Array(3*3)
-		logical,intent(in) :: FollowerForce
-        logical,intent(in) :: FollowerForceRig
-        logical,intent(in) :: PrintInfo
-        logical,intent(in) :: OutInBframe
-        logical,intent(in) :: OutInaframe
-        integer,intent(in) :: ElemProj
-        integer,intent(in) :: MaxIterations
-        integer,intent(in) :: NumLoadSteps
-        integer,intent(in) :: NumGauss
-        integer,intent(in) :: Solution
-        real(8),intent(in) :: DeltaCurved
-        real(8),intent(in) :: MinDelta
-        real(8),intent(in) :: NewmarkDamp
-        
-        type(xbelem),allocatable:: Elem(:)
-        type(xbnode),allocatable:: Node(:)
-        real(8)     ,allocatable:: PosDefor(:,:)
-        real(8)     ,allocatable:: PsiDefor(:,:,:)
-        real(8)     ,allocatable:: CQR(:,:)
-        real(8)     ,allocatable:: CQQ(:,:)
-        type(sparse),allocatable:: Frigid(:)
-        real(8)     ,allocatable:: Frigid_Full(:,:)
-        real(8)     ,allocatable:: Cao(:,:)
-        
-        type(xbopts):: Options
-        
-        allocate(Elem(NumElems))
-        allocate(Node(NumNodes_tot))
-        allocate(PosDefor(NumNodes_tot,3)); PosDefor = 0.d0
-        allocate(PsiDefor(NumElems,MaxElNod,3)); PsiDefor = 0.d0
-        allocate(CQR(4,6)); CQR = 0.d0
-        allocate(CQQ(4,4)); CQQ = 0.d0
-        allocate(Frigid(DimMat*NumDof)); call sparse_zero(fs,Frigid)
-        allocate(Frigid_Full(6,NumDof+6)); Frigid_Full = 0.d0
-        allocate(Cao(3,3)); Cao = 0.d0
-        
-        ! Convert PY data to F90 data
-        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,Master_Array,&
-        &       Length,PreCurv,Psi,Vector,Mass_Array,Stiff_Array,&
-        &       InvStiff_Array,RBMass_Array)
-        
-		! Convert PY data to F90 data
-        call pack_xbnode(NumNodes_tot,Node,Nod_Master,Nod_Vdof,Nod_Fdof)
-
-		! Convert PY data to F90 data
-		call pack_xbopts(Options,FollowerForce,FollowerForceRig,			&
-&					PrintInfo,OutInBframe,OutInaframe,ElemProj,				&
-&					MaxIterations,NumLoadSteps,								&
-&					NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
-        
-        call vec2mat_double(PosDefor_Array,PosDefor,NumNodes_tot,3)
-        call vec2mat3d_double(PsiDefor_Array,PsiDefor,NumElems,MaxElNod,3)
-        call vec2mat_double(CQR_Array,CQR,4,6)
-        call vec2mat_double(CQQ_Array,CQQ,4,4)
-        call vec2mat_double(Cao_Array,Cao,3,3)
-        
-        ! Assembly rigid body matrices for changing orientation
-        call xbeam_asbly_orient(Elem,Node,PosDefor,PsiDefor,Vrel,Quat,&
-        &       CQR,CQQ,fs,Frigid,Options,Cao)
-        
-        ! Convert F90 data to PY data
-        call mat2vec_double(CQR,CQR_Array,4,6)
-        call mat2vec_double(CQQ,CQQ_Array,4,4)
-        
-        call sparse2full_rank(fs,Frigid,6,NumDof+6,Frigid_Full)
-        call mat2vec_double(Frigid_Full,Frigid_Array,6,NumDof+6)
-        
-        deallocate(Elem)
-        deallocate(Node)
-        deallocate(PosDefor)
-        deallocate(PsiDefor)
-        deallocate(CQR)
-        deallocate(CQQ)
-        deallocate(Frigid)
-        deallocate(Frigid_Full)
-        deallocate(Cao)
-        
-        return
-        
-    end subroutine wrap_xbeam_asbly_orient
-    
-    !---------------------------------------------------------------------------
-    ! Wrapper to out_outgrid
-    !---------------------------------------------------------------------------
-    subroutine wrap_xbeam_asbly_dynamic(&
-    &           NumElems,NumNodes_tot,NumNodes,&
-    &           MemNo,Conn,Master_Array,Length,PreCurv,Psi,Vector,Mass_Array,&
-    &           Stiff_Array,InvStiff_Array,RBMass_Array,&
-    &           Nod_Master,Nod_Vdof,Nod_Fdof,&
-    &           Coords_Array,Psi0_Array,PosDefor_Array,PsiDefor_Array,&
-    &           PosDeforDot_Array,PsiDeforDot_Array,&
-    &           PosDeforDDot_Array,PsiDeforDDot_Array,Vrel,VrelDot,Quat,&
-    &           NumDof,DimMat,ms,MRS_Array,MRR_Array,cs,CRS_Array,CRR_Array,&
-    &           CQR_Array,CQQ_Array,ks,KRS_Array,fs,Frigid_Array,&
-    &           Qrigid,Cao_Array,&
-	&			FollowerForce, FollowerForceRig,		&!for pack_xbopts
-	&			PrintInfo, OutInBframe, OutInaframe,	&!for pack_xbopts
-	&			ElemProj, MaxIterations, NumLoadSteps,	&!for pack_xbopts
-	&			NumGauss, Solution, DeltaCurved, 		&!for pack_xbopts
-	&			MinDelta, NewmarkDamp)					 !for pack_xbopts
-        
-        integer,intent(in) :: NumElems
-        integer,intent(in) :: NumNodes_tot
-        integer,intent(in) :: NumNodes(NumElems)
-        integer,intent(in) :: MemNo(NumElems)
-        integer,intent(in) :: Conn(MaxElNod*NumElems)
-        integer,intent(in) :: Master_Array(MaxElNod*NumElems*2)
-        real(8),intent(in) :: Length(NumElems)
-        real(8),intent(in) :: PreCurv(3*NumElems)
-        real(8),intent(in) :: Psi(3*NumElems)
-        real(8),intent(in) :: Vector(3*NumElems)
-        real(8),intent(in) :: Mass_Array(6*NumElems*6)
-        real(8),intent(in) :: Stiff_Array(6*NumElems*6)
-        real(8),intent(in) :: InvStiff_Array(6*NumElems*6)
-        real(8),intent(in) :: RBMass_Array(MaxElNod*NumElems*6*6)
-        integer,intent(in) :: Nod_Master(2*NumNodes_tot)
-        integer,intent(in) :: Nod_Vdof(NumNodes_tot)
-        integer,intent(in) :: Nod_Fdof(NumNodes_tot)
-        real(8),intent(in) :: Coords_Array(NumNodes_tot*3)
-        real(8),intent(in) :: Psi0_Array(NumElems*MaxElNod*3)
-        real(8),intent(in) :: PosDefor_Array(NumNodes_tot*3)
-        real(8),intent(in) :: PsiDefor_Array(NumElems*MaxElNod*3)
-        real(8),intent(in) :: PosDeforDot_Array(NumNodes_tot*3)
-        real(8),intent(in) :: PsiDeforDot_Array(NumElems*MaxElNod*3)
-        real(8),intent(in) :: PosDeforDDot_Array(NumNodes_tot*3)
-        real(8),intent(in) :: PsiDeforDDot_Array(NumElems*MaxElNod*3)
-        real(8),intent(in) :: Vrel(6)
-        real(8),intent(in) :: VrelDot(6)
-        real(8),intent(in) :: Quat(4)
-        integer,intent(in) :: NumDof
-        integer,intent(in) :: DimMat
-        integer,intent(out):: ms
-        real(8),intent(out):: MRS_Array(6*NumDof)
-        real(8),intent(out):: MRR_Array(6*6)
-        integer,intent(out):: cs
-        real(8),intent(out):: CRS_Array(6*NumDof)
-        real(8),intent(out):: CRR_Array(6*6)
-        real(8),intent(out):: CQR_Array(4*6)
-        real(8),intent(out):: CQQ_Array(4*4)
-        integer,intent(out):: ks
-        real(8),intent(out):: KRS_Array(6*NumDof)
-        integer,intent(out):: fs
-        real(8),intent(out):: Frigid_Array(6*(NumDof+6))
-        real(8),intent(out):: Qrigid(6)
-        real(8),intent(in) :: Cao_Array(3*3)
-		logical,intent(in) :: FollowerForce
-        logical,intent(in) :: FollowerForceRig
-        logical,intent(in) :: PrintInfo
-        logical,intent(in) :: OutInBframe
-        logical,intent(in) :: OutInaframe
-        integer,intent(in) :: ElemProj
-        integer,intent(in) :: MaxIterations
-        integer,intent(in) :: NumLoadSteps
-        integer,intent(in) :: NumGauss
-        integer,intent(in) :: Solution
-        real(8),intent(in) :: DeltaCurved
-        real(8),intent(in) :: MinDelta
-        real(8),intent(in) :: NewmarkDamp
-        
-        type(xbelem),allocatable:: Elem(:)
-        type(xbnode),allocatable:: Node(:)
-        real(8)     ,allocatable:: Coords(:,:)
-        real(8)     ,allocatable:: Psi0(:,:,:)
-        real(8)     ,allocatable:: PosDefor(:,:)
-        real(8)     ,allocatable:: PsiDefor(:,:,:)
-        real(8)     ,allocatable:: PosDeforDot(:,:)
-        real(8)     ,allocatable:: PsiDeforDot(:,:,:)
-        real(8)     ,allocatable:: PosDeforDDot(:,:)
-        real(8)     ,allocatable:: PsiDeforDDot(:,:,:)
-        type(sparse),allocatable:: MRS(:)
-        real(8)     ,allocatable:: MRS_Full(:,:)
-        real(8)     ,allocatable:: MRR(:,:)
-        type(sparse),allocatable:: CRS(:)
-        real(8)     ,allocatable:: CRS_Full(:,:)
-        real(8)     ,allocatable:: CRR(:,:)
-        real(8)     ,allocatable:: CQR(:,:)
-        real(8)     ,allocatable:: CQQ(:,:)
-        type(sparse),allocatable:: KRS(:)
-        real(8)     ,allocatable:: KRS_Full(:,:)
-        type(sparse),allocatable:: Frigid(:)
-        real(8)     ,allocatable:: Frigid_Full(:,:)
-        real(8)     ,allocatable:: Cao(:,:)
-        
-        type(xbopts):: Options
-        
-        allocate(Elem(NumElems))
-        allocate(Node(NumNodes_tot))
-        allocate(Coords(NumNodes_tot,3)); Coords = 0.d0
-        allocate(Psi0(NumElems,MaxElNod,3)); Psi0 = 0.d0
-        allocate(PosDefor(NumNodes_tot,3)); PosDefor = 0.d0
-        allocate(PsiDefor(NumElems,MaxElNod,3)); PsiDefor = 0.d0
-        allocate(PosDeforDot(NumNodes_tot,3)); PosDeforDot = 0.d0
-        allocate(PsiDeforDot(NumElems,MaxElNod,3)); PsiDeforDot = 0.d0
-        allocate(PosDeforDDot(NumNodes_tot,3)); PosDeforDDot = 0.d0
-        allocate(PsiDeforDDot(NumElems,MaxElNod,3)); PsiDeforDDot = 0.d0
-        allocate(MRS(DimMat*NumDof)); call sparse_zero(ms,MRS)
-        allocate(MRS_Full(6,NumDof)); MRS_Full = 0.d0
-        allocate(MRR(6,6)); MRR = 0.d0
-        allocate(CRS(DimMat*NumDof)); call sparse_zero(cs,CRS)
-        allocate(CRS_Full(6,NumDof)); CRS_Full = 0.d0
-        allocate(CRR(6,6)); CRR = 0.d0
-        allocate(CQR(4,6)); CQR = 0.d0
-        allocate(CQQ(4,4)); CQQ = 0.d0
-        allocate(KRS(DimMat*NumDof)); call sparse_zero(ks,KRS)
-        allocate(KRS_Full(6,NumDof)); KRS_Full = 0.d0
-        allocate(Frigid(DimMat*NumDof)); call sparse_zero(fs,Frigid)
-        allocate(Frigid_Full(6,NumDof+6)); Frigid_Full = 0.d0
-        allocate(Cao(3,3)); Cao = 0.d0
-        
-        ! Convert PY data to F90 data
-        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,Master_Array,&
-        &       Length,PreCurv,Psi,Vector,Mass_Array,Stiff_Array,&
-        &       InvStiff_Array,RBMass_Array)
-        
-		! Convert PY data to F90 data
-        call pack_xbnode(NumNodes_tot,Node,Nod_Master,Nod_Vdof,Nod_Fdof)
-
-		! Convert PY data to F90 data
-		call pack_xbopts(Options,FollowerForce,FollowerForceRig,			&
-&					PrintInfo,OutInBframe,OutInaframe,ElemProj,				&
-&					MaxIterations,NumLoadSteps,								&
-&					NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
-        
-        call vec2mat_double(Coords_Array,Coords,NumNodes_tot,3)
-        call vec2mat3d_double(Psi0_Array,Psi0,NumElems,MaxElNod,3)
-        call vec2mat_double(PosDefor_Array,PosDefor,NumNodes_tot,3)
-        call vec2mat3d_double(PsiDefor_Array,PsiDefor,NumElems,MaxElNod,3)
-        call vec2mat_double(PosDeforDot_Array,PosDeforDot,NumNodes_tot,3)
-        call vec2mat3d_double(PsiDeforDot_Array,PsiDeforDot,NumElems,MaxElNod,3)
-        call vec2mat_double(PosDeforDDot_Array,PosDeforDDot,NumNodes_tot,3)
-        call vec2mat3d_double(PsiDeforDDot_Array,PsiDeforDDot,NumElems,MaxElNod,3)
-        call vec2mat_double(Cao_Array,Cao,3,3)
-        
-        ! Assembly rigid-body matrices for the dynamic problem
-        call xbeam_asbly_dynamic(Elem,Node,Coords,Psi0,PosDefor,PsiDefor,&
-        &       PosDeforDot,PsiDeforDot,PosDeforDDot,PsiDeforDDot,&
-        &       Vrel,VrelDot,Quat,ms,MRS,MRR,cs,CRS,CRR,CQR,CQQ,ks,KRS,&
-        &       fs,Frigid,Qrigid,Options,Cao)
-        
-        ! Convert F90 data to PY data
-        call sparse2full_rank(ms,MRS,6,NumDof,MRS_Full)
-        call mat2vec_double(MRS_Full,MRS_Array,6,NumDof)
-        
-        call mat2vec_double(MRR,MRR_Array,6,6)
-        
-        call sparse2full_rank(cs,CRS,6,NumDof,CRS_Full)
-        call mat2vec_double(CRS_Full,CRS_Array,6,NumDof)
-        
-        call mat2vec_double(CRR,CRR_Array,6,6)
-        call mat2vec_double(CQR,CQR_Array,4,6)
-        call mat2vec_double(CQQ,CQQ_Array,4,4)
-        
-        call sparse2full_rank(ks,KRS,6,NumDof,KRS_Full)
-        call mat2vec_double(KRS_Full,KRS_Array,6,NumDof)
-        
-        call sparse2full_rank(fs,Frigid,6,NumDof+6,Frigid_Full)
-        call mat2vec_double(Frigid_Full,Frigid_Array,6,NumDof+6)
-        
-        deallocate(Elem)
-        deallocate(Node)
-        deallocate(Coords)
-        deallocate(Psi0)
-        deallocate(PosDefor)
-        deallocate(PsiDefor)
-        deallocate(PosDeforDot)
-        deallocate(PsiDeforDot)
-        deallocate(PosDeforDDot)
-        deallocate(PsiDeforDDot)
-        deallocate(MRS)
-        deallocate(MRS_Full)
-        deallocate(MRR)
-        deallocate(CRS)
-        deallocate(CRS_Full)
-        deallocate(CRR)
-        deallocate(CQR)
-        deallocate(CQQ)
-        deallocate(KRS)
-        deallocate(KRS_Full)
-        deallocate(Frigid)
-        deallocate(Frigid_Full)
-        deallocate(Cao)
-        
-        return
-        
-    end subroutine wrap_xbeam_asbly_dynamic
-    
-    !---------------------------------------------------------------------------
+        !---------------------------------------------------------------------------
     ! Wrapper to fem_glob2loc_extract
     !---------------------------------------------------------------------------
     subroutine wrap_fem_glob2loc_extract(NumElems,NumNodes_tot,NumNodes,MemNo,&
@@ -2129,188 +1802,189 @@ module test
         
     end subroutine wrap_fem_glob2loc_extract
 
-	!---------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
     ! Wrapper for cbeam3_solv_nlndyn under external forces
     !---------------------------------------------------------------------------
-	
-		subroutine wrap_cbeam3_solv_nlndyn(iOut,NumDof,NumSteps,Time,&
-&					NumElems, NumNodes, MemNo, Conn,		&!for do_xbelem_var
-&					Master_Array, 							&!for do_xbelem_var
-&					Length, PreCurv,						&!for do_xbelem_var
-&					Psi, Vector, Mass_Array,				&!for do_xbelem_var
-&					Stiff_Array,							&!for do_xbelem_var
-&					InvStiff_Array, RBMass_Array,			&!for do_xbelem_var
-&					NumNodes_tot, Master, Vdof, Fdof,		&!for pack_xbnode
-&					F0_Vec,Fa_Vec,Ftime,							&
-&                   Vrel_Vec, VrelDot_Vec, Coords_Vec, Psi0_Vec, PosDefor_Vec,	&
-&					PsiDefor_Vec, PosDotDefor_Vec, PsiDotDefor_Vec,		&
-&                   PosPsiTime_Vec,VelocTime_Vec,DynOut_Vec,			&
-&                   OutGrids,								&
-&       			FollowerForce, FollowerForceRig,		&!for pack_xbopts
-&					PrintInfo, OutInBframe, OutInaframe,	&!for pack_xbopts
-&					ElemProj, MaxIterations, NumLoadSteps,	&!for pack_xbopts
-&					NumGauss, Solution, DeltaCurved, 		&!for pack_xbopts
-&					MinDelta, NewmarkDamp)					 !for pack_xbopts
 
-		integer,   	intent(in) 	:: iOut         		! Output file.
-		integer,   	intent(in) 	:: NumDof       		! No. of independent DoF
-		integer,	intent(in)	:: NumSteps			! Number of timesteps
-		real(8),   	intent(in) 	:: Time(NumSteps+1)	! Time steps.
-		integer,	intent(in) 	:: NumElems				!for do_xbelem_var
-        integer,	intent(in) 	:: NumNodes(NumElems) 	!for do_xbelem_var+pkxbn !Number of nodes in each element
-        integer,	intent(in) 	:: MemNo(NumElems)		!for do_xbelem_var
-        integer,	intent(in) 	:: Conn(MaxElNod*NumElems)	 !for do_xbelem_var
-        integer,	intent(in) 	:: Master_Array(MaxElNod*NumElems*2) !for do_xbe
-        real(8),	intent(in) 	:: Length(NumElems)		!for do_xbelem_var
-        real(8),	intent(in) 	:: PreCurv(3*NumElems)	!for do_xbelem_var
-        real(8),	intent(in) 	:: Psi(3*NumElems)		!for do_xbelem_var
-        real(8),	intent(in) 	:: Vector(3*NumElems)	!for do_xbelem_var
-        real(8),	intent(in) 	:: Mass_Array(6*NumElems*6)	!for do_xbelem_var
-        real(8),	intent(in) 	:: Stiff_Array(6*NumElems*6)!for do_xbelem_var
-        real(8),	intent(in) 	:: InvStiff_Array(6*NumElems*6)	!for do_xbelem_v
-        real(8),	intent(in) 	:: RBMass_Array(MaxElNod*NumElems*6*6)!for do_xb
-		integer,	intent(in) 	:: NumNodes_tot				!for pack_xbnode
-        integer,	intent(in) 	:: Master(2*NumNodes_tot)	!for pack_xbnode
-        integer,	intent(in) 	:: Vdof(NumNodes_tot)		!for pack_xbnode
-        integer,	intent(in) 	:: Fdof(NumNodes_tot)		!for pack_xbnode
-		real(8),   	intent(in) 	:: F0_Vec(NumNodes_tot*6)	!Applied static nodal forces
-  		real(8),   	intent(in) 	:: Fa_Vec(NumNodes_tot*6)	!Amplitude of dynamic nodal forces
-  		real(8),   	intent(in) 	:: Ftime(NumSteps+1)	!Time history of applied forces
-		real(8),   	intent(in) 	:: Vrel_Vec((NumSteps+1)*6)!Time history of vel of ref frame
-  		real(8),   	intent(in) 	:: VrelDot_Vec((NumSteps+1)*6)!Ti Hstry of accel of ref frame
-  		real(8),   	intent(in) 	:: Coords_Vec(NumNodes_tot*3)	!Undefrmd coords of grid points
-  		real(8),   	intent(in)  :: Psi0_Vec(NumElems*MaxElNod*3)	!Undefrmd CRV of nodes in elems
-  		real(8),   	intent(inout)	:: PosDefor_Vec(NumNodes_tot*3)   !Initial/final grid pts
-  		real(8),   	intent(inout)	:: PsiDefor_Vec(NumElems*MaxElNod*3) !Init/Fnl CRVs
-  		real(8),   	intent(inout)	:: PosDotDefor_Vec(NumNodes_tot*3)!d/dt of PosDefor
-  		real(8),   	intent(inout)	:: PsiDotDefor_Vec(NumElems*MaxElNod*3)	!d/dt of PsiDefor
-  		real(8),   	intent(out)  	:: PosPsiTime_Vec((NumSteps+1)*6)	!t-hstry of pos/crv at selected nodes.
-  		real(8),   	intent(out)  	:: VelocTime_Vec((NumSteps+1)*NumNodes_tot)	!t-hstry of t-dervatvs at selected nodes.
-  		real(8),   	intent(out)  	:: DynOut_Vec(((NumSteps+1)*NumNodes_tot)*3)	!snapshot t-hstry of pos of all nodes to be appended
-  		logical,   	intent(inout)	:: OutGrids(NumNodes_tot)	!Output grids
-        logical,	intent(in) :: FollowerForce
-        logical,	intent(in) :: FollowerForceRig
-        logical,	intent(in) :: PrintInfo
-        logical,	intent(in) :: OutInBframe
-        logical,	intent(in) :: OutInaframe
-        integer,	intent(in) :: ElemProj
-        integer,	intent(in) :: MaxIterations
-        integer,	intent(in) :: NumLoadSteps
-        integer,	intent(in) :: NumGauss
-        integer,	intent(in) :: Solution
-        real(8),	intent(in) :: DeltaCurved
-        real(8),	intent(in) :: MinDelta
-        real(8),	intent(in) :: NewmarkDamp
-		! TODO: test wrapper.
-		! out and inout arguments must be then be converted from fortran matrix to vector after solve.
-		! TODO: write and test a wrapper for logicals and arrays of logicals
-		! F(t) = F0+Ftime(iStep)*Fa
-		! TODO: erors here are copy-pasted in nlnstatic
+        subroutine wrap_cbeam3_solv_nlndyn(iOut,NumDof,NumSteps,Time,&
+&                   NumElems, NumNodes, MemNo, Conn,        &!for do_xbelem_var
+&                   Master_Array,                           &!for do_xbelem_var
+&                   Length, PreCurv,                        &!for do_xbelem_var
+&                   Psi, Vector, Mass_Array,                &!for do_xbelem_var
+&                   Stiff_Array,                            &!for do_xbelem_var
+&                   InvStiff_Array, RBMass_Array,           &!for do_xbelem_var
+&                   NumNodes_tot, Master, Vdof, Fdof,       &!for pack_xbnode
+&                   F0_Vec,Fa_Vec,Ftime,                            &
+&                   Vrel_Vec, VrelDot_Vec, Coords_Vec, Psi0_Vec, PosDefor_Vec,  &
+&                   PsiDefor_Vec, PosDotDefor_Vec, PsiDotDefor_Vec,     &
+&                   PosPsiTime_Vec,VelocTime_Vec,DynOut_Vec,            &
+&                   OutGrids,                               &
+&                   FollowerForce, FollowerForceRig,        &!for pack_xbopts
+&                   PrintInfo, OutInBframe, OutInaframe,    &!for pack_xbopts
+&                   ElemProj, MaxIterations, NumLoadSteps,  &!for pack_xbopts
+&                   NumGauss, Solution, DeltaCurved,        &!for pack_xbopts
+&                   MinDelta, NewmarkDamp)                   !for pack_xbopts
 
-		! Declare local variables 
+        integer,    intent(in)  :: iOut                 ! Output file.
+        integer,    intent(in)  :: NumDof               ! No. of independent DoF
+        integer,    intent(in)  :: NumSteps         ! Number of timesteps
+        real(8),    intent(in)  :: Time(NumSteps+1) ! Time steps.
+        integer,    intent(in)  :: NumElems             !for do_xbelem_var
+        integer,    intent(in)  :: NumNodes(NumElems)   !for do_xbelem_var+pkxbn !Number of nodes in each element
+        integer,    intent(in)  :: MemNo(NumElems)      !for do_xbelem_var
+        integer,    intent(in)  :: Conn(MaxElNod*NumElems)   !for do_xbelem_var
+        integer,    intent(in)  :: Master_Array(MaxElNod*NumElems*2) !for do_xbe
+        real(8),    intent(in)  :: Length(NumElems)     !for do_xbelem_var
+        real(8),    intent(in)  :: PreCurv(3*NumElems)  !for do_xbelem_var
+        real(8),    intent(in)  :: Psi(3*NumElems)      !for do_xbelem_var
+        real(8),    intent(in)  :: Vector(3*NumElems)   !for do_xbelem_var
+        real(8),    intent(in)  :: Mass_Array(6*NumElems*6) !for do_xbelem_var
+        real(8),    intent(in)  :: Stiff_Array(6*NumElems*6)!for do_xbelem_var
+        real(8),    intent(in)  :: InvStiff_Array(6*NumElems*6) !for do_xbelem_v
+        real(8),    intent(in)  :: RBMass_Array(MaxElNod*NumElems*6*6)!for do_xb
+        integer,    intent(in)  :: NumNodes_tot             !for pack_xbnode
+        integer,    intent(in)  :: Master(2*NumNodes_tot)   !for pack_xbnode
+        integer,    intent(in)  :: Vdof(NumNodes_tot)       !for pack_xbnode
+        integer,    intent(in)  :: Fdof(NumNodes_tot)       !for pack_xbnode
+        real(8),    intent(in)  :: F0_Vec(NumNodes_tot*6)   !Applied static nodal forces
+        real(8),    intent(in)  :: Fa_Vec(NumNodes_tot*6)   !Amplitude of dynamic nodal forces
+        real(8),    intent(in)  :: Ftime(NumSteps+1)    !Time history of applied forces
+        real(8),    intent(in)  :: Vrel_Vec((NumSteps+1)*6)!Time history of vel of ref frame
+        real(8),    intent(in)  :: VrelDot_Vec((NumSteps+1)*6)!Ti Hstry of accel of ref frame
+        real(8),    intent(in)  :: Coords_Vec(NumNodes_tot*3)   !Undefrmd coords of grid points
+        real(8),    intent(in)  :: Psi0_Vec(NumElems*MaxElNod*3)    !Undefrmd CRV of nodes in elems
+        real(8),    intent(inout)   :: PosDefor_Vec(NumNodes_tot*3)   !Initial/final grid pts
+        real(8),    intent(inout)   :: PsiDefor_Vec(NumElems*MaxElNod*3) !Init/Fnl CRVs
+        real(8),    intent(inout)   :: PosDotDefor_Vec(NumNodes_tot*3)!d/dt of PosDefor
+        real(8),    intent(inout)   :: PsiDotDefor_Vec(NumElems*MaxElNod*3) !d/dt of PsiDefor
+        real(8),    intent(out)     :: PosPsiTime_Vec((NumSteps+1)*6)   !t-hstry of pos/crv at selected nodes.
+        real(8),    intent(out)     :: VelocTime_Vec((NumSteps+1)*NumNodes_tot) !t-hstry of t-dervatvs at selected nodes.
+        real(8),    intent(out)     :: DynOut_Vec(((NumSteps+1)*NumNodes_tot)*3)    !snapshot t-hstry of pos of all nodes to be appended
+        logical,    intent(inout)   :: OutGrids(NumNodes_tot)   !Output grids
+        logical,    intent(in) :: FollowerForce
+        logical,    intent(in) :: FollowerForceRig
+        logical,    intent(in) :: PrintInfo
+        logical,    intent(in) :: OutInBframe
+        logical,    intent(in) :: OutInaframe
+        integer,    intent(in) :: ElemProj
+        integer,    intent(in) :: MaxIterations
+        integer,    intent(in) :: NumLoadSteps
+        integer,    intent(in) :: NumGauss
+        integer,    intent(in) :: Solution
+        real(8),    intent(in) :: DeltaCurved
+        real(8),    intent(in) :: MinDelta
+        real(8),    intent(in) :: NewmarkDamp
+        ! TODO: test wrapper.
+        ! out and inout arguments must be then be converted from fortran matrix to vector after solve.
+        ! TODO: write and test a wrapper for logicals and arrays of logicals
+        ! F(t) = F0+Ftime(iStep)*Fa
+        ! TODO: erors here are copy-pasted in nlnstatic
+
+        ! Declare local variables
         type(xbelem),allocatable:: Elem(:) ! Initialise xbelem derived type
-		type(xbnode),allocatable:: Node(:) ! Initialise xbnode derived type
-		real(8)     ,allocatable:: F0(:,:)
+        type(xbnode),allocatable:: Node(:) ! Initialise xbnode derived type
+        real(8)     ,allocatable:: F0(:,:)
         real(8)     ,allocatable:: Fa(:,:)
-		real(8)     ,allocatable:: Vrel(:,:)
-		real(8)     ,allocatable:: VrelDot(:,:)
-		real(8)     ,allocatable:: Coords(:,:)
-		real(8)		,allocatable:: Psi0(:,:,:)
-		real(8)		,allocatable:: PosDefor(:,:)
-		real(8)		,allocatable:: PsiDefor(:,:,:)
-		real(8)		,allocatable:: PosDotDefor(:,:)
-		real(8)		,allocatable:: PsiDotDefor(:,:,:)
-		real(8)		,allocatable:: PosPsiTime(:,:)
-		real(8)		,allocatable:: VelocTime(:,:)
-		real(8)		,allocatable:: DynOut(:,:)
-		! create Options struct
-		type(xbopts):: Options
-		
-		! allocate memory for vectors of derived type       
+        real(8)     ,allocatable:: Vrel(:,:)
+        real(8)     ,allocatable:: VrelDot(:,:)
+        real(8)     ,allocatable:: Coords(:,:)
+        real(8)     ,allocatable:: Psi0(:,:,:)
+        real(8)     ,allocatable:: PosDefor(:,:)
+        real(8)     ,allocatable:: PsiDefor(:,:,:)
+        real(8)     ,allocatable:: PosDotDefor(:,:)
+        real(8)     ,allocatable:: PsiDotDefor(:,:,:)
+        real(8)     ,allocatable:: PosPsiTime(:,:)
+        real(8)     ,allocatable:: VelocTime(:,:)
+        real(8)     ,allocatable:: DynOut(:,:)
+        ! create Options struct
+        type(xbopts):: Options
+
+        ! allocate memory for vectors of derived type
         allocate(Elem(NumElems))
-		allocate(Node(NumNodes_tot))
+        allocate(Node(NumNodes_tot))
 
-		! allocate memory for F90 Arrays
-		allocate(F0(NumNodes_tot,6))
-		allocate(Fa(NumNodes_tot,6))
-		allocate(Vrel((NumSteps+1),6))
-		allocate(VrelDot((NumSteps+1),6))
-		allocate(Coords(NumNodes_tot,3))
-		allocate(Psi0(NumElems,MaxElNod,3))
-		allocate(PosDefor(NumNodes_tot,3))
-		allocate(PsiDefor(NumElems,MaxElNod,3))
-		allocate(PosDotDefor(NumNodes_tot,3))
-		allocate(PsiDotDefor(NumElems,MaxElNod,3))
-		allocate(PosPsiTime(NumSteps+1,6))
-		allocate(VelocTime(NumSteps+1,NumNodes_tot))
-		allocate(DynOut((NumSteps+1)*NumNodes_tot,3))
-		
-		! Convert PY data to F90 data
-		call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,			&
-&				Master_Array,Length,PreCurv,Psi,Vector,Mass_Array, 		&
-&				Stiff_Array,InvStiff_Array,RBMass_Array)
+        ! allocate memory for F90 Arrays
+        allocate(F0(NumNodes_tot,6))
+        allocate(Fa(NumNodes_tot,6))
+        allocate(Vrel((NumSteps+1),6))
+        allocate(VrelDot((NumSteps+1),6))
+        allocate(Coords(NumNodes_tot,3))
+        allocate(Psi0(NumElems,MaxElNod,3))
+        allocate(PosDefor(NumNodes_tot,3))
+        allocate(PsiDefor(NumElems,MaxElNod,3))
+        allocate(PosDotDefor(NumNodes_tot,3))
+        allocate(PsiDotDefor(NumElems,MaxElNod,3))
+        allocate(PosPsiTime(NumSteps+1,6))
+        allocate(VelocTime(NumSteps+1,NumNodes_tot))
+        allocate(DynOut((NumSteps+1)*NumNodes_tot,3))
 
-		! Convert PY data to F90 data
-		call pack_xbnode(NumNodes_tot,Node,Master,Vdof,Fdof)
+        ! Convert PY data to F90 data
+        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,           &
+&               Master_Array,Length,PreCurv,Psi,Vector,Mass_Array,      &
+&               Stiff_Array,InvStiff_Array,RBMass_Array)
 
-		! Convert PY data to F90 data
-		call pack_xbopts(Options,FollowerForce,FollowerForceRig,			&
-&					PrintInfo,OutInBframe,OutInaframe,ElemProj,				&
-&					MaxIterations,NumLoadSteps,								&
-&					NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
+        ! Convert PY data to F90 data
+        call pack_xbnode(NumNodes_tot,Node,Master,Vdof,Fdof)
 
-		! Convert vectors to multi-dim fortran arrays
-		call vec2mat_double(F0_Vec,F0,NumNodes_tot,6)
-		call vec2mat_double(Fa_Vec,Fa,NumNodes_tot,6)
-		call vec2mat_double(Vrel_Vec,Vrel,size(Time),6)
-		call vec2mat_double(VrelDot_Vec,VrelDot,size(Time),6)
-		call vec2mat_double(Coords_Vec,Coords,NumNodes_tot,3)
-		call vec2mat3d_double(Psi0_Vec,Psi0,NumElems,MaxElNod,3)
-		call vec2mat_double(PosDefor_Vec,PosDefor,NumNodes_tot,3)
-		call vec2mat3d_double(PsiDefor_Vec,PsiDefor,NumElems,MaxElNod,3)
-		call vec2mat_double(PosDotDefor_Vec,PosDotDefor,NumNodes_tot,3)
-		call vec2mat3d_double(PsiDotDefor_Vec,PsiDotDefor,NumElems,MaxElNod,3)
-		call vec2mat_double(PosPsiTime_Vec,PosPsiTime,size(Time),6)
-		call vec2mat_double(VelocTime_Vec,VelocTime,size(Time),NumNodes_tot)
-		call vec2mat_double(DynOut_Vec,DynOut,size(Time)*NumNodes_tot,3)	
+        ! Convert PY data to F90 data
+        call pack_xbopts(Options,FollowerForce,FollowerForceRig,            &
+&                   PrintInfo,OutInBframe,OutInaframe,ElemProj,             &
+&                   MaxIterations,NumLoadSteps,                             &
+&                   NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
 
-		! Call fortran solver
-		call cbeam3_solv_nlndyn (iOut,NumDof,Time,Elem,Node,				&
-							F0,Fa,Ftime,									&
+        ! Convert vectors to multi-dim fortran arrays
+        call vec2mat_double(F0_Vec,F0,NumNodes_tot,6)
+        call vec2mat_double(Fa_Vec,Fa,NumNodes_tot,6)
+        call vec2mat_double(Vrel_Vec,Vrel,size(Time),6)
+        call vec2mat_double(VrelDot_Vec,VrelDot,size(Time),6)
+        call vec2mat_double(Coords_Vec,Coords,NumNodes_tot,3)
+        call vec2mat3d_double(Psi0_Vec,Psi0,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDefor_Vec,PosDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDefor_Vec,PsiDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDotDefor_Vec,PosDotDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDotDefor_Vec,PsiDotDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(PosPsiTime_Vec,PosPsiTime,size(Time),6)
+        call vec2mat_double(VelocTime_Vec,VelocTime,size(Time),NumNodes_tot)
+        call vec2mat_double(DynOut_Vec,DynOut,size(Time)*NumNodes_tot,3)
+
+        ! Call fortran solver
+        call cbeam3_solv_nlndyn (iOut,NumDof,Time,Elem,Node,                &
+                            F0,Fa,Ftime,                                    &
 &                           Vrel,VrelDot,Coords,Psi0,PosDefor,PsiDefor,     &
-&                           PosDotDefor,PsiDotDefor,PosPsiTime,VelocTime,	&
-&							DynOut,OutGrids,								&
-&							Options)
+&                           PosDotDefor,PsiDotDefor,PosPsiTime,VelocTime,   &
+&                           DynOut,OutGrids,                                &
+&                           Options)
 
-		! Convert multi-dim fortran arrays to vectors
-		call mat2vec_double(PosDefor,PosDefor_Vec,NumNodes_tot,3)
-		call mat2vec3d_double(PsiDefor,PsiDefor_Vec,NumElems,MaxElNod,3)
-  		call mat2vec_double(PosDotDefor,PosDotDefor_Vec,NumNodes_tot,3)
-  		call mat2vec3d_double(PsiDotDefor,PsiDotDefor_Vec,NumElems,MaxElNod,3)
-  		call mat2vec_double(PosPsiTime,PosPsiTime_Vec,size(Time),6)
-  		call mat2vec_double(VelocTime,VelocTime_Vec,size(Time),NumNodes_tot)
-  		call mat2vec3d_double(DynOut,DynOut_Vec,size(Time),NumNodes_tot,3)		
-		
-		! deallocate memory for vectors of derived types
-		deallocate(Elem)
-		deallocate(Node)
+        ! Convert multi-dim fortran arrays to vectors
+        call mat2vec_double(PosDefor,PosDefor_Vec,NumNodes_tot,3)
+        call mat2vec3d_double(PsiDefor,PsiDefor_Vec,NumElems,MaxElNod,3)
+        call mat2vec_double(PosDotDefor,PosDotDefor_Vec,NumNodes_tot,3)
+        call mat2vec3d_double(PsiDotDefor,PsiDotDefor_Vec,NumElems,MaxElNod,3)
+        call mat2vec_double(PosPsiTime,PosPsiTime_Vec,size(Time),6)
+        call mat2vec_double(VelocTime,VelocTime_Vec,size(Time),NumNodes_tot)
+        call mat2vec3d_double(DynOut,DynOut_Vec,size(Time),NumNodes_tot,3)
 
-		! deallocate memory for F90 Arrays
-		deallocate(F0)	
-		deallocate(Fa)
-		deallocate(Vrel)
-		deallocate(VrelDot)
-		deallocate(Coords)
-		deallocate(Psi0)
-		deallocate(PosDefor)
-		deallocate(PsiDefor)
-		deallocate(PosDotDefor)
-		deallocate(PsiDotDefor)
-		deallocate(PosPsiTime)
-		deallocate(VelocTime)
-		deallocate(DynOut)
+        ! deallocate memory for vectors of derived types
+        deallocate(Elem)
+        deallocate(Node)
 
-	end subroutine wrap_cbeam3_solv_nlndyn
+        ! deallocate memory for F90 Arrays
+        deallocate(F0)
+        deallocate(Fa)
+        deallocate(Vrel)
+        deallocate(VrelDot)
+        deallocate(Coords)
+        deallocate(Psi0)
+        deallocate(PosDefor)
+        deallocate(PsiDefor)
+        deallocate(PosDotDefor)
+        deallocate(PsiDotDefor)
+        deallocate(PosPsiTime)
+        deallocate(VelocTime)
+        deallocate(DynOut)
+
+    end subroutine wrap_cbeam3_solv_nlndyn
+
 
 
 	!---------------------------------------------------------------------------
@@ -2631,6 +2305,742 @@ module test
         deallocate(DynOut)
 
     end subroutine wrap_cbeam3_solv_nlndyn_accel
+
+
+
+    !---------------------------------------------------------------------------
+    ! Separate assembly of influence coefficients matrix for
+    ! applied follower and dead loads
+    !---------------------------------------------------------------------------
+    subroutine wrap_cbeam3_asbly_Fglobal(NumElems,NumNodes_tot,&
+    &           NumNodes,MemNo,Conn,Master_Array,Length,PreCurv,Psi,Vector,&
+    &           Nod_Master,Nod_Vdof,Nod_Fdof,&
+    &           PosIni_Array,PsiIni_Array,PosDefor_Array,PsiDefor_Array,&
+    &           ForceStatic_foll_Array,DimMat,NumDof,&
+    &           ksf,Kglobal_foll_Array,fsf,Fglobal_foll_Array,fsd,Fglobal_dead_Array,&
+    &           Cao_Array)                   !for pack_xbopts)
+
+        integer,intent(in)   :: NumElems
+        integer,intent(in)   :: NumNodes_tot
+        integer,intent(in)   :: NumNodes(NumElems)
+        integer,intent(in)   :: MemNo(NumElems)
+        integer,intent(in)   :: Conn(MaxElNod*NumElems)
+        integer,intent(in)   :: Master_Array(MaxElNod*NumElems*2)
+        real(8),intent(in)   :: Length(NumElems)
+        real(8),intent(in)   :: PreCurv(3*NumElems)
+        real(8),intent(in)   :: Psi(3*NumElems)
+        real(8),intent(in)   :: Vector(3*NumElems)
+        integer,intent(in)   :: Nod_Master(2*NumNodes_tot)
+        integer,intent(in)   :: Nod_Vdof(NumNodes_tot)
+        integer,intent(in)   :: Nod_Fdof(NumNodes_tot)
+        real(8),intent(in)   :: PosIni_Array(NumNodes_tot*3)
+        real(8),intent(in)   :: PsiIni_Array(NumElems*MaxElNod*3)
+        real(8),intent(in)   :: PosDefor_Array(NumNodes_tot*3)
+        real(8),intent(in)   :: PsiDefor_Array(NumElems*MaxElNod*3)
+        real(8),intent(in)   :: ForceStatic_foll_Array(NumNodes_tot*6)
+        integer,intent(in)   :: DimMat
+        integer,intent(in)   :: NumDof
+        integer,intent(out)  :: ksf
+        real(8),intent(out)  :: Kglobal_foll_Array(NumDof*NumDof)
+        integer,intent(out)  :: fsf
+        real(8),intent(out)  :: Fglobal_foll_Array(NumDof*NumDof)
+        integer,intent(out)  :: fsd
+        real(8),intent(out)  :: Fglobal_dead_Array(NumDof*NumDof)
+        real(8),intent(in)   :: Cao_Array(3*3)
+
+        type(xbelem),allocatable:: Elem(:)
+        type(xbnode),allocatable:: Node(:)
+        real(8)     ,allocatable:: Coords(:,:)
+        real(8)     ,allocatable:: Psi0(:,:,:)
+        real(8)     ,allocatable:: PosDefor(:,:)
+        real(8)     ,allocatable:: PsiDefor(:,:,:)
+        real(8)     ,allocatable:: AppForces(:,:)
+        real(8)     ,allocatable:: Kglobal_foll_Full(:,:)
+        real(8)     ,allocatable:: Fglobal_foll_Full(:,:)
+        real(8)     ,allocatable:: Fglobal_dead_Full(:,:)
+        type(sparse),allocatable:: Kglobal_foll(:)
+        type(sparse),allocatable:: Fglobal_foll(:)
+        type(sparse),allocatable:: Fglobal_dead(:)
+        real(8)     ,allocatable:: Cao(:,:)
+        real(8)                 :: Dummy1(6*NumElems*6)
+        real(8)                 :: Dummy2(MaxElNod*NumElems*6*6)
+
+        allocate(Elem(NumElems))
+        allocate(Node(NumNodes_tot))
+        allocate(Coords(NumNodes_tot,3)); Coords = 0.d0
+        allocate(Psi0(NumElems,MaxElNod,3)); Psi0 = 0.d0
+        allocate(PosDefor(NumNodes_tot,3)); PosDefor = 0.d0
+        allocate(PsiDefor(NumElems,MaxElNod,3)); PsiDefor = 0.d0
+        allocate(AppForces(NumNodes_tot,6)); AppForces = 0.d0
+        allocate(Kglobal_foll_Full(NumDof,NumDof)); Kglobal_foll_Full = 0.d0
+        allocate(Fglobal_foll_Full(NumDof,NumDof)); Fglobal_foll_Full = 0.d0
+        allocate(Fglobal_dead_Full(NumDof,NumDof)); Fglobal_dead_Full = 0.d0
+        allocate(Kglobal_foll(DimMat*NumDof)); call sparse_zero(ksf,Kglobal_foll)
+        allocate(Fglobal_foll(DimMat*NumDof)); call sparse_zero(fsf,Fglobal_foll)
+        allocate(Fglobal_dead(DimMat*NumDof)); call sparse_zero(fsd,Fglobal_dead)
+        allocate(Cao(3,3)); Cao = 0.d0
+        Dummy1 = 0.d0
+        Dummy2 = 0.d0
+
+        ! Convert PY data to F90 data
+        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,Master_Array,&
+        &       Length,PreCurv,Psi,Vector,Dummy1,Dummy1,&
+        &       Dummy1,Dummy2)
+
+        ! Convert PY data to F90 data
+        call pack_xbnode(NumNodes_tot,Node,Nod_Master,Nod_Vdof,Nod_Fdof)
+
+        call vec2mat_double(PosIni_Array,Coords,NumNodes_tot,3)
+        call vec2mat3d_double(PsiIni_Array,Psi0,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDefor_Array,PosDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDefor_Array,PsiDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(ForceStatic_foll_Array,AppForces,NumNodes_tot,6)
+        call vec2mat_double(Cao_Array,Cao,3,3)
+
+        ! Assembly matrices for a nonlinear static problem
+        call cbeam3_asbly_Fglobal(Elem,Node,Coords,Psi0,PosDefor,PsiDefor,AppForces, &
+        &       ksf,Kglobal_foll,fsf,Fglobal_foll,fsd,Fglobal_dead,Cao)
+
+        ! Convert F90 data to PY data
+        call sparse2full_rank(ksf,Kglobal_foll,NumDof,NumDof,Kglobal_foll_Full)
+        call sparse2full_rank(fsf,Fglobal_foll,NumDof,NumDof,Fglobal_foll_Full)
+        call sparse2full_rank(fsd,Fglobal_dead,NumDof,NumDof,Fglobal_dead_Full)
+
+        call mat2vec_double(Kglobal_foll_Full,Kglobal_foll_Array,NumDof,NumDof)
+        call mat2vec_double(Fglobal_foll_Full,Fglobal_foll_Array,NumDof,NumDof)
+        call mat2vec_double(Fglobal_dead_Full,Fglobal_dead_Array,NumDof,NumDof)
+
+        deallocate(Elem)
+        deallocate(Node)
+        deallocate(Coords)
+        deallocate(Psi0)
+        deallocate(PosDefor)
+        deallocate(PsiDefor)
+        deallocate(AppForces)
+        deallocate(Kglobal_foll)
+        deallocate(Kglobal_foll_Full)
+        deallocate(Fglobal_foll)
+        deallocate(Fglobal_foll_Full)
+        deallocate(Fglobal_dead)
+        deallocate(Fglobal_dead_Full)
+
+        return
+
+    end subroutine wrap_cbeam3_asbly_Fglobal
+
+
+    !---------------------------------------------------------------------------
+    ! Assembly rigid-body matrices for the dynamic problem.
+    !---------------------------------------------------------------------------
+    subroutine wrap_xbeam_asbly_dynamic(&
+    &           NumElems,NumNodes_tot,NumNodes,&
+    &           MemNo,Conn,Master_Array,Length,PreCurv,Psi,Vector,Mass_Array,&
+    &           Stiff_Array,InvStiff_Array,RBMass_Array,&
+    &           Nod_Master,Nod_Vdof,Nod_Fdof,&
+    &           Coords_Array,Psi0_Array,PosDefor_Array,PsiDefor_Array,&
+    &           PosDeforDot_Array,PsiDeforDot_Array,&
+    &           PosDeforDDot_Array,PsiDeforDDot_Array,Vrel,VrelDot,Quat,&
+    &           NumDof,DimMat,mr,MRS_Array,MRR_Array,cr,CRS_Array,CRR_Array,&
+    &           CQR_Array,CQQ_Array,kr,KRS_Array,fr,Frigid_Array,&
+    &           Qrigid,Cao_Array,&
+    &           FollowerForce, FollowerForceRig,        &!for pack_xbopts
+    &           PrintInfo, OutInBframe, OutInaframe,    &!for pack_xbopts
+    &           ElemProj, MaxIterations, NumLoadSteps,  &!for pack_xbopts
+    &           NumGauss, Solution, DeltaCurved,        &!for pack_xbopts
+    &           MinDelta, NewmarkDamp)                   !for pack_xbopts
+
+        integer,intent(in) :: NumElems
+        integer,intent(in) :: NumNodes_tot
+        integer,intent(in) :: NumNodes(NumElems)
+        integer,intent(in) :: MemNo(NumElems)
+        integer,intent(in) :: Conn(MaxElNod*NumElems)
+        integer,intent(in) :: Master_Array(MaxElNod*NumElems*2)
+        real(8),intent(in) :: Length(NumElems)
+        real(8),intent(in) :: PreCurv(3*NumElems)
+        real(8),intent(in) :: Psi(3*NumElems)
+        real(8),intent(in) :: Vector(3*NumElems)
+        real(8),intent(in) :: Mass_Array(6*NumElems*6)
+        real(8),intent(in) :: Stiff_Array(6*NumElems*6)
+        real(8),intent(in) :: InvStiff_Array(6*NumElems*6)
+        real(8),intent(in) :: RBMass_Array(MaxElNod*NumElems*6*6)
+        integer,intent(in) :: Nod_Master(2*NumNodes_tot)
+        integer,intent(in) :: Nod_Vdof(NumNodes_tot)
+        integer,intent(in) :: Nod_Fdof(NumNodes_tot)
+        real(8),intent(in) :: Coords_Array(NumNodes_tot*3)
+        real(8),intent(in) :: Psi0_Array(NumElems*MaxElNod*3)
+        real(8),intent(in) :: PosDefor_Array(NumNodes_tot*3)
+        real(8),intent(in) :: PsiDefor_Array(NumElems*MaxElNod*3)
+        real(8),intent(in) :: PosDeforDot_Array(NumNodes_tot*3)
+        real(8),intent(in) :: PsiDeforDot_Array(NumElems*MaxElNod*3)
+        real(8),intent(in) :: PosDeforDDot_Array(NumNodes_tot*3)
+        real(8),intent(in) :: PsiDeforDDot_Array(NumElems*MaxElNod*3)
+        real(8),intent(in) :: Vrel(6)
+        real(8),intent(in) :: VrelDot(6)
+        real(8),intent(in) :: Quat(4)
+        integer,intent(in) :: NumDof
+        integer,intent(in) :: DimMat
+        integer,intent(inout):: mr
+        real(8),intent(inout):: MRS_Array(6*NumDof)
+        real(8),intent(inout):: MRR_Array(6*6)
+        integer,intent(inout):: cr
+        real(8),intent(inout):: CRS_Array(6*NumDof)
+        real(8),intent(inout):: CRR_Array(6*6)
+        real(8),intent(inout):: CQR_Array(4*6)
+        real(8),intent(inout):: CQQ_Array(4*4)
+        integer,intent(inout):: kr
+        real(8),intent(inout):: KRS_Array(6*NumDof)
+        integer,intent(inout):: fr
+        real(8),intent(inout):: Frigid_Array(6*(NumDof+6))
+        real(8),intent(inout):: Qrigid(6)
+        real(8),intent(in) :: Cao_Array(3*3)
+        logical,intent(in) :: FollowerForce
+        logical,intent(in) :: FollowerForceRig
+        logical,intent(in) :: PrintInfo
+        logical,intent(in) :: OutInBframe
+        logical,intent(in) :: OutInaframe
+        integer,intent(in) :: ElemProj
+        integer,intent(in) :: MaxIterations
+        integer,intent(in) :: NumLoadSteps
+        integer,intent(in) :: NumGauss
+        integer,intent(in) :: Solution
+        real(8),intent(in) :: DeltaCurved
+        real(8),intent(in) :: MinDelta
+        real(8),intent(in) :: NewmarkDamp
+
+        type(xbelem),allocatable:: Elem(:)
+        type(xbnode),allocatable:: Node(:)
+        real(8)     ,allocatable:: Coords(:,:)
+        real(8)     ,allocatable:: Psi0(:,:,:)
+        real(8)     ,allocatable:: PosDefor(:,:)
+        real(8)     ,allocatable:: PsiDefor(:,:,:)
+        real(8)     ,allocatable:: PosDeforDot(:,:)
+        real(8)     ,allocatable:: PsiDeforDot(:,:,:)
+        real(8)     ,allocatable:: PosDeforDDot(:,:)
+        real(8)     ,allocatable:: PsiDeforDDot(:,:,:)
+        type(sparse),allocatable:: MRS(:)
+        real(8)     ,allocatable:: MRS_Full(:,:)
+        real(8)     ,allocatable:: MRR(:,:)
+        type(sparse),allocatable:: CRS(:)
+        real(8)     ,allocatable:: CRS_Full(:,:)
+        real(8)     ,allocatable:: CRR(:,:)
+        real(8)     ,allocatable:: CQR(:,:)
+        real(8)     ,allocatable:: CQQ(:,:)
+        type(sparse),allocatable:: KRS(:)
+        real(8)     ,allocatable:: KRS_Full(:,:)
+        type(sparse),allocatable:: Frigid(:)
+        real(8)     ,allocatable:: Frigid_Full(:,:)
+        real(8)     ,allocatable:: Cao(:,:)
+
+        type(xbopts):: Options
+
+        allocate(Elem(NumElems))
+        allocate(Node(NumNodes_tot))
+        allocate(Coords(NumNodes_tot,3)); Coords = 0.d0
+        allocate(Psi0(NumElems,MaxElNod,3)); Psi0 = 0.d0
+        allocate(PosDefor(NumNodes_tot,3)); PosDefor = 0.d0
+        allocate(PsiDefor(NumElems,MaxElNod,3)); PsiDefor = 0.d0
+        allocate(PosDeforDot(NumNodes_tot,3)); PosDeforDot = 0.d0
+        allocate(PsiDeforDot(NumElems,MaxElNod,3)); PsiDeforDot = 0.d0
+        allocate(PosDeforDDot(NumNodes_tot,3)); PosDeforDDot = 0.d0
+        allocate(PsiDeforDDot(NumElems,MaxElNod,3)); PsiDeforDDot = 0.d0
+        allocate(MRS(DimMat*NumDof)); call sparse_zero(mr,MRS)
+        allocate(MRS_Full(6,NumDof)); MRS_Full = 0.d0
+        allocate(MRR(6,6)); MRR = 0.d0
+        allocate(CRS(DimMat*NumDof)); call sparse_zero(cr,CRS)
+        allocate(CRS_Full(6,NumDof)); CRS_Full = 0.d0
+        allocate(CRR(6,6)); CRR = 0.d0
+        allocate(CQR(4,6)); CQR = 0.d0
+        allocate(CQQ(4,4)); CQQ = 0.d0
+        allocate(KRS(DimMat*NumDof)); call sparse_zero(kr,KRS)
+        allocate(KRS_Full(6,NumDof)); KRS_Full = 0.d0
+        allocate(Frigid(DimMat*NumDof)); call sparse_zero(fr,Frigid)
+        allocate(Frigid_Full(6,NumDof+6)); Frigid_Full = 0.d0
+        allocate(Cao(3,3)); Cao = 0.d0
+
+        ! Convert PY data to F90 data
+        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,Master_Array,&
+        &       Length,PreCurv,Psi,Vector,Mass_Array,Stiff_Array,&
+        &       InvStiff_Array,RBMass_Array)
+
+        ! Convert PY data to F90 data
+        call pack_xbnode(NumNodes_tot,Node,Nod_Master,Nod_Vdof,Nod_Fdof)
+
+        ! Convert PY data to F90 data
+        call pack_xbopts(Options,FollowerForce,FollowerForceRig,            &
+&                   PrintInfo,OutInBframe,OutInaframe,ElemProj,             &
+&                   MaxIterations,NumLoadSteps,                             &
+&                   NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
+
+        call vec2mat_double(Coords_Array,Coords,NumNodes_tot,3)
+        call vec2mat3d_double(Psi0_Array,Psi0,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDefor_Array,PosDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDefor_Array,PsiDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDeforDot_Array,PosDeforDot,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDeforDot_Array,PsiDeforDot,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDeforDDot_Array,PosDeforDDot,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDeforDDot_Array,PsiDeforDDot,NumElems,MaxElNod,3)
+        call vec2mat_double(Cao_Array,Cao,3,3)
+
+        ! Assembly rigid-body matrices for the dynamic problem
+        call xbeam_asbly_dynamic(Elem,Node,Coords,Psi0,PosDefor,PsiDefor,&
+        &       PosDeforDot,PsiDeforDot,PosDeforDDot,PsiDeforDDot,&
+        &       Vrel,VrelDot,Quat,mr,MRS,MRR,cr,CRS,CRR,CQR,CQQ,kr,KRS,&
+        &       fr,Frigid,Qrigid,Options,Cao)
+
+        ! Convert F90 data to PY data
+        call sparse2full_rank(mr,MRS,6,NumDof,MRS_Full)
+        call mat2vec_double(MRS_Full,MRS_Array,6,NumDof)
+
+        call mat2vec_double(MRR,MRR_Array,6,6)
+
+        call sparse2full_rank(cr,CRS,6,NumDof,CRS_Full)
+        call mat2vec_double(CRS_Full,CRS_Array,6,NumDof)
+
+        call mat2vec_double(CRR,CRR_Array,6,6)
+        call mat2vec_double(CQR,CQR_Array,4,6)
+        call mat2vec_double(CQQ,CQQ_Array,4,4)
+
+        call sparse2full_rank(kr,KRS,6,NumDof,KRS_Full)
+        call mat2vec_double(KRS_Full,KRS_Array,6,NumDof)
+
+        call sparse2full_rank(fr,Frigid,6,NumDof+6,Frigid_Full)
+        call mat2vec_double(Frigid_Full,Frigid_Array,6,NumDof+6)
+
+
+        deallocate(Elem)
+        deallocate(Node)
+        deallocate(Coords)
+        deallocate(Psi0)
+        deallocate(PosDefor)
+        deallocate(PsiDefor)
+        deallocate(PosDeforDot)
+        deallocate(PsiDeforDot)
+        deallocate(PosDeforDDot)
+        deallocate(PsiDeforDDot)
+        deallocate(MRS)
+        deallocate(MRS_Full)
+        deallocate(MRR)
+        deallocate(CRS)
+        deallocate(CRS_Full)
+        deallocate(CRR)
+        deallocate(CQR)
+        deallocate(CQQ)
+        deallocate(KRS)
+        deallocate(KRS_Full)
+        deallocate(Frigid)
+        deallocate(Frigid_Full)
+        deallocate(Cao)
+
+        return
+
+    end subroutine wrap_xbeam_asbly_dynamic
+
+
+
+    !---------------------------------------------------------------------------
+    ! Separate assembly of influence coefficients matrix for
+    ! applied follower and dead loads for rigid-body dynamics EoM
+    !---------------------------------------------------------------------------
+    subroutine wrap_xbeam_asbly_Frigid(NumElems,NumNodes_tot,&
+    &           NumNodes,MemNo,Conn,Master_Array,Length,PreCurv,Psi,Vector,&
+    &           Nod_Master,Nod_Vdof,Nod_Fdof,&
+    &           PosIni_Array,PsiIni_Array,PosDefor_Array,PsiDefor_Array,&
+    &           DimMat,NumDof,&
+    &           frf,Frigid_foll_Array,frd,Frigid_dead_Array,&
+    &           Cao_Array)                   !for pack_xbopts)
+
+        integer,intent(in)   :: NumElems
+        integer,intent(in)   :: NumNodes_tot
+        integer,intent(in)   :: NumNodes(NumElems)
+        integer,intent(in)   :: MemNo(NumElems)
+        integer,intent(in)   :: Conn(MaxElNod*NumElems)
+        integer,intent(in)   :: Master_Array(MaxElNod*NumElems*2)
+        real(8),intent(in)   :: Length(NumElems)
+        real(8),intent(in)   :: PreCurv(3*NumElems)
+        real(8),intent(in)   :: Psi(3*NumElems)
+        real(8),intent(in)   :: Vector(3*NumElems)
+        integer,intent(in)   :: Nod_Master(2*NumNodes_tot)
+        integer,intent(in)   :: Nod_Vdof(NumNodes_tot)
+        integer,intent(in)   :: Nod_Fdof(NumNodes_tot)
+        real(8),intent(in)   :: PosIni_Array(NumNodes_tot*3)
+        real(8),intent(in)   :: PsiIni_Array(NumElems*MaxElNod*3)
+        real(8),intent(in)   :: PosDefor_Array(NumNodes_tot*3)
+        real(8),intent(in)   :: PsiDefor_Array(NumElems*MaxElNod*3)
+        integer,intent(in)   :: DimMat
+        integer,intent(in)   :: NumDof
+        integer,intent(inout):: frf
+        real(8),intent(inout):: Frigid_foll_Array(6*(NumDof+6))
+        integer,intent(inout):: frd
+        real(8),intent(inout):: Frigid_dead_Array(6*(NumDof+6))
+        real(8),intent(in)   :: Cao_Array(3*3)
+
+        type(xbelem),allocatable:: Elem(:)
+        type(xbnode),allocatable:: Node(:)
+        real(8)     ,allocatable:: Coords(:,:)
+        real(8)     ,allocatable:: Psi0(:,:,:)
+        real(8)     ,allocatable:: PosDefor(:,:)
+        real(8)     ,allocatable:: PsiDefor(:,:,:)
+        type(sparse),allocatable:: Frigid_foll(:)
+        real(8)     ,allocatable:: Frigid_foll_Full(:,:)
+        type(sparse),allocatable:: Frigid_dead(:)
+        real(8)     ,allocatable:: Frigid_dead_Full(:,:)
+        real(8)     ,allocatable:: Cao(:,:)
+        real(8)                 :: Dummy1(6*NumElems*6)
+        real(8)                 :: Dummy2(MaxElNod*NumElems*6*6)
+
+        type(xbopts):: Options
+
+        allocate(Elem(NumElems))
+        allocate(Node(NumNodes_tot))
+        allocate(Coords(NumNodes_tot,3)); Coords = 0.d0
+        allocate(Psi0(NumElems,MaxElNod,3)); Psi0 = 0.d0
+        allocate(PosDefor(NumNodes_tot,3)); PosDefor = 0.d0
+        allocate(PsiDefor(NumElems,MaxElNod,3)); PsiDefor = 0.d0
+        allocate(Frigid_foll(DimMat*NumDof)); call sparse_zero(frf,Frigid_foll)
+        allocate(Frigid_foll_Full(6,NumDof+6)); Frigid_foll_Full = 0.d0
+        allocate(Frigid_dead(DimMat*NumDof)); call sparse_zero(frd,Frigid_dead)
+        allocate(Frigid_dead_Full(6,NumDof+6)); Frigid_dead_Full = 0.d0
+        allocate(Cao(3,3)); Cao = 0.d0
+        Dummy1 = 0.d0
+        Dummy2 = 0.d0
+
+        ! Convert PY data to F90 data
+        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,Master_Array,&
+        &       Length,PreCurv,Psi,Vector,Dummy1,Dummy1,&
+        &       Dummy1,Dummy2)
+
+        ! Convert PY data to F90 data
+        call pack_xbnode(NumNodes_tot,Node,Nod_Master,Nod_Vdof,Nod_Fdof)
+
+        call vec2mat_double(PosIni_Array,Coords,NumNodes_tot,3)
+        call vec2mat3d_double(PsiIni_Array,Psi0,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDefor_Array,PosDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDefor_Array,PsiDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(Cao_Array,Cao,3,3)
+
+        ! Assembly matrices for a nonlinear static problem
+        call xbeam_asbly_Frigid(Elem,Node,Coords,Psi0,PosDefor,PsiDefor, &
+        &                       frf,Frigid_foll,frd,Frigid_dead,Cao)
+
+        ! Convert F90 data to PY data
+        call sparse2full_rank(frf,Frigid_foll,6,NumDof+6,Frigid_foll_Full)
+        call sparse2full_rank(frd,Frigid_dead,6,NumDof+6,Frigid_dead_Full)
+
+        call mat2vec_double(Frigid_foll_Full,Frigid_foll_Array,6,NumDof+6)
+        call mat2vec_double(Frigid_dead_Full,Frigid_dead_Array,6,NumDof+6)
+
+        deallocate(Elem)
+        deallocate(Node)
+        deallocate(Coords)
+        deallocate(Psi0)
+        deallocate(PosDefor)
+        deallocate(PsiDefor)
+        deallocate(Frigid_foll)
+        deallocate(Frigid_foll_Full)
+        deallocate(Frigid_dead)
+        deallocate(Frigid_dead_Full)
+        deallocate(Cao)
+
+        return
+
+    end subroutine wrap_xbeam_asbly_Frigid
+
+
+    !---------------------------------------------------------------------------
+    ! Assembly rigid-body matrices to account for change in orientation.
+    ! This is a redundant assembly for the linear rigid-body dynamics.
+    !---------------------------------------------------------------------------
+    subroutine wrap_xbeam_asbly_orient(&
+    &           NumElems,NumNodes_tot,NumNodes,&
+    &           MemNo,Conn,Master_Array,Length,PreCurv,Psi,Vector,Mass_Array,&
+    &           Stiff_Array,InvStiff_Array,RBMass_Array,&
+    &           Nod_Master,Nod_Vdof,Nod_Fdof,&
+    &           PosDefor_Array,PsiDefor_Array,Vrel,Quat,&
+    &           CQR_Array,CQQ_Array,NumDof,DimMat,fs,Frigid_Array,Cao_Array,&
+    &           FollowerForce, FollowerForceRig,        &!for pack_xbopts
+    &           PrintInfo, OutInBframe, OutInaframe,    &!for pack_xbopts
+    &           ElemProj, MaxIterations, NumLoadSteps,  &!for pack_xbopts
+    &           NumGauss, Solution, DeltaCurved,        &!for pack_xbopts
+    &           MinDelta, NewmarkDamp)                   !for pack_xbopts
+
+        integer,intent(in) :: NumElems
+        integer,intent(in) :: NumNodes_tot
+        integer,intent(in) :: NumNodes(NumElems)
+        integer,intent(in) :: MemNo(NumElems)
+        integer,intent(in) :: Conn(MaxElNod*NumElems)
+        integer,intent(in) :: Master_Array(MaxElNod*NumElems*2)
+        real(8),intent(in) :: Length(NumElems)
+        real(8),intent(in) :: PreCurv(3*NumElems)
+        real(8),intent(in) :: Psi(3*NumElems)
+        real(8),intent(in) :: Vector(3*NumElems)
+        real(8),intent(in) :: Mass_Array(6*NumElems*6)
+        real(8),intent(in) :: Stiff_Array(6*NumElems*6)
+        real(8),intent(in) :: InvStiff_Array(6*NumElems*6)
+        real(8),intent(in) :: RBMass_Array(MaxElNod*NumElems*6*6)
+        integer,intent(in) :: Nod_Master(2*NumNodes_tot)
+        integer,intent(in) :: Nod_Vdof(NumNodes_tot)
+        integer,intent(in) :: Nod_Fdof(NumNodes_tot)
+        real(8),intent(in) :: PosDefor_Array(NumNodes_tot*3)
+        real(8),intent(in) :: PsiDefor_Array(NumElems*MaxElNod*3)
+        real(8),intent(in) :: Vrel(6)
+        real(8),intent(in) :: Quat(4)
+        real(8),intent(out):: CQR_Array(4*6)
+        real(8),intent(out):: CQQ_Array(4*4)
+        integer,intent(in) :: NumDof
+        integer,intent(in) :: DimMat
+        integer,intent(out):: fs
+        real(8),intent(out):: Frigid_Array(6*(NumDof+6))
+        real(8),intent(in) :: Cao_Array(3*3)
+        logical,intent(in) :: FollowerForce
+        logical,intent(in) :: FollowerForceRig
+        logical,intent(in) :: PrintInfo
+        logical,intent(in) :: OutInBframe
+        logical,intent(in) :: OutInaframe
+        integer,intent(in) :: ElemProj
+        integer,intent(in) :: MaxIterations
+        integer,intent(in) :: NumLoadSteps
+        integer,intent(in) :: NumGauss
+        integer,intent(in) :: Solution
+        real(8),intent(in) :: DeltaCurved
+        real(8),intent(in) :: MinDelta
+        real(8),intent(in) :: NewmarkDamp
+
+        type(xbelem),allocatable:: Elem(:)
+        type(xbnode),allocatable:: Node(:)
+        real(8)     ,allocatable:: PosDefor(:,:)
+        real(8)     ,allocatable:: PsiDefor(:,:,:)
+        real(8)     ,allocatable:: CQR(:,:)
+        real(8)     ,allocatable:: CQQ(:,:)
+        type(sparse),allocatable:: Frigid(:)
+        real(8)     ,allocatable:: Frigid_Full(:,:)
+        real(8)     ,allocatable:: Cao(:,:)
+
+        type(xbopts):: Options
+
+        allocate(Elem(NumElems))
+        allocate(Node(NumNodes_tot))
+        allocate(PosDefor(NumNodes_tot,3)); PosDefor = 0.d0
+        allocate(PsiDefor(NumElems,MaxElNod,3)); PsiDefor = 0.d0
+        allocate(CQR(4,6)); CQR = 0.d0
+        allocate(CQQ(4,4)); CQQ = 0.d0
+        allocate(Frigid(DimMat*NumDof)); call sparse_zero(fs,Frigid)
+        allocate(Frigid_Full(6,NumDof+6)); Frigid_Full = 0.d0
+        allocate(Cao(3,3)); Cao = 0.d0
+
+        ! Convert PY data to F90 data
+        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,Master_Array,&
+        &       Length,PreCurv,Psi,Vector,Mass_Array,Stiff_Array,&
+        &       InvStiff_Array,RBMass_Array)
+
+        ! Convert PY data to F90 data
+        call pack_xbnode(NumNodes_tot,Node,Nod_Master,Nod_Vdof,Nod_Fdof)
+
+        ! Convert PY data to F90 data
+        call pack_xbopts(Options,FollowerForce,FollowerForceRig,            &
+&                   PrintInfo,OutInBframe,OutInaframe,ElemProj,             &
+&                   MaxIterations,NumLoadSteps,                             &
+&                   NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
+
+        call vec2mat_double(PosDefor_Array,PosDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDefor_Array,PsiDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(CQR_Array,CQR,4,6)
+        call vec2mat_double(CQQ_Array,CQQ,4,4)
+        call vec2mat_double(Cao_Array,Cao,3,3)
+
+        ! Assembly rigid body matrices for changing orientation
+        call xbeam_asbly_orient(Elem,Node,PosDefor,PsiDefor,Vrel,Quat,&
+        &       CQR,CQQ,fs,Frigid,Options,Cao)
+
+        ! Convert F90 data to PY data
+        call mat2vec_double(CQR,CQR_Array,4,6)
+        call mat2vec_double(CQQ,CQQ_Array,4,4)
+
+        call sparse2full_rank(fs,Frigid,6,NumDof+6,Frigid_Full)
+        call mat2vec_double(Frigid_Full,Frigid_Array,6,NumDof+6)
+
+        deallocate(Elem)
+        deallocate(Node)
+        deallocate(PosDefor)
+        deallocate(PsiDefor)
+        deallocate(CQR)
+        deallocate(CQQ)
+        deallocate(Frigid)
+        deallocate(Frigid_Full)
+        deallocate(Cao)
+
+        return
+
+    end subroutine wrap_xbeam_asbly_orient
+
+
+    !---------------------------------------------------------------------------
+    ! Wrapper for xbeam_solv_couplednlndyn for unconstrained structures
+    ! under external forces
+    !---------------------------------------------------------------------------
+    subroutine wrap_xbeam_solv_couplednlndyn(iOut,NumDof,NumSteps,Time,&
+&                   NumElems, NumNodes, MemNo, Conn,        &!for do_xbelem_var
+&                   Master_Array,                           &!for do_xbelem_var
+&                   Length, PreCurv,                        &!for do_xbelem_var
+&                   Psi, Vector, Mass_Array,                &!for do_xbelem_var
+&                   Stiff_Array,                            &!for do_xbelem_var
+&                   InvStiff_Array, RBMass_Array,           &!for do_xbelem_var
+&                   NumNodes_tot, Master, Vdof, Fdof,       &!for pack_xbnode
+&                   F0_Vec,Fa_Vec,Ftime,                                &
+&                   Vrel_Vec, VrelDot_Vec, Quat,                        &
+&                   Coords_Vec, Psi0_Vec, PosDefor_Vec,                 &
+&                   PsiDefor_Vec, PosDotDefor_Vec, PsiDotDefor_Vec,     &
+&                   DynOut_Vec,OutGrids,                                &
+&                   FollowerForce, FollowerForceRig,        &!for pack_xbopts
+&                   PrintInfo, OutInBframe, OutInaframe,    &!for pack_xbopts
+&                   ElemProj, MaxIterations, NumLoadSteps,  &!for pack_xbopts
+&                   NumGauss, Solution, DeltaCurved,        &!for pack_xbopts
+&                   MinDelta, NewmarkDamp)                   !for pack_xbopts
+
+        integer,    intent(in)  :: iOut                 ! Output file.
+        integer,    intent(in)  :: NumDof               ! No. of independent DoF
+        integer,    intent(in)  :: NumSteps             ! Number of timesteps
+        real(8),    intent(in)  :: Time(NumSteps+1)     ! Time steps.
+        integer,    intent(in)  :: NumElems             !for do_xbelem_var
+        integer,    intent(in)  :: NumNodes(NumElems)   !for do_xbelem_var+pkxbn !Number of nodes in each element
+        integer,    intent(in)  :: MemNo(NumElems)      !for do_xbelem_var
+        integer,    intent(in)  :: Conn(MaxElNod*NumElems)   !for do_xbelem_var
+        integer,    intent(in)  :: Master_Array(MaxElNod*NumElems*2) !for do_xbe
+        real(8),    intent(in)  :: Length(NumElems)     !for do_xbelem_var
+        real(8),    intent(in)  :: PreCurv(3*NumElems)  !for do_xbelem_var
+        real(8),    intent(in)  :: Psi(3*NumElems)      !for do_xbelem_var
+        real(8),    intent(in)  :: Vector(3*NumElems)   !for do_xbelem_var
+        real(8),    intent(in)  :: Mass_Array(6*NumElems*6) !for do_xbelem_var
+        real(8),    intent(in)  :: Stiff_Array(6*NumElems*6)!for do_xbelem_var
+        real(8),    intent(in)  :: InvStiff_Array(6*NumElems*6) !for do_xbelem_v
+        real(8),    intent(in)  :: RBMass_Array(MaxElNod*NumElems*6*6)!for do_xb
+        integer,    intent(in)  :: NumNodes_tot             !for pack_xbnode
+        integer,    intent(in)  :: Master(2*NumNodes_tot)   !for pack_xbnode
+        integer,    intent(in)  :: Vdof(NumNodes_tot)       !for pack_xbnode
+        integer,    intent(in)  :: Fdof(NumNodes_tot)       !for pack_xbnode
+        real(8),    intent(in)  :: F0_Vec(NumNodes_tot*6)   !Applied static nodal forces
+        real(8),    intent(in)  :: Fa_Vec(NumNodes_tot*6)   !Amplitude of dynamic nodal forces
+        real(8),    intent(in)  :: Ftime(NumSteps+1)    !Time history of applied forces
+        real(8),    intent(inout)   :: Vrel_Vec((NumSteps+1)*6)!Time history of vel of ref frame
+        real(8),    intent(inout)   :: VrelDot_Vec((NumSteps+1)*6)!Ti Hstry of accel of ref frame
+        real(8),    intent(inout)   :: Quat(4) ! Quaternions to describes motion of reference system.
+        real(8),    intent(in)      :: Coords_Vec(NumNodes_tot*3)   !Undefrmd coords of grid points
+        real(8),    intent(in)      :: Psi0_Vec(NumElems*MaxElNod*3)    !Undefrmd CRV of nodes in elems
+        real(8),    intent(inout)   :: PosDefor_Vec(NumNodes_tot*3)   !Initial/final grid pts
+        real(8),    intent(inout)   :: PsiDefor_Vec(NumElems*MaxElNod*3) !Init/Fnl CRVs
+        real(8),    intent(inout)   :: PosDotDefor_Vec(NumNodes_tot*3)!d/dt of PosDefor
+        real(8),    intent(inout)   :: PsiDotDefor_Vec(NumElems*MaxElNod*3) !d/dt of PsiDefor
+        real(8),    intent(out)     :: DynOut_Vec(((NumSteps+1)*NumNodes_tot)*3)    !snapshot t-hstry of pos of all nodes to be appended
+        logical,    intent(inout)   :: OutGrids(NumNodes_tot)   !Output grids
+        logical,    intent(in) :: FollowerForce
+        logical,    intent(in) :: FollowerForceRig
+        logical,    intent(in) :: PrintInfo
+        logical,    intent(in) :: OutInBframe
+        logical,    intent(in) :: OutInaframe
+        integer,    intent(in) :: ElemProj
+        integer,    intent(in) :: MaxIterations
+        integer,    intent(in) :: NumLoadSteps
+        integer,    intent(in) :: NumGauss
+        integer,    intent(in) :: Solution
+        real(8),    intent(in) :: DeltaCurved
+        real(8),    intent(in) :: MinDelta
+        real(8),    intent(in) :: NewmarkDamp
+
+        ! Declare local variables
+        type(xbelem),allocatable:: Elem(:) ! Initialise xbelem derived type
+        type(xbnode),allocatable:: Node(:) ! Initialise xbnode derived type
+        real(8)     ,allocatable:: F0(:,:)
+        real(8)     ,allocatable:: Fa(:,:)
+        real(8)     ,allocatable:: Vrel(:,:)
+        real(8)     ,allocatable:: VrelDot(:,:)
+        real(8)     ,allocatable:: Coords(:,:)
+        real(8)     ,allocatable:: Psi0(:,:,:)
+        real(8)     ,allocatable:: PosDefor(:,:)
+        real(8)     ,allocatable:: PsiDefor(:,:,:)
+        real(8)     ,allocatable:: PosDotDefor(:,:)
+        real(8)     ,allocatable:: PsiDotDefor(:,:,:)
+        real(8)     ,allocatable:: DynOut(:,:)
+        ! create Options struct
+        type(xbopts):: Options
+
+        ! allocate memory for vectors of derived type
+        allocate(Elem(NumElems))
+        allocate(Node(NumNodes_tot))
+
+        ! allocate memory for F90 Arrays
+        allocate(F0(NumNodes_tot,6))
+        allocate(Fa(NumNodes_tot,6))
+        allocate(Vrel((NumSteps+1),6))
+        allocate(VrelDot((NumSteps+1),6))
+        allocate(Coords(NumNodes_tot,3))
+        allocate(Psi0(NumElems,MaxElNod,3))
+        allocate(PosDefor(NumNodes_tot,3))
+        allocate(PsiDefor(NumElems,MaxElNod,3))
+        allocate(PosDotDefor(NumNodes_tot,3))
+        allocate(PsiDotDefor(NumElems,MaxElNod,3))
+        allocate(DynOut((NumSteps+1)*NumNodes_tot,3))
+
+        ! Convert PY data to F90 data
+        call do_xbelem_var(NumElems,Elem,NumNodes,MemNo,Conn,           &
+&               Master_Array,Length,PreCurv,Psi,Vector,Mass_Array,      &
+&               Stiff_Array,InvStiff_Array,RBMass_Array)
+
+        ! Convert PY data to F90 data
+        call pack_xbnode(NumNodes_tot,Node,Master,Vdof,Fdof)
+
+        ! Convert PY data to F90 data
+        call pack_xbopts(Options,FollowerForce,FollowerForceRig,            &
+&                   PrintInfo,OutInBframe,OutInaframe,ElemProj,             &
+&                   MaxIterations,NumLoadSteps,                             &
+&                   NumGauss,Solution,DeltaCurved,MinDelta,NewmarkDamp)
+
+        ! Convert vectors to multi-dim fortran arrays
+        call vec2mat_double(F0_Vec,F0,NumNodes_tot,6)
+        call vec2mat_double(Fa_Vec,Fa,NumNodes_tot,6)
+        call vec2mat_double(Vrel_Vec,Vrel,size(Time),6)
+        call vec2mat_double(VrelDot_Vec,VrelDot,size(Time),6)
+        call vec2mat_double(Coords_Vec,Coords,NumNodes_tot,3)
+        call vec2mat3d_double(Psi0_Vec,Psi0,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDefor_Vec,PosDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDefor_Vec,PsiDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(PosDotDefor_Vec,PosDotDefor,NumNodes_tot,3)
+        call vec2mat3d_double(PsiDotDefor_Vec,PsiDotDefor,NumElems,MaxElNod,3)
+        call vec2mat_double(DynOut_Vec,DynOut,size(Time)*NumNodes_tot,3)
+
+
+        ! Call fortran solver
+        call xbeam_solv_couplednlndyn (iOut,NumDof,Time,Elem,Node,F0,Fa,Ftime,             &
+&                                      Vrel,VrelDot,Quat,Coords,Psi0,PosDefor,PsiDefor,    &
+&                                      PosDotDefor,PsiDotDefor,DynOut,Options)
+
+
+        ! Convert multi-dim fortran arrays to vectors
+        call mat2vec_double(PosDefor,PosDefor_Vec,NumNodes_tot,3)
+        call mat2vec3d_double(PsiDefor,PsiDefor_Vec,NumElems,MaxElNod,3)
+        call mat2vec_double(PosDotDefor,PosDotDefor_Vec,NumNodes_tot,3)
+        call mat2vec3d_double(PsiDotDefor,PsiDotDefor_Vec,NumElems,MaxElNod,3)
+        call mat2vec3d_double(DynOut,DynOut_Vec,size(Time),NumNodes_tot,3)
+        call vec2mat_double(Vrel,Vrel_Vec,size(Time),6)
+        call vec2mat_double(VrelDot,VrelDot_Vec,size(Time),6)
+
+        ! deallocate memory for vectors of derived types
+        deallocate(Elem)
+        deallocate(Node)
+
+        ! deallocate memory for F90 Arrays
+        deallocate(F0)
+        deallocate(Fa)
+        deallocate(Vrel)
+        deallocate(VrelDot)
+        deallocate(Coords)
+        deallocate(Psi0)
+        deallocate(PosDefor)
+        deallocate(PsiDefor)
+        deallocate(PosDotDefor)
+        deallocate(PsiDotDefor)
+        deallocate(DynOut)
+
+    end subroutine wrap_xbeam_solv_couplednlndyn
+
 
 end module test
 
