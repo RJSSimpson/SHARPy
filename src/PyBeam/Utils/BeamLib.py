@@ -475,24 +475,6 @@ def Cbeam3_strainz(R0,Ri,z):
     element with z in [-1,1].
     """
     return (lib_cbeam3.cbeam3_strainz(R0,Ri,z))
-
-def Cbeam3_quat2psi(quat):
-    """@brief Convert quaternion into Cartesian rotation vector.
-    
-    @param quat Quaternion.
-    @returns Cartesian rotation vector.
-    """
-    return(lib_rotvect.lib_rotvect.rotvect_quat2psi(quat))
-    
-
-def Cbeam3_quat2psi(quat):
-    """@brief Convert quaternion into Cartesian rotation vector.
-    
-    @param quat Quaternion.
-    @returns Cartesian rotation vector.
-    """
-    return(lib_rotvect.lib_rotvect.rotvect_quat2psi(quat))
-    
     
 
 def Cbeam3_Asbly_Fglobal(XBINPUT, NumNodes_tot, XBELEM, XBNODE,\

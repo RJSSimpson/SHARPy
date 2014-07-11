@@ -14,6 +14,7 @@ import SharPySettings as Settings
 from scipy import linalg
 from PyBeam.Utils.Misc import isodd
 import BeamLib
+import lib_rotvect
 
 def QuadSkew(Omega):
     """@brief Calculate incremental update operator for Quaternion based on Omega.
@@ -82,7 +83,9 @@ def Euler2Quat(phi,theta,psi):
     
 
 def Psi2TransMat(Psi):
-    """@brief Calculates the transformation matrix associated with CRV Psi."""
+    """@brief Calculates the transformation matrix associated with CRV Psi.
+    @details This gives the transformation from B to a, or the rotation from
+              a to B."""
     TransMat = np.zeros((3,3))
     Norm = TriadNorm(Psi)
     SkewPsi=Skew(Psi)
@@ -323,6 +326,24 @@ def LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
     #------------------
     # Return everything
     return Qforces, KglobalFull_foll, Qrigid
+
+def quat2psi(quat):
+    """@brief Convert quaternion into Cartesian rotation vector.
+    
+    @param quat Quaternion.
+    @returns Cartesian rotation vector.
+    """
+    return(lib_rotvect.lib_rotvect.rotvect_quat2psi(quat))
+
+def a1(psi,b):
+    """@brief Calculates the A1 operator: delta(T)*b=a1(psi,b)*Delta(psi))
+    @param psi cartesian rotation vector.
+    @param b vector in R^3.
+    @returns A1 matrix (which is size R^3x3)
+    @details If magnitude of psi is less than 1e-3 a linearized
+    approximation is used to avoid numerical issues.
+    """
+    return(lib_rotvect.lib_rotvect.rotvect_a1(psi,b))
 
 
 if __name__ == '__main__':

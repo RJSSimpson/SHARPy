@@ -26,7 +26,7 @@ from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels
 from PyAero.UVLM.Solver.VLM import InitSteadyWake
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 import PyCoupled.Coupled_NlnStatic as Static
-import PyBeam.Utils.XbeamLib as XbeamLib
+import PyBeam.Utils.XbeamLib as xbl
 from PyCoupled.Coupled_NlnStatic import AddGravityLoads
 from DerivedTypesAero import ControlSurf
 from collections import OrderedDict
@@ -153,8 +153,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
     #Initialise rotation operators. TODO: include initial AOA here
     currVrel=Vrel[0,:].copy('F')
     AOA  = np.arctan(currVrel[2]/-currVrel[1])
-    Quat = XbeamLib.Euler2Quat(AOA,0,0)
-    Cao  = XbeamLib.Rot(Quat)
+    Quat = xbl.Euler2Quat(AOA,0,0)
+    Cao  = xbl.Rot(Quat)
     ACoa = np.zeros((6,6), ct.c_double, 'F')
     ACoa[:3,:3] = np.transpose(Cao)
     ACoa[3:,3:] = np.transpose(Cao)
@@ -230,7 +230,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
           
 #     #Separate assembly of follower and dead loads   
 #     tmpForceTime=ForceTime[0].copy('F') 
-#     tmpQforces,Dummy,tmpQrigid = XbeamLib.LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
+#     tmpQforces,Dummy,tmpQrigid = xbl.LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
 #                                     PosIni, PsiIni, PosDefor, PsiDefor, \
 #                                     (XBINPUT.ForceStatic_foll + XBINPUT.ForceDyn_foll*tmpForceTime), \
 #                                     (XBINPUT.ForceStatic_dead + XBINPUT.ForceDyn_dead*tmpForceTime), \
@@ -281,7 +281,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
     
     # Initialise A-frame location and orientation to be zero.
     OriginA_G = np.zeros(3,ct.c_double,'C')
-    PsiA_G = BeamLib.Cbeam3_quat2psi(Quat) # CRV at iStep
+    PsiA_G = xbl.quat2psi(Quat) # CRV at iStep
     
     # Init external velocities.  
     Ufree = InitSteadyExternalVels(VMOPTS,VMINPUT)
@@ -409,7 +409,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
         # Quaternion update for orientation.
         Quat = dQdt[NumDof.value+6:].copy('F')
         Quat = Quat/np.linalg.norm(Quat)
-        Cao  = XbeamLib.Rot(Quat)
+        Cao  = xbl.Rot(Quat)
         
         #nodal diplacements and velocities from state vector
         X=Q[:NumDof.value].copy('F') 
@@ -425,7 +425,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
             AeroForces[:,:,:] = 0.0
             
             # Update CRV.
-            PsiA_G = BeamLib.Cbeam3_quat2psi(Quat) # CRV at iStep
+            PsiA_G = xbl.quat2psi(Quat) # CRV at iStep
             
             # Update origin.
             currVrel=Vrel[iStep-1,:].copy('F')
@@ -542,7 +542,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
             VrelDot[iStep+1,:] = dQddt[NumDof.value:NumDof.value+6].copy('F')
             Quat = dQdt[NumDof.value+6:].copy('F')
             Quat = Quat/np.linalg.norm(Quat)
-            Cao  = XbeamLib.Rot(Quat)
+            Cao  = xbl.Rot(Quat)
 
 
             #Update matrices and loads for structural dynamic analysis
@@ -611,7 +611,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
           
 #             #Separate assembly of follower and dead loads   
 #             tmpForceTime=ForceTime[iStep+1].copy('F') 
-#             tmpQforces,Dummy,tmpQrigid = XbeamLib.LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
+#             tmpQforces,Dummy,tmpQrigid = xbl.LoadAssembly(XBINPUT, XBELEM, XBNODE, XBOPTS, NumDof, \
 #                                             PosIni, PsiIni, PosDefor, PsiDefor, \
 #                                             (XBINPUT.ForceStatic_foll + XBINPUT.ForceDyn_foll*tmpForceTime), \
 #                                             (XBINPUT.ForceStatic_dead + XBINPUT.ForceDyn_dead*tmpForceTime), \
@@ -683,7 +683,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
         else:
             Quat = dQdt[NumDof.value+6:].copy('F')
             Quat = Quat/np.linalg.norm(Quat)
-            Cao  = XbeamLib.Rot(Quat)
+            Cao  = xbl.Rot(Quat)
             ACoa[:3,:3] = np.transpose(Cao)
             ACoa[3:,3:] = np.transpose(Cao)
             

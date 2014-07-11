@@ -26,7 +26,7 @@ from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels
 from PyAero.UVLM.Solver.VLM import InitSteadyWake
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 import PyCoupled.Coupled_NlnStatic as Static
-import PyBeam.Utils.XbeamLib as XbeamLib
+import PyBeam.Utils.XbeamLib as xbl
 from PyCoupled.Coupled_NlnStatic import AddGravityLoads
 from DerivedTypesAero import ControlSurf
 from collections import OrderedDict
@@ -291,7 +291,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
             AeroForces[:,:,:] = 0.0
             
             # Update CRV.
-            PsiA_G = BeamLib.Cbeam3_quat2psi(Quat) # CRV at iStep
+            PsiA_G = xbl.quat2psi(Quat) # CRV at iStep
             
             # Update origin.
             OriginA_G[:] = OriginA_G[:] + ForcedVel[iStep-1,:3]*dt
@@ -357,14 +357,14 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS,**kwords):
         #END if iStep > 0
         
         # Quaternion update for orientation.
-        Temp = np.linalg.inv(Unit4 + 0.25*XbeamLib.QuadSkew(ForcedVel[iStep+1,3:])*dt)
-        Quat = np.dot(Temp, np.dot(Unit4 - 0.25*XbeamLib.QuadSkew(ForcedVel[iStep,3:])*dt, Quat))
+        Temp = np.linalg.inv(Unit4 + 0.25*xbl.QuadSkew(ForcedVel[iStep+1,3:])*dt)
+        Quat = np.dot(Temp, np.dot(Unit4 - 0.25*xbl.QuadSkew(ForcedVel[iStep,3:])*dt, Quat))
         Quat = Quat/np.linalg.norm(Quat)
-        Cao  = XbeamLib.Rot(Quat) # transformation matrix at iStep+1
+        Cao  = xbl.Rot(Quat) # transformation matrix at iStep+1
         
         if AELAOPTS.Tight == True:
             # CRV at iStep+1
-            PsiA_G = BeamLib.Cbeam3_quat2psi(Quat)
+            PsiA_G = xbl.quat2psi(Quat)
             # Origin at iStep+1
             OriginA_G[:] = OriginA_G[:] + ForcedVel[iStep,:3]*dt
             
