@@ -1,8 +1,8 @@
 '''@package PyFSI.Beam2UVLM
-@brief      Displacement extrapolation from beam FEM to UVLM grid.
+@brief      Displacement and velocity extrapolation from beam FEM to UVLM grid.
 @author     Rob Simpson
 @contact    r.simpson11@imperial.ac.uk 
-@version    0.0
+@version    1.0
 @date       18/01/2013
 @pre        None
 @warning    None
@@ -24,7 +24,7 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
                    PsiA_G = None,
                    ctrlSurf = None):
     """@brief Creates aero grid and velocities 
-    centred on beam nodes.
+    based on beam nodal information.
     @param PosDefor Array of beam nodal displacements.
     @param PsiDefor Array of beam nodal rotations.
     @param Section Array containing sectional camberline coordinates.
@@ -62,7 +62,7 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
             # the B-frame.
             Omega_B_B = (np.dot(Tangential(PsiDefor[iElem,iiElem,:]),
                                 PsiDotDef[iElem,iiElem,:])
-                         + np.dot(CaB.T, OmegaA_A)) #Warning: this line might be an error? The velocity due to a-frame rotation is included seperately?
+                         + np.dot(CaB.T, OmegaA_A))
                         
             # Calculate inertial velocity at grid points (projected in A-frame).                             
             AeroVels[jSection,iNode,:] = (VelA_A
@@ -111,8 +111,9 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
                 # of the hinge projected in the B-frame. is added.
                 # Note: Skew(hingeRotDot) is an acceptable definition of the
                 # angular rate as it corresponds to planar motion within the
-                # section.
-                # Warning: should omega_Bnew_Bnew be calculated by summing all the angular velocities of the parent frames too?
+                # section. In general Skew(T(\psi)\dot{\psi}) is required.
+                # Warning: should omega_Bnew_Bnew  (Skew(hingeRotDot))
+                # be an inertial velocity?
                 AeroVels[jSection,iNode,:] = (VelA_A
                         + np.dot(Skew(OmegaA_A),PosDefor[iNode,:])
                         + PosDotDef[iNode,:]
@@ -145,8 +146,8 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
 
 def CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,
                            BeamForces):
-    """@brief Creates aero grid and velocities 
-    centred on beam nodes.
+    """@brief Calculates aero forces and moments on the beam nodes from those on
+    the aerodynamic grid.
     @param XBINPUT Beam input options.
     @param PsiDefor Array of beam nodal rotations.
     @param Section Array containing sectional camberline coordinates.
@@ -232,7 +233,7 @@ if __name__ == '__main__':
     XBINPUT = DerivedTypes.Xbinput(3,1)
     AeroM = 1
     
-    "Initialise for Beam"
+    #Initialise for Beam
     PosDefor = np.zeros((XBINPUT.NumNodesTot,3),ct.c_double,'F')
     for i in range(PosDefor.shape[0]):
         PosDefor[i,0] = i
@@ -250,7 +251,7 @@ if __name__ == '__main__':
     
     BeamForces = np.zeros((XBINPUT.NumNodesTot,6),ct.c_double,'F')
     
-    "Initialise data for UVLM"
+    #Initialise data for UVLM
     VMOPTS = DerivedTypesAero.VMopts(1,1,True)
     VMINPUT = DerivedTypesAero.VMinput(1.0, 1.0, 25.0, 2.0*np.pi/180.0, \
                                              0.0*np.pi/180.0)
@@ -266,49 +267,49 @@ if __name__ == '__main__':
     
     print(AeroGrid, '\n')
     
-    "Create forces"
+    #Create forces
     AeroForces = np.zeros((AeroM+1,XBINPUT.NumNodesTot,3),ct.c_double,'C')
     AeroForces[:,:,2] = 1.0
     
-    "map to beam forces"
+    #map to beam forces
     CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
                         BeamForces)
     
-    print(BeamForces, "\n")
+    print(BeamForces, '\n')
     
     
-    "forces must be reset"
+    #forces must be reset
     BeamForces[:,:] = 0.0
     
-    "rotate by 90 degrees and check"
+    #rotate by 90 degrees and check
     PsiDefor[:,:,0] = np.pi/2.0
     
-    "create updated grid"
+    #create updated grid
     CoincidentGrid(PosDefor, PsiDefor, Section, VelA_A, \
                    OmegaA_A, PosDotDef, PsiDotDef, XBINPUT,\
                    AeroGrid, AeroVels)
     
     print(AeroGrid, '\n')
     
-    "map to beam forces"
+    #map to beam forces
     CoincidentGridForce(XBINPUT, PsiDefor, Section, AeroForces,\
                         BeamForces)
     
-    print(BeamForces, "\n")
+    print(BeamForces, '\n')
     
-    "check applied forces"
-    "declare temp traids"
+    #check applied forces
+    #declare temp traids
     Psi = np.zeros((3))
     
-    "loop through all beam nodes"
+    #loop through all beam nodes
     BeamForceCheck = np.zeros((3))
     for iNode in range(XBINPUT.NumNodesTot):
         BeamForceCheck[:] += BeamForces[iNode,:3]
     
-    "account for rotation of aerodynamic FoR (freestream velocity)"
+    #account for rotation of aerodynamic FoR (freestream velocity)
     Psi[0] = VMINPUT.alpha
     
-    "get transformation matrix"
+    #get transformation matrix
     CalphaG = Psi2TransMat(Psi)
     
     print(np.dot(CalphaG,BeamForceCheck))

@@ -44,7 +44,7 @@ def zetaDotSubMat(r,psi,rDot,psiDot,v_a,omega_a,psi_G2a,xi,xiDot,iLin,jLin,
     subMat = np.zeros((3,nStates))
     
     # term 1: \delta(C^{Ga}v_a)
-    cGa = xbl.Psi2TransMat(psi_G2a);
+    cGa = xbl.Psi2TransMat(psi_G2a)
     skewVa = xbl.Skew(v_a)
     tangGa = xbl.Tangential(psi_G2a);
     # term for \delta \psi_{Ga}
@@ -163,8 +163,7 @@ def printBlocks(mat,iBlock,jBlock):
         # end while j
         i+=iBlock
     # end while i
-
-        
+      
 
 if __name__ == '__main__':
     # test zetaDotSubMat
