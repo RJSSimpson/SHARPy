@@ -106,7 +106,7 @@ def zetaDotSubMat(r,psi,rDot,psiDot,v_a,omega_a,psi_G2a,xi,xiDot,iLin,jLin,
                                       np.dot(skewXiDot,
                                       tangAb)))
     # term for \delta \dot{\xi}_B
-    subMat[:,2*6*nBeam+9+3*nSection+3*iLin:2*6*nBeam+9+3*nSection+3*iLin+3:1] += np.dot(cGa,cAb)
+    subMat[:,2*6*nBeam+9+3*nSection+3*iLin:2*6*nBeam+9+3*nSection+3*iLin+3] += np.dot(cGa,cAb)
     
     # term 6: \delta(C^{Ga}C^{aB}\tilde{T(\psi_{aB})\dot{\psi}_{aB}\xi_B)
     # Note: eqn. rearranged to \delta(-C^{Ga}C^{aB}\tilde{\xi}T(\psi_{aB})\dot{\psi}_{aB})
@@ -142,7 +142,6 @@ def zetaDotSubMat(r,psi,rDot,psiDot,v_a,omega_a,psi_G2a,xi,xiDot,iLin,jLin,
                                                       np.dot(cAb,
                                                       np.dot(skewXi,
                                                       tangAb)))
-    printBlocks(subMat,3,3)
     return subMat
 
 def printBlocks(mat,iBlock,jBlock):
