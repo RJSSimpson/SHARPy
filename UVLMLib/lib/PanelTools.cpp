@@ -7,6 +7,8 @@
 
 #include <PanelTools.hpp>
 #include <triads.hpp>
+#include <indices.hpp>
+#include <iostream>
 
 void PanelNormal(const double* p1, const double* p2, \
 				 const double* p3, const double* p4, \
@@ -54,7 +56,7 @@ void PanelTau_c(const double* p1, const double* p2, \
 void PanelTau_s(const double* p1, const double* p2, \
 				 const double* p3, const double* p4, \
 				 double* Tau_s) {
-	/** @brief Calculate panel sppanwise unit vector
+	/** @brief Calculate panel spanwise unit vector
 	 */
 
 	double side1[3];
@@ -67,7 +69,7 @@ void PanelTau_s(const double* p1, const double* p2, \
 	//combine
 	AddTriad(side1,side2,side1);
 
-	//normalise and write to Tau_c
+	//normalise and write to Tau_
 	NormaliseTriad(side1,Tau_s);
 }
 
@@ -127,4 +129,30 @@ double PanelArea(const double* p1, const double* p2, \
 	return 0.5*NormTriad(cross);
 }
 
+void XiKernel(const unsigned int k,
+		      const unsigned int q,
+		      const int N,
+		      const double eta1,
+		      const double eta2,
+		      const Eigen::Matrix3d& XiKern_) {
+	/** @brief Calculate 3x3 kernal of interpolation matrix, \Xi.
+	 */
 
+	// const cast Eigen inputs
+	Eigen::Matrix3d& XiKern = const_cast<Eigen::Matrix3d&> (XiKern_);
+
+	// switch depending on q_k
+	int qSigned = q;
+	if (qSigned == q_k(k,N,1)) {
+		XiKern = (1.0 - eta2)*(1.0 - eta1) * Eigen::Matrix3d::Identity();
+	} else if (qSigned == q_k(k,N,2)) {
+		XiKern = eta2*(1.0 - eta1) * Eigen::Matrix3d::Identity();
+	} else if (qSigned == q_k(k,N,3)) {
+		XiKern = eta2*eta1 * Eigen::Matrix3d::Identity();
+	} else if (qSigned == q_k(k,N,4)) {
+		XiKern = (1.0 - eta2)*eta1 * Eigen::Matrix3d::Identity();
+	} else {
+		XiKern = Eigen::Matrix3d::Zero();
+	}
+	return;
+}

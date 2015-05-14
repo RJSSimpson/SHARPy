@@ -110,7 +110,7 @@ void BiotSegment_map(const Eigen::Map<Eigen::Vector3d>& xp, \
 void C_BiotSegment(const double* xP,\
 					  const double* x1,\
 					  const double* x2,\
-					  double& Gamma,\
+					  const double& Gamma,\
 					  double* Uind) {
 	/** @brief Calculate the velocity induced at point p by a vortex line
 	  * with start and end points 1 and 2.

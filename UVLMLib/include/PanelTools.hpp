@@ -8,6 +8,8 @@
 #ifndef PANELTOOLS_HPP_
 #define PANELTOOLS_HPP_
 
+#include<Eigen/Dense>
+
 void PanelNormal(const double* p1, const double* p2, \
 				 const double* p3, const double* p4, \
 				 double* normal);
@@ -31,5 +33,11 @@ double PanelDeltaS(const double* p1, const double* p2, \
 double PanelArea(const double* p1, const double* p2, \
 				 const double* p3, const double* p4);
 
+void XiKernel(const unsigned int k,
+		      const unsigned int q,
+		      const int N,
+		      const double eta1,
+		      double eta2,
+		      const Eigen::Matrix3d& XiKern_);
 
 #endif /* PANELTOOLS_HPP_ */

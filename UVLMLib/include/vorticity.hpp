@@ -26,7 +26,7 @@ void BiotSegment_map(const Eigen::Map<Eigen::Vector3d>& xp, \
 void C_BiotSegment(const double* xP,\
 					  const double* x1,\
 					  const double* x2,\
-					  double& Gamma,\
+					  const double& Gamma,\
 					  double* Uind);
 
 void C_BiotSegment_ImageYZ(const double* xP,\

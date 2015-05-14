@@ -144,12 +144,19 @@ void BilinearInterpTriad( double* x00, double* x01, \
 	} // END if, else-if
 }
 
-void CopyTriad(double* pTarget, double* pSrc) {
+void CopyTriad(double* pTarget, const double* pSrc) {
 	pTarget[0] = pSrc[0];
 	pTarget[1] = pSrc[1];
 	pTarget[2] = pSrc[2];
 }
 
-void PrintTriad(double* x) {
+void PrintTriad(const double* x) {
 	printf("(%f %f %f)",x[0],x[1],x[2]);
+}
+
+void AssignTriad(double* x,
+		         const double x0, const double x1, const double x2) {
+	x[0] = x0;
+	x[1] = x1;
+	x[2] = x2;
 }

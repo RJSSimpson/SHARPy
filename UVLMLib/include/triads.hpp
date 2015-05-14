@@ -34,9 +34,11 @@ void BilinearInterpTriad( double* x00, double* x01, \
 					  	  const double eta1, const double eta2,\
 					  	  const bool reverse);
 
-void CopyTriad(double* pTarget, double* pSrc);
+void CopyTriad(double* pTarget, const double* pSrc);
 
-void PrintTriad(double* x);
+void PrintTriad(const double* x);
 
+void AssignTriad(double* x,
+		           const double x0, const double x1, const double x2);
 
 #endif /* TRIADS_HPP_ */
