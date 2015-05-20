@@ -9,23 +9,26 @@
 #define AICMATS_HPP_
 
 #include<Eigen/Dense>
+using namespace Eigen;
 
-void genW(const Eigen::VectorXd& zeta,
+void genW(const VectorXd& zeta,
 		   const int M,
 		   const int N,
-		   const Eigen::MatrixXd& W_);
+		   const MatrixXd& W_);
 
-void getNormals(const Eigen::VectorXd& zeta,
+void getNormals(const VectorXd& zeta,
 		          const int M,
 		          const int N,
-		          const Eigen::VectorXd& normals_);
+		          const VectorXd& normals_);
 
-void genAstar(const Eigen::VectorXd& zetaSrc,
+void genAstar(const VectorXd& zetaSrc,
 				const unsigned int mSrc,
 				const unsigned int nSrc,
-		        const Eigen::VectorXd& zetaTgt,
+		        const VectorXd& zetaTgt,
 		        const unsigned int mTgt,
 		        const unsigned int nTgt,
-		        const Eigen::MatrixXd& Astar_);
+		        const MatrixXd& Astar_);
+
+void dxHat_dx(const Vector3d& x, const Matrix3d& dX_);
 
 #endif /* AICMATS_HPP_ */

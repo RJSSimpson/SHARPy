@@ -15,27 +15,28 @@
 #include <triads.hpp>
 #include <stdexcept>
 #include <vorticity.hpp>
+using namespace Eigen;
 
-void genW(const Eigen::VectorXd& zeta,
+void genW(const ::VectorXd& zeta,
 		  const int M,
 		  const int N,
-		  const Eigen::MatrixXd& W_) {
+		  const ::MatrixXd& W_) {
 	/**@brief Populate W, downwash interpolation, matrix.
 	 * @param zeta Vector of lattice vertices.
 	 * @param W downwash interpolation matrix.
 	 */
 
 	// const cast Eigen outputs
-	Eigen::MatrixXd& W = const_cast<Eigen::MatrixXd&> (W_);
+	MatrixXd& W = const_cast<MatrixXd&> (W_);
 
 	// check relative size of zeta and W
 	assert(zeta.size()==W.cols());
 
 	// temporary vars
-	Eigen::VectorXd normals(3*W.rows());
-	Eigen::MatrixXd norMat(W.rows(),3*W.rows());
-	Eigen::MatrixXd Xi(3*W.rows(),W.cols());
-	Eigen::Matrix3d XiKern;
+	VectorXd normals(3*W.rows());
+	MatrixXd norMat(W.rows(),3*W.rows());
+	MatrixXd Xi(3*W.rows(),W.cols());
+	Matrix3d XiKern;
 
 	// calculate normal vectors
 	getNormals(zeta,M,N,normals);
@@ -59,10 +60,10 @@ void genW(const Eigen::VectorXd& zeta,
 	return;
 }
 
-void getNormals(const Eigen::VectorXd& zeta,
+void getNormals(const VectorXd& zeta,
 		        const int M,
 		        const int N,
-		        const Eigen::VectorXd& normals_) {
+		        const VectorXd& normals_) {
 	/**@brief Get vector containing panel normal vectors.
 	 * @param zeta Vector containing lattice vertices.
 	 * @param M chordwise panels.
@@ -71,7 +72,7 @@ void getNormals(const Eigen::VectorXd& zeta,
 	 */
 
 	// const cast Eigen outputs
-	Eigen::VectorXd& normals = const_cast<Eigen::VectorXd&> (normals_);
+	VectorXd& normals = const_cast<VectorXd&> (normals_);
 
 	// check inputs
 	assert(zeta.size()==3*(M+1)*(N+1));
@@ -98,18 +99,18 @@ void getNormals(const Eigen::VectorXd& zeta,
 		PanelNormal(x1,x2,x3,x4,n);
 
 		//save to normals
-		normals.block<3,1>(3*k,0)=Eigen::Vector3d(n[0],n[1],n[2]);
+		normals.block<3,1>(3*k,0)=Vector3d(n[0],n[1],n[2]);
 	}
 	return;
 }
 
-void genAstar(const Eigen::VectorXd& zetaSrc,
+void genAstar(const VectorXd& zetaSrc,
 				const unsigned int mSrc,
 				const unsigned int nSrc,
-		        const Eigen::VectorXd& zetaTgt,
+		        const VectorXd& zetaTgt,
 		        const unsigned int mTgt,
 		        const unsigned int nTgt,
-		        const Eigen::MatrixXd& Astar_) {
+		        const MatrixXd& Astar_) {
 	/**@brief Get vector containing panel normal vectors.
 	 * @param zetaSrc Vector containing lattice vertices of source.
 	 * @param mSrc Spanwise panels in the source lattice.
@@ -122,7 +123,7 @@ void genAstar(const Eigen::VectorXd& zetaSrc,
 	 */
 
 	// const cast Eigen outputs
-	Eigen::MatrixXd& Astar = const_cast<Eigen::MatrixXd&> (Astar_);
+	MatrixXd& Astar = const_cast<MatrixXd&> (Astar_);
 
 	// reused panel numbers
 	const unsigned int kSrc = mSrc*nSrc;
@@ -189,10 +190,108 @@ void genAstar(const Eigen::VectorXd& zetaSrc,
 				AddTriad(sumVel,vel,sumVel);
 			}
 			// save to aStar
-			Astar.block<3,1>(3*q,k)=Eigen::Vector3d(sumVel[1],
+			Astar.block<3,1>(3*q,k)=Vector3d(sumVel[1],
 													sumVel[2],
 													sumVel[3]);
 		}
+	}
+	return;
+}
+
+void df_dgeom(const double* r0,
+		        const double* r1,
+			 	const double* r2,
+			 	const double* n,
+			 	const Vector3d& f_r0_,
+			 	const Vector3d& f_r1_,
+			 	const Vector3d& f_r2_,
+			 	const Vector3d& f_n_) {
+	/**@brief Calculate df/dr and df/dn, row vectors.
+	 * @param r0 Vector r0.
+     * @param r1 Vector r1.
+     * @param r2 Vector r2.
+     * @param n Normal vector of target panel.
+     * @param f_r0 Row vector, gradient of f w.r.t r0.
+     * @param f_r1 Row vector, gradient of f w.r.t r1.
+     * @param f_r2 Row vector, gradient of f w.r.t r2.
+     * @param f_n Row vector, gradient of f w.r.t n.
+     */
+
+	// const cast Eigen outputs
+	Vector3d& f_r0 = const_cast<Vector3d&> (f_r0_);
+	Vector3d& f_r1 = const_cast<Vector3d&> (f_r1_);
+	Vector3d& f_r2 = const_cast<Vector3d&> (f_r2_);
+	Vector3d& f_n = const_cast<Vector3d&> (f_n_);
+
+	// temps
+	double u[3] = {0.0,0.0,0.0};
+
+	// get u
+	CrossTriad(r1,r2,u);
+
+	// if within cut-off radius, r-vector derivatives are set to zero
+	if (NormTriad(u) <= 1.0e-5) {
+
+		f_r0.setZero();
+		f_r1.setZero();
+		f_r2.setZero();
+
+	} else {
+
+		// temps
+		double x[3] = {0.0,0.0,0.0};
+		double r1hat[3] = {0.0,0.0,0.0}; // normalized r1
+		double r2hat[3] = {0.0,0.0,0.0}; // normalized r2
+		double normSum[3] = {0.0,0.0,0.0};
+		double f_r0_triad[3] = {0.0,0.0,0.0};
+
+		// get x
+		MulTriad(u,1.0/pow(NormTriad(u),2.0),x);
+
+		// get normalised triads
+		NormaliseTriad(r1,r1hat);
+		NormaliseTriad(r2,r2hat);
+
+		// sum them
+		AddTriad(r1hat,r2hat,normSum);
+
+		// get f_r0
+		MulTriad(normSum,DotTriad(x,n),f_r0_triad);
+		f_r0(0) = f_r0_triad[0];
+		f_r0(1) = f_r0_triad[1];
+		f_r0(2) = f_r0_triad[2];
+
+		// get f_r1
+		// calc dr1Hat_dr1 terms
+		Vector3d r0v(r0[0],r0[1],r0[2]);
+		Vector3d r1v(r1[0],r1[1],r1[2]);
+		Matrix3d dr1Hat_dr1;
+		Vector3d preMul;
+		preMul = DotTriad(x,n)*r0v;
+		dxHat_dx(r1v,dr1Hat_dr1);
+
+		// calc d(u/|u|^2)/dr1 terms
+
+		f_r1 = preMul.transpose()*dr1Hat_dr1; // + d(u/|u|^2)/dr1
+	}
+
+	// calculate f_n
+}
+
+void dxHat_dx(const Vector3d& x, const Matrix3d& dX_) {
+	/**@brief Calculate derivative of x/|x| w.r.t x.
+	 * @param x Vector x.
+	 * @param dX Matrix output.
+	 */
+
+	// const cast Eigen outputs
+	Matrix3d& dX = const_cast<Matrix3d&> (dX_);
+
+	if (x.norm() < 1.0e-5) {
+		dX.setZero();
+	} else {
+		Matrix3d Eye = Matrix3d::Identity();
+		dX = (1.0/x.norm())*(Eye - (1.0/pow(x.norm(),2.0)) * x*x.transpose());
 	}
 	return;
 }
