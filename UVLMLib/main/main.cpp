@@ -10,8 +10,15 @@
 #include <iostream>
 #include <stdlib.h>
 #include <time.h>
+#include <triads.hpp>
 using namespace std;
 using namespace Eigen;
+
+double fRand(double fMin, double fMax) {
+	// generate random numbers
+    double f = (double)rand() / RAND_MAX;
+    return fMin + f * (fMax - fMin);
+}
 
 int main() {
 	// Test UVLMLib functions during development.
@@ -52,10 +59,32 @@ int main() {
 	srand(time(NULL));
 	Vector3d dx = Vector3d::Random()/(10.0*x.norm());
 	Vector3d f = (x + dx).normalized();
-	dxHat_dx(x,dX);
+	dX = dxHat_dx(x);
 	Vector3d fApprox = x.normalized() + dX * dx;
 	Vector3d diff = f-fApprox;
 	cout << "dxHat_dx: ---------------" << endl << "dx:" << endl << dx
 	     << endl << "norm (l-2) rel error:" << endl << diff.norm()/dx.norm()
+	     << endl;
+
+	// Init matrices for df_dGeom tests
+	Vector3d f_r0, f_r1, f_r2, f_n;
+	//df_dr0
+	double r0[3] = {1.0,0.0,0.0};
+	double r1[3] = {1.0,1.0,0.0};
+	double r2[3] = {0.0,1.0,0.0};
+	double n[3] = {0.0,0.0,1.0};
+	// calc variations
+	df_dgeom(r0,r1,r2,n,f_r0,f_r1,f_r2,f_n);
+	double dr0[3] = {fRand(-1,1)/(10*NormTriad(r0)),
+					  fRand(-1,1)/(10*NormTriad(r0)),
+					  fRand(-1,1)/(10*NormTriad(r0))};
+	cout << "df_dr0: ---------------" << endl << "dr0:"
+		 << endl << Vector3d(dr0[0],dr0[1],dr0[2])
+		 << endl;
+	double r0Test[3];
+	AddTriad(r0,dr0,r0Test);
+	double fGeomExact = fGeom(r0Test,r1,r2,n);
+	double fGeomAppDr0 = fGeom(r0,r1,r2,n) + f_r0.transpose()*Vector3d(dr0[0],dr0[1],dr0[2]);
+	cout << "error:" << endl << fGeomExact - fGeomAppDr0
 	     << endl;
 }

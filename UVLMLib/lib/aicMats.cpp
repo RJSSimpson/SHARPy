@@ -198,6 +198,40 @@ void genAstar(const VectorXd& zetaSrc,
 	return;
 }
 
+double fGeom(const double* r0,
+          const double* r1,
+	 	  const double* r2,
+	 	  const double* n) {
+	/**@brief Calculate geometry influence function f.
+	 * @param r0 Vector r0.
+	 * @param r1 Vector r1.
+	 * @param r2 Vector r2.
+	 * @param n Normal vector of target panel.
+	 */
+
+	// temps
+	double u[3] = {0.0,0.0,0.0};
+	double r1hat[3] = {0.0,0.0,0.0}; // normalized r1
+	double r2hat[3] = {0.0,0.0,0.0}; // normalized r2
+	double normSum[3] = {0.0,0.0,0.0};
+	double x[3] = {0.0,0.0,0.0};
+
+	// get u
+	CrossTriad(r1,r2,u);
+
+	// get x
+	MulTriad(u,1.0/pow(NormTriad(u),2.0),x);
+
+	// get normalised triads
+	NormaliseTriad(r1,r1hat);
+	NormaliseTriad(r2,r2hat);
+
+	// sum them
+	AddTriad(r1hat,r2hat,normSum);
+
+	return DotTriad(r0,normSum)*DotTriad(x,n);
+}
+
 void df_dgeom(const double* r0,
 		        const double* r1,
 			 	const double* r2,
@@ -225,9 +259,24 @@ void df_dgeom(const double* r0,
 
 	// temps
 	double u[3] = {0.0,0.0,0.0};
+	double r1hat[3] = {0.0,0.0,0.0}; // normalized r1
+	double r2hat[3] = {0.0,0.0,0.0}; // normalized r2
+	double normSum[3] = {0.0,0.0,0.0};
+	double x[3] = {0.0,0.0,0.0};
 
 	// get u
 	CrossTriad(r1,r2,u);
+
+	// get x
+	MulTriad(u,1.0/pow(NormTriad(u),2.0),x);
+	Vector3d xV(x[0],x[1],x[2]);
+
+	// get normalised triads
+	NormaliseTriad(r1,r1hat);
+	NormaliseTriad(r2,r2hat);
+
+	// sum them
+	AddTriad(r1hat,r2hat,normSum);
 
 	// if within cut-off radius, r-vector derivatives are set to zero
 	if (NormTriad(u) <= 1.0e-5) {
@@ -239,21 +288,7 @@ void df_dgeom(const double* r0,
 	} else {
 
 		// temps
-		double x[3] = {0.0,0.0,0.0};
-		double r1hat[3] = {0.0,0.0,0.0}; // normalized r1
-		double r2hat[3] = {0.0,0.0,0.0}; // normalized r2
-		double normSum[3] = {0.0,0.0,0.0};
 		double f_r0_triad[3] = {0.0,0.0,0.0};
-
-		// get x
-		MulTriad(u,1.0/pow(NormTriad(u),2.0),x);
-
-		// get normalised triads
-		NormaliseTriad(r1,r1hat);
-		NormaliseTriad(r2,r2hat);
-
-		// sum them
-		AddTriad(r1hat,r2hat,normSum);
 
 		// get f_r0
 		MulTriad(normSum,DotTriad(x,n),f_r0_triad);
@@ -262,30 +297,38 @@ void df_dgeom(const double* r0,
 		f_r0(2) = f_r0_triad[2];
 
 		// get f_r1
-		// calc dr1Hat_dr1 terms
 		Vector3d r0v(r0[0],r0[1],r0[2]);
 		Vector3d r1v(r1[0],r1[1],r1[2]);
-		Matrix3d dr1Hat_dr1;
+		Vector3d r2v(r2[0],r2[1],r2[2]);
+		Vector3d nV(n[0],n[1],n[2]);
+		// calc dr1Hat_dr1 terms
 		Vector3d preMul;
 		preMul = DotTriad(x,n)*r0v;
-		dxHat_dx(r1v,dr1Hat_dr1);
-
 		// calc d(u/|u|^2)/dr1 terms
+		Vector3d preMul2;
+		preMul2 = DotTriad(r0,normSum)*nV;
+		f_r1 = preMul.transpose()*dxHat_dx(r1v)
+			 + preMul2.transpose()*duHat2_dr1(r1v,r2v);
 
-		f_r1 = preMul.transpose()*dr1Hat_dr1; // + d(u/|u|^2)/dr1
+		// get f_r2
+		f_r2 = preMul.transpose()*dxHat_dx(r2v)
+			 + preMul2.transpose()*duHat2_dr2(r1v,r2v);
 	}
 
-	// calculate f_n
+	// get f_n
+	f_n = DotTriad(r0,normSum)*xV; // f_n needs to be transposed
+
+	return;
 }
 
-void dxHat_dx(const Vector3d& x, const Matrix3d& dX_) {
+Matrix3d dxHat_dx(const Vector3d& x) {
 	/**@brief Calculate derivative of x/|x| w.r.t x.
 	 * @param x Vector x.
-	 * @param dX Matrix output.
+	 * @return dX Matrix output.
 	 */
 
-	// const cast Eigen outputs
-	Matrix3d& dX = const_cast<Matrix3d&> (dX_);
+	// init
+	Matrix3d dX;
 
 	if (x.norm() < 1.0e-5) {
 		dX.setZero();
@@ -293,5 +336,65 @@ void dxHat_dx(const Vector3d& x, const Matrix3d& dX_) {
 		Matrix3d Eye = Matrix3d::Identity();
 		dX = (1.0/x.norm())*(Eye - (1.0/pow(x.norm(),2.0)) * x*x.transpose());
 	}
-	return;
+	return dX;
+}
+
+Matrix3d duHat2_dr1(const Vector3d& r1,
+				     const Vector3d& r2) {
+	/**@brief Calculate derivative of (r1xr2)/|r1xr2|^2 w.r.t r1.
+	 * @param r1 Vector r1.
+	 * @param r2 Vector r2.
+	 * @return dX Matrix output.
+	 */
+
+	// init
+	Matrix3d dX;
+
+	// temps
+	Vector3d u = r1.cross(r2);
+
+	if (u.norm() < 1.0e-5) {
+		dX.setZero();
+	} else {
+		Matrix3d Eye = Matrix3d::Identity();
+		dX = - (1.0/pow(u.norm(),2.0))
+			 * (Eye - (2.0/pow(u.norm(),2.0)) * u*u.transpose())
+			 * skew(r2);
+	}
+	return dX;
+}
+
+Matrix3d duHat2_dr2(const Vector3d& r1,
+				     const Vector3d& r2) {
+	/**@brief Calculate derivative of (r1xr2)/|r1xr2|^2 w.r.t r2.
+	 * @param r1 Vector r1.
+	 * @param r2 Vector r2.
+	 * @return dX Matrix output.
+	 */
+
+	// init
+	Matrix3d dX;
+
+	// temps
+	Vector3d u = r1.cross(r2);
+
+	if (u.norm() < 1.0e-5) {
+		dX.setZero();
+	} else {
+		Matrix3d Eye = Matrix3d::Identity();
+		dX =   (1.0/pow(u.norm(),2.0))
+			 * (Eye - (2.0/pow(u.norm(),2.0)) * u*u.transpose())
+			 * skew(r1);
+	}
+	return dX;
+}
+
+Matrix3d skew(const Vector3d& x) {
+	/**@brief Calculate skew-symmetric matrix of vector x.
+	 */
+	Matrix3d X;
+	X  << 0.0,  -x(2), x(1),
+		  x(2),  0.0, -x(0),
+		 -x(1),  x(0), 0.0;
+	return X;
 }

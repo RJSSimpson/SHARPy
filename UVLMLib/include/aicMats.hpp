@@ -29,6 +29,28 @@ void genAstar(const VectorXd& zetaSrc,
 		        const unsigned int nTgt,
 		        const MatrixXd& Astar_);
 
-void dxHat_dx(const Vector3d& x, const Matrix3d& dX_);
+double fGeom(const double* r0,
+          const double* r1,
+	 	  const double* r2,
+	 	  const double* n);
+
+void df_dgeom(const double* r0,
+		        const double* r1,
+			 	const double* r2,
+			 	const double* n,
+			 	const Vector3d& f_r0_,
+			 	const Vector3d& f_r1_,
+			 	const Vector3d& f_r2_,
+			 	const Vector3d& f_n_);
+
+Matrix3d dxHat_dx(const Vector3d& x);
+
+Matrix3d duHat2_dr1(const Vector3d& r1,
+				     const Vector3d& r2);
+
+Matrix3d duHat2_dr2(const Vector3d& r1,
+				     const Vector3d& r2);
+
+Matrix3d skew(const Vector3d& x);
 
 #endif /* AICMATS_HPP_ */
