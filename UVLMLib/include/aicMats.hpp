@@ -53,4 +53,8 @@ Matrix3d duHat2_dr2(const Vector3d& r1,
 
 Matrix3d skew(const Vector3d& x);
 
+Matrix3d dn_dd(const Vector3d& d, const Vector3d& e);
+
+Matrix3d dn_de(const Vector3d& d, const Vector3d& e);
+
 #endif /* AICMATS_HPP_ */

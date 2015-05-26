@@ -398,3 +398,21 @@ Matrix3d skew(const Vector3d& x) {
 		 -x(1),  x(0), 0.0;
 	return X;
 }
+
+Matrix3d dn_dd(const Vector3d& d, const Vector3d& e) {
+	/**@brief Calculate derivative of normal vector w.r.t d (diagonal 1).
+	 * @param d Diagonal vector 1 (corner 1 to corner 3).
+	 * @param e Diagonal vector 2 (corner 4 to corner 2).
+	 * @return dX Matrix output.
+	 */
+	return -dxHat_dx(d.cross(e))*skew(e);
+}
+
+Matrix3d dn_de(const Vector3d& d, const Vector3d& e) {
+	/**@brief Calculate derivative of normal vector w.r.t e (diagonal 2).
+	 * @param d Diagonal vector 1 (corner 1 to corner 3).
+	 * @param e Diagonal vector 2 (corner 4 to corner 2).
+	 * @return dX Matrix output.
+	 */
+	return dxHat_dx(d.cross(e))*skew(d);
+}
