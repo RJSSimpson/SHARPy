@@ -416,3 +416,56 @@ Matrix3d dn_de(const Vector3d& d, const Vector3d& e) {
 	 */
 	return dxHat_dx(d.cross(e))*skew(d);
 }
+
+void dAgamma0_dZeta(const VectorXd& zetaSrc,
+					 const unsigned int mSrc,
+					 const unsigned int nSrc,
+					 const VectorXd& gamma0,
+					 const VectorXd& zetaTgt,
+					 const unsigned int mTgt,
+					 const unsigned int nTgt,
+					 const MatrixXd& dX_) {
+	/**@brief Calculate tensor-free derivative of (A gamma_0) w.r.t zeta.
+	 * @param zetaSrc Grid points of source lattice.
+	 * @param mSrc chordwise panels on source lattice.
+	 * @param nSrc spnwise panels on source lattice.
+	 * @param gamma0 Reference circulation distribution on source lattice.
+	 * @param zetaTgt Grid points of target lattice.
+	 * @param mTgt chordwise panels on target lattice.
+	 * @param nTgt spnwise panels on target lattice.
+	 * @param dX K x 3K_{\zeta_{src}} matrix output.
+	 */
+
+	// const cast Eigen outputs
+	MatrixXd& dX = const_cast<MatrixXd&> (dX_);
+
+	// temps
+	unsigned int kSrc = mSrc*nSrc;
+	unsigned int kTgt = mTgt*nTgt;
+	unsigned int qTgt = 3*(mTgt+1)*(nTgt+1);
+	unsigned int ll = 0;
+	unsigned int llp1 = 0; //segment counters
+
+	// loop through DoFs to make (1x3) submatrices
+	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
+		for (unsigned int k2 = 0; k2 < kSrc; k2++) {
+			for (unsigned int q = 0; q < qTgt; q++) {
+				//
+				for (unsigned int l = 1; l < 5; l++) {
+					// roll around segment index
+					if (l < 4) {
+						ll = l;
+						llp1 = l+1;
+					} else if (l == 4) {
+						ll = l;
+						llp1= 1;
+					}
+					// contributions from targets
+
+					// contributions from sources
+				}
+			}
+		}
+	}
+	return;
+}
