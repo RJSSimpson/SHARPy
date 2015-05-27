@@ -9,14 +9,16 @@
 
 #include <stdexcept>
 
-int q_k(const int k_, const int N, const int no) {
+unsigned int q_k(const unsigned int k_,
+				   const unsigned int N,
+				   const unsigned int no) {
 	/**@brief Get lattice index of corner point based on panel index.
 	 * @param k_ Panel index, starts from 0.
 	 * @param N Spanwise panels.
 	 * @param no Corner number within panel.
 	 * @notes The equations here are from Simpson (2015) (thesis) where the
 	 * indexing starts from 1, however in the implementation we need indices
-	 * starting from 0.
+	 * starting from 0, hence k = k_ + 1.
 	 */
 
 	// init k, q_k

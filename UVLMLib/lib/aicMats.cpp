@@ -428,11 +428,11 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 	/**@brief Calculate tensor-free derivative of (A gamma_0) w.r.t zeta.
 	 * @param zetaSrc Grid points of source lattice.
 	 * @param mSrc chordwise panels on source lattice.
-	 * @param nSrc spnwise panels on source lattice.
+	 * @param nSrc spanwise panels on source lattice.
 	 * @param gamma0 Reference circulation distribution on source lattice.
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
-	 * @param nTgt spnwise panels on target lattice.
+	 * @param nTgt spanwise panels on target lattice.
 	 * @param dX K x 3K_{\zeta_{src}} matrix output.
 	 */
 
@@ -443,14 +443,29 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 	unsigned int kSrc = mSrc*nSrc;
 	unsigned int kTgt = mTgt*nTgt;
 	unsigned int qTgt = 3*(mTgt+1)*(nTgt+1);
-	unsigned int ll = 0;
-	unsigned int llp1 = 0; //segment counters
+	unsigned int ll = 0; //segment counter
+	unsigned int llp1 = 0; //segment counter
+	Vector3d d, e, n; // panel diagonal and normal vectors
+	Matrix3d n_d, n_e;
+	Vector3d r0, r1, r2; // Biot-Savart kernel vectors
+	Vector3d f_r0, f_r1, f_r2, f_n; //dvtvs required for target/source variation
 
 	// loop through DoFs to make (1x3) submatrices
 	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
+		// calc n, dn_dd, dn_de only once for each target panel, k1
+		d = Vector3d(zetaTgt[3*q_k(k1,nTgt,3)]   - zetaTgt[3*q_k(k1,nTgt,1)],
+                     zetaTgt[3*q_k(k1,nTgt,3)+1] - zetaTgt[3*q_k(k1,nTgt,1)+1],
+                     zetaTgt[3*q_k(k1,nTgt,3)+2] - zetaTgt[3*q_k(k1,nTgt,1)+2]);
+		e = Vector3d(zetaTgt[3*q_k(k1,nTgt,2)]   - zetaTgt[3*q_k(k1,nTgt,4)],
+			         zetaTgt[3*q_k(k1,nTgt,2)+1] - zetaTgt[3*q_k(k1,nTgt,4)+1],
+			         zetaTgt[3*q_k(k1,nTgt,2)+2] - zetaTgt[3*q_k(k1,nTgt,4)+2]);
+		// calc n
+		n = (d.cross(e)).normalized();
+		// calc dn_dd, dn_de
+		n_d = dn_dd(d,e);
+		n_e = dn_de(d,e);
 		for (unsigned int k2 = 0; k2 < kSrc; k2++) {
 			for (unsigned int q = 0; q < qTgt; q++) {
-				//
 				for (unsigned int l = 1; l < 5; l++) {
 					// roll around segment index
 					if (l < 4) {
@@ -460,12 +475,34 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 						ll = l;
 						llp1= 1;
 					}
-					// contributions from targets
+					// check if either k1 or k2 are active based on q
+					if (q_k(k1,nTgt,1) == q || q_k(k1,nTgt,2) == q ||
+						q_k(k1,nTgt,3) == q || q_k(k1,nTgt,4) == q ||
+						q_k(k2,nSrc,ll) == q || q_k(k2,nSrc,llp1) == q) {// TODO: this isn't right, need a separate index for source and target grids IF they are not the same.
+						// contributions from targets
+						// calc r0, r1, r2
+						r0(0) = zetaSrc(q_k(k2,nSrc,llp1)) - zetaSrc(q_k(k2,nSrc,ll));
+						r0(1) = zetaSrc(q_k(k2,nSrc,llp1)+1) - zetaSrc(q_k(k2,nSrc,ll)+1);
+						r0(2) = zetaSrc(q_k(k2,nSrc,llp1)+2) - zetaSrc(q_k(k2,nSrc,ll)+2);
+						// TODO: r1 ,r2
 
-					// contributions from sources
+						// calc f_r0, f_r1, f_r2, f_n
+						df_dgeom(r0.data(),
+								 r1.data(),
+								 r2.data(),
+								 n.data(),
+								 f_r0,
+								 f_r1,
+								 f_r2,
+								 f_n);
+						// contributions from sources
+
+					} else {
+						continue;
+					}
 				}
-			}
-		}
-	}
+			} // for q
+		} // for k2
+	} // for k1
 	return;
 }

@@ -142,14 +142,13 @@ void XiKernel(const unsigned int k,
 	Eigen::Matrix3d& XiKern = const_cast<Eigen::Matrix3d&> (XiKern_);
 
 	// switch depending on q_k
-	int qSigned = q;
-	if (qSigned == q_k(k,N,1)) {
+	if (q == q_k(k,N,1)) {
 		XiKern = (1.0 - eta2)*(1.0 - eta1) * Eigen::Matrix3d::Identity();
-	} else if (qSigned == q_k(k,N,2)) {
+	} else if (q == q_k(k,N,2)) {
 		XiKern = eta2*(1.0 - eta1) * Eigen::Matrix3d::Identity();
-	} else if (qSigned == q_k(k,N,3)) {
+	} else if (q == q_k(k,N,3)) {
 		XiKern = eta2*eta1 * Eigen::Matrix3d::Identity();
-	} else if (qSigned == q_k(k,N,4)) {
+	} else if (q == q_k(k,N,4)) {
 		XiKern = (1.0 - eta2)*eta1 * Eigen::Matrix3d::Identity();
 	} else {
 		XiKern = Eigen::Matrix3d::Zero();

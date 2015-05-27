@@ -8,6 +8,8 @@
 #ifndef INDICES_HPP_
 #define INDICES_HPP_
 
-int q_k(const int k, const int N, const int no);
+unsigned int q_k(const unsigned int k,
+				   const unsigned int N,
+				   const unsigned int no);
 
 #endif /* INDICES_HPP_ */

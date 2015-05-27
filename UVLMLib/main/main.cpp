@@ -34,6 +34,8 @@ int main() {
 	Eigen::MatrixXd W(K,3*K_zeta);
 	Eigen::MatrixXd Astar(3*K_zeta,K);
 	Eigen::MatrixXd A(K,K);
+	Eigen::VectorXd gam(K); gam.setOnes(); // init gamma as 1
+	Eigen::MatrixXd dAgam0_dzeta(K,3*K_zeta);
 
 //	zeta << 0.0, 0.0, 0.0,
 //			0.0, 1.0, 0.0,
@@ -184,4 +186,8 @@ int main() {
 			 << endl;
 	cout << "error in normals:" << endl << normals - approxNormals
 	     << endl;
+
+	// test dAgamma_dZeta matrix
+	cout << endl << "dAgamma_dZeta: ----------------" << endl;
+	dAgamma0_dZeta(zeta,M,N,gam,zeta,M,N,dAgam0_dzeta);
 }

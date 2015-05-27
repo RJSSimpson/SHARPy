@@ -57,4 +57,13 @@ Matrix3d dn_dd(const Vector3d& d, const Vector3d& e);
 
 Matrix3d dn_de(const Vector3d& d, const Vector3d& e);
 
+void dAgamma0_dZeta(const VectorXd& zetaSrc,
+					 const unsigned int mSrc,
+					 const unsigned int nSrc,
+					 const VectorXd& gamma0,
+					 const VectorXd& zetaTgt,
+					 const unsigned int mTgt,
+					 const unsigned int nTgt,
+					 const MatrixXd& dX_);
+
 #endif /* AICMATS_HPP_ */
