@@ -445,25 +445,35 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 	unsigned int qTgt = 3*(mTgt+1)*(nTgt+1);
 	unsigned int ll = 0; //segment counter
 	unsigned int llp1 = 0; //segment counter
+	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
 	Vector3d d, e, n; // panel diagonal and normal vectors
 	Matrix3d n_d, n_e;
 	Vector3d r0, r1, r2; // Biot-Savart kernel vectors
 	Vector3d f_r0, f_r1, f_r2, f_n; //dvtvs required for target/source variation
+	Matrix3d Xi; // interpolating matrix
 
 	// loop through DoFs to make (1x3) submatrices
 	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
-		// calc n, dn_dd, dn_de only once for each target panel, k1
-		d = Vector3d(zetaTgt[3*q_k(k1,nTgt,3)]   - zetaTgt[3*q_k(k1,nTgt,1)],
-                     zetaTgt[3*q_k(k1,nTgt,3)+1] - zetaTgt[3*q_k(k1,nTgt,1)+1],
-                     zetaTgt[3*q_k(k1,nTgt,3)+2] - zetaTgt[3*q_k(k1,nTgt,1)+2]);
-		e = Vector3d(zetaTgt[3*q_k(k1,nTgt,2)]   - zetaTgt[3*q_k(k1,nTgt,4)],
-			         zetaTgt[3*q_k(k1,nTgt,2)+1] - zetaTgt[3*q_k(k1,nTgt,4)+1],
-			         zetaTgt[3*q_k(k1,nTgt,2)+2] - zetaTgt[3*q_k(k1,nTgt,4)+2]);
+		// calc n, dn_dd, dn_de, colloc point only once for each target panel
+		c1 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,1),0);
+		c2 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,2),0);
+		c3 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,3),0);
+		c4 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,4),0);
+		// diagonals
+		d = c3 - c1;
+		e = c2 - c4;
 		// calc n
 		n = (d.cross(e)).normalized();
 		// calc dn_dd, dn_de
 		n_d = dn_dd(d,e);
 		n_e = dn_de(d,e);
+		// collocation point
+		BilinearInterpTriad(c1.data(),
+							c2.data(),
+							c3.data(),
+							c4.data(),
+							cp.data(),
+							0.5,0.5,false);
 		for (unsigned int k2 = 0; k2 < kSrc; k2++) {
 			for (unsigned int q = 0; q < qTgt; q++) {
 				for (unsigned int l = 1; l < 5; l++) {
@@ -478,13 +488,16 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 					// check if either k1 or k2 are active based on q
 					if (q_k(k1,nTgt,1) == q || q_k(k1,nTgt,2) == q ||
 						q_k(k1,nTgt,3) == q || q_k(k1,nTgt,4) == q ||
-						q_k(k2,nSrc,ll) == q || q_k(k2,nSrc,llp1) == q) {// TODO: this isn't right, need a separate index for source and target grids IF they are not the same.
+						q_k(k2,nSrc,ll) == q || q_k(k2,nSrc,llp1) == q) {
+
 						// contributions from targets
 						// calc r0, r1, r2
-						r0(0) = zetaSrc(q_k(k2,nSrc,llp1)) - zetaSrc(q_k(k2,nSrc,ll));
-						r0(1) = zetaSrc(q_k(k2,nSrc,llp1)+1) - zetaSrc(q_k(k2,nSrc,ll)+1);
-						r0(2) = zetaSrc(q_k(k2,nSrc,llp1)+2) - zetaSrc(q_k(k2,nSrc,ll)+2);
-						// TODO: r1 ,r2
+						r0 = zetaSrc.block<3,1>(q_k(k2,nSrc,llp1),0)
+							-zetaSrc.block<3,1>(q_k(k2,nSrc,ll),0);
+						// r1
+						r1 = cp - zetaSrc.block<3,1>(q_k(k2,nSrc,ll),0);
+						// r2
+						r2 = cp - zetaSrc.block<3,1>(q_k(k2,nSrc,llp1),0);
 
 						// calc f_r0, f_r1, f_r2, f_n
 						df_dgeom(r0.data(),
@@ -495,12 +508,45 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 								 f_r1,
 								 f_r2,
 								 f_n);
-						// contributions from sources
 
+						// add effect to output matrix
+						XiKernel(k1,q,nTgt,0.5,0.5,Xi);
+
+						if (q_k(k1,nTgt,1) == q) {
+							// add Xi, and Kronecker delta terms, c1
+							dX.block<1,3>(k1,3*q) =
+								(f_r1 + f_r2).transpose()*Xi
+							   - f_n.transpose()*n_d;
+						} else if (q_k(k1,nTgt,2) == q) {
+							// add Xi, and Kronecker delta terms, c2
+							dX.block<1,3>(k1,3*q) =
+								(f_r1 + f_r2).transpose()*Xi
+							   + f_n.transpose()*n_e;
+						} else if (q_k(k1,nTgt,3) == q) {
+							// add Xi, and Kronecker delta terms, c3
+							dX.block<1,3>(k1,3*q) =
+								(f_r1 + f_r2).transpose()*Xi
+							   + f_n.transpose()*n_d;
+						} else if (q_k(k1,nTgt,4) == q) {
+							// add Xi, and Kronecker delta terms, c4
+							dX.block<1,3>(k1,3*q) =
+								(f_r1 + f_r2).transpose()*Xi
+							   - f_n.transpose()*n_e;
+						} // end if k1,q (targets)
+
+						// contributions from sources
+						if (zetaSrc.data() == zetaTgt.data()) {
+							if (q_k(k2,nSrc,ll) == q) {
+								// add Kronecker delta term, segment start
+								dX.block<1,3>(k2,3*q) = -(f_r0+f_r1).transpose();
+							} else if (q_k(k2,nSrc,llp1) == q) {
+								dX.block<1,3>(k2,3*q) = (f_r0-f_r2).transpose();
+							} // end if k2,q (sources)
+						} // end if Src == Tgt
 					} else {
 						continue;
-					}
-				}
+					} // end if k,q
+				} // for l
 			} // for q
 		} // for k2
 	} // for k1
