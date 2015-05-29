@@ -66,4 +66,12 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 					 const unsigned int nTgt,
 					 const MatrixXd& dX_);
 
+void AIC(const VectorXd& zetaSrc,
+		  const unsigned int mSrc,
+		  const unsigned int nSrc,
+		  const VectorXd& zetaTgt,
+		  const unsigned int mTgt,
+		  const unsigned int nTgt,
+		  const MatrixXd& dX_);
+
 #endif /* AICMATS_HPP_ */

@@ -21,6 +21,13 @@ double fRand(double fMin, double fMax) {
     return fMin + f * (fMax - fMin);
 }
 
+void wFunc(const MatrixXd& A,
+		    const VectorXd& gamma,
+		    const VectorXd& w_) {
+	VectorXd& w = const_cast<VectorXd&> (w_);
+	w = A*gamma;
+}
+
 int main() {
 	// Test UVLMLib functions during development.
 
@@ -33,7 +40,6 @@ int main() {
 	Eigen::VectorXd zeta(3*K_zeta);
 	Eigen::MatrixXd W(K,3*K_zeta);
 	Eigen::MatrixXd Astar(3*K_zeta,K);
-	Eigen::MatrixXd A(K,K);
 	Eigen::VectorXd gam(K); gam.setOnes(); // init gamma as 1
 	Eigen::MatrixXd dAgam0_dzeta(K,3*K_zeta);
 
@@ -187,7 +193,24 @@ int main() {
 	cout << "error in normals:" << endl << normals - approxNormals
 	     << endl;
 
+	// test A
+	cout << endl << "A(zeta): ----------------" << endl;
+	Eigen::MatrixXd A(K,K);
+	AIC(zeta,M,N,zeta,M,N,A);
+	cout << A << endl;
+
 	// test dAgamma_dZeta matrix
 	cout << endl << "dAgamma_dZeta: ----------------" << endl;
 	dAgamma0_dZeta(zeta,M,N,gam,zeta,M,N,dAgam0_dzeta);
+	VectorXd wPdel(K);
+	Eigen::MatrixXd Adel(K,K);
+	AIC(zeta+dZeta,M,N,zeta+dZeta,M,N,Adel);
+	wPdel = Adel*gam;
+	VectorXd w(K);
+	w = A*gam;
+	VectorXd wApprox(K);
+	wApprox = dAgam0_dzeta*dZeta;
+	cout << "dw (approx):" << endl << wApprox << endl;
+	cout << "dw (exact):" << endl << wPdel-w << endl;
+
 }
