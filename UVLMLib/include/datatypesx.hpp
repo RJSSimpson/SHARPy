@@ -28,6 +28,7 @@ public:
 typedef boost::multi_array<double, 2> BoostArray2D;
 typedef boost::multi_array<double, 3> BoostArray3D;
 typedef Eigen::Map<Eigen::VectorXd> EigenMapVectXd;
+typedef Eigen::Map<const Eigen::VectorXd> ConstMapVectXd;
 typedef Eigen::Map<Eigen::MatrixXd> EigenMapMatrixXd;
 
 class VortexSegment {

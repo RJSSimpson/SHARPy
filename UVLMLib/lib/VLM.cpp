@@ -16,6 +16,7 @@
 #include <vector>
 #include <assert.h>
 #include "omp.h"
+#include <aicMats.hpp>
 
 void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 		const double* ZetaStar_Vec, const double* GammaStar_Vec,\
@@ -575,7 +576,7 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	Eigen::VectorXd RHS(VMOPTS.M*VMOPTS.N);
 	EigenMapVectXd Gamma(Gamma_Vec,VMOPTS.M*VMOPTS.N);
 	EigenMapVectXd GammaStar(GammaStar_Vec,VMOPTS.Mstar*VMOPTS.N);
-	EigenMapMatrixXd AIC(AIC_Vec,VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
+	EigenMapMatrixXd Aic(AIC_Vec,VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
 	EigenMapMatrixXd BIC(BIC_Vec,VMOPTS.M*VMOPTS.N,VMOPTS.M*VMOPTS.N);
 	Eigen::VectorXd Downwash(VMOPTS.M*VMOPTS.N);
 
@@ -812,7 +813,7 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 						} //END if, else if VMOPTS.M-1
 
 						// element of AIC matrix
-						AIC(i*VMOPTS.N + j,ii*VMOPTS.N + jj) = \
+						Aic(i*VMOPTS.N + j,ii*VMOPTS.N + jj) = \
 													DotTriad(Temp3,Normal[i][j]);
 
 					} //END for jj
@@ -843,8 +844,14 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 		myfile.close();
 	}
 
+	if (false) {// I'm testing the new AIC routine
+		AIC(Zeta_Vec,VMOPTS.M,VMOPTS.N,Zeta_Vec,VMOPTS.M,VMOPTS.N,AIC_Vec);
+		// must add wake effect in steady calcs!
+	}
+
 	//solve for gamma
-	Gamma = AIC.colPivHouseholderQr().solve(RHS);
+	std::cout << "AIC matrix:" << std::endl << Aic << std::endl;
+	Gamma = Aic.colPivHouseholderQr().solve(RHS);
 
 	//set GammaStar to TE velocities
 	//check if steady set all to TE gamma

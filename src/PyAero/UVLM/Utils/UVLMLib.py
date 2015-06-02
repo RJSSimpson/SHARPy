@@ -21,6 +21,7 @@ c_vorticity_biotsegment = UVLMLib.c_wrap_vorticity_biotsegment
 cpp_test_biotsegment = UVLMLib.cpp_wrap_test_biotsegment
 c_test_biotsegment = UVLMLib.c_wrap_test_biotsegment
 cpp_solver_vlm = UVLMLib.cpp_wrap_solver_vlm
+cpp_AIC = UVLMLib.cpp_wrap_AIC
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -34,6 +35,7 @@ c_vorticity_biotsegment.restype = None
 cpp_test_biotsegment.restype = None
 c_test_biotsegment.restype = None
 cpp_solver_vlm.restype = None
+cpp_AIC.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -134,6 +136,24 @@ def Colloc(zeta_G_panel):
                      zeta_G_panel[1,1,:] +
                      zeta_G_panel[1,0,:]  ) )
     
+def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC):
+    """@details Wrapper for cpp_wrap_AIC.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param zetaTgt Target grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @return AIC influence coefficient matrix."""
+    cpp_AIC(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mSrc)),
+            ct.byref(ct.c_uint(nSrc)),
+            zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mTgt)),
+            ct.byref(ct.c_uint(nTgt)),
+            AIC.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+        
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')

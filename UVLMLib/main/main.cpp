@@ -196,7 +196,8 @@ int main() {
 	// test A
 	cout << endl << "A(zeta): ----------------" << endl;
 	Eigen::MatrixXd A(K,K);
-	AIC(zeta,M,N,zeta,M,N,A);
+	const double* zetaPtr = zeta.data();
+	AIC(zetaPtr,M,N,zetaPtr,M,N,A.data());
 	cout << A << endl;
 
 	// test dAgamma_dZeta matrix
@@ -204,7 +205,9 @@ int main() {
 	dAgamma0_dZeta(zeta,M,N,gam,zeta,M,N,dAgam0_dzeta);
 	VectorXd wPdel(K);
 	Eigen::MatrixXd Adel(K,K);
-	AIC(zeta+dZeta,M,N,zeta+dZeta,M,N,Adel);
+	VectorXd zetaPdel = zeta + dZeta;
+	const double* zetaPdelPtr = zetaPdel.data();
+	AIC(zetaPdelPtr,M,N,zetaPdelPtr,M,N,Adel.data());
 	wPdel = Adel*gam;
 	VectorXd w(K);
 	w = A*gam;

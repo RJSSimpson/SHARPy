@@ -11,7 +11,7 @@
 #include <VLM.hpp>
 #include <stdio.h>
 #include <datatypesx.hpp>
-
+#include <aicMats.hpp>
 
 // forward declare some useful functions
 
@@ -150,6 +150,17 @@ void cpp_wrap_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 			AIC_Vec,\
 			BIC_Vec);
 
+}
+
+void cpp_wrap_AIC(double* zetaSrc_,
+					unsigned int& mSrc,
+					unsigned int& nSrc,
+					double* zetaTgt_,
+					unsigned int& mTgt,
+					unsigned int& nTgt,
+					double* Aic_) {
+	//call AIC generator
+	AIC(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,Aic_);
 }
 
 } // END extern C

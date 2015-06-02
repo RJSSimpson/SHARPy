@@ -564,13 +564,13 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 	return;
 }
 
-void AIC(const VectorXd& zetaSrc,
+void AIC(const double* zetaSrc_,
 		  const unsigned int mSrc,
 		  const unsigned int nSrc,
-		  const VectorXd& zetaTgt,
+		  const double* zetaTgt_,
 		  const unsigned int mTgt,
 		  const unsigned int nTgt,
-		  const MatrixXd& dX_) {
+		  double* dX_) {
 	/**@brief Calculate AIC matrix.
 	 * @param zetaSrc Grid points of source lattice.
 	 * @param mSrc chordwise panels on source lattice.
@@ -578,11 +578,15 @@ void AIC(const VectorXd& zetaSrc,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
-	 * @param dX K x 3K_{\zeta_{src}} matrix output.
+	 * @param dX K_tgt x K_src matrix output.
 	 */
 
-	// const cast Eigen outputs
-	MatrixXd& dX = const_cast<MatrixXd&> (dX_);
+	// Create Eigen maps to memory
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,mTgt*nTgt,mSrc*nSrc);
+	// Set dX to zero
+	dX.setZero();
 
 	// temps
 	unsigned int kSrc = mSrc*nSrc;
@@ -630,7 +634,7 @@ void AIC(const VectorXd& zetaSrc,
 				// r2
 				r2 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
 				// AIC entry
-				dX(k1,k2)+=1/(4*M_PI)*fGeom(r0.data(),
+				dX(k1,k2)+=1.0/(4.0*M_PI)*fGeom(r0.data(),
 										    r1.data(),
 										    r2.data(),
 										    n.data());
