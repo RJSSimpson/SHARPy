@@ -57,14 +57,14 @@ Matrix3d dn_dd(const Vector3d& d, const Vector3d& e);
 
 Matrix3d dn_de(const Vector3d& d, const Vector3d& e);
 
-void dAgamma0_dZeta(const VectorXd& zetaSrc,
+void dAgamma0_dZeta(const double* zetaSrc_,
 					 const unsigned int mSrc,
 					 const unsigned int nSrc,
-					 const VectorXd& gamma0,
-					 const VectorXd& zetaTgt,
+					 const double* gamma0_,
+					 const double* zetaTgt_,
 					 const unsigned int mTgt,
 					 const unsigned int nTgt,
-					 const MatrixXd& dX_);
+					 double* dX_);
 
 void AIC(const double* zetaSrc_,
 		  const unsigned int mSrc,

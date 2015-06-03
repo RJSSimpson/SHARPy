@@ -421,14 +421,14 @@ Matrix3d dn_de(const Vector3d& d, const Vector3d& e) {
 	return dxHat_dx(d.cross(e))*skew(d);
 }
 
-void dAgamma0_dZeta(const VectorXd& zetaSrc,
+void dAgamma0_dZeta(const double* zetaSrc_,
 					 const unsigned int mSrc,
 					 const unsigned int nSrc,
-					 const VectorXd& gamma0,
-					 const VectorXd& zetaTgt,
+					 const double* gamma0_,
+					 const double* zetaTgt_,
 					 const unsigned int mTgt,
 					 const unsigned int nTgt,
-					 const MatrixXd& dX_) {
+					 double* dX_) {
 	/**@brief Calculate tensor-free derivative of (A gamma_0) w.r.t zeta.
 	 * @param zetaSrc Grid points of source lattice.
 	 * @param mSrc chordwise panels on source lattice.
@@ -444,8 +444,11 @@ void dAgamma0_dZeta(const VectorXd& zetaSrc,
 	 * invalid because a two temps are instantiated.
 	 */
 
-	// const cast Eigen outputs
-	MatrixXd& dX = const_cast<MatrixXd&> (dX_);
+	// eigen map output matrix
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd gamma0(gamma0_,mSrc*nSrc);
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,mTgt*nTgt,3*(mSrc+1)*(nSrc+1));
 
 	// temps
 	unsigned int kSrc = mSrc*nSrc;

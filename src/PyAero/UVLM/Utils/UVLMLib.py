@@ -22,6 +22,7 @@ cpp_test_biotsegment = UVLMLib.cpp_wrap_test_biotsegment
 c_test_biotsegment = UVLMLib.c_wrap_test_biotsegment
 cpp_solver_vlm = UVLMLib.cpp_wrap_solver_vlm
 cpp_AIC = UVLMLib.cpp_wrap_AIC
+cpp_dAgamma0_dZeta = UVLMLib.cpp_wrap_dAgamma0_dZeta
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -36,6 +37,7 @@ cpp_test_biotsegment.restype = None
 c_test_biotsegment.restype = None
 cpp_solver_vlm.restype = None
 cpp_AIC.restype = None
+cpp_dAgamma0_dZeta.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -152,6 +154,26 @@ def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC):
             ct.byref(ct.c_uint(mTgt)),
             ct.byref(ct.c_uint(nTgt)),
             AIC.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+
+def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
+    """@details Wrapper for cpp_wrap_AIC.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param gamma0 Reference circulation distribution.
+    @param zetaTgt Target grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @return  influence coefficient matrix."""
+    cpp_dAgamma0_dZeta(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       ct.byref(ct.c_uint(mSrc)),
+                       ct.byref(ct.c_uint(nSrc)),
+                       gamma0.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       ct.byref(ct.c_uint(mTgt)),
+                       ct.byref(ct.c_uint(nTgt)),
+                       dAgam0.ctypes.data_as(ct.POINTER(ct.c_double)))
     
         
 

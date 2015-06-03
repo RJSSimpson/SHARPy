@@ -202,7 +202,7 @@ int main() {
 
 	// test dAgamma_dZeta matrix
 	cout << endl << "dAgamma_dZeta: ----------------" << endl;
-	dAgamma0_dZeta(zeta,M,N,gam,zeta,M,N,dAgam0_dzeta);
+	dAgamma0_dZeta(zeta.data(),M,N,gam.data(),zeta.data(),M,N,dAgam0_dzeta.data());
 	VectorXd wPdel(K);
 	Eigen::MatrixXd Adel(K,K);
 	VectorXd zetaPdel = zeta + dZeta;

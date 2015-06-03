@@ -163,6 +163,18 @@ void cpp_wrap_AIC(double* zetaSrc_,
 	AIC(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,Aic_);
 }
 
+void cpp_wrap_dAgamma0_dZeta(const double* zetaSrc_,
+								const unsigned int& mSrc,
+								const unsigned int& nSrc,
+								const double* gamma0_,
+								const double* zetaTgt_,
+								const unsigned int& mTgt,
+								const unsigned int& nTgt,
+								double* Aic_) {
+	// call function
+	dAgamma0_dZeta(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,Aic_);
+}
+
 } // END extern C
 
 
