@@ -14,7 +14,9 @@ TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/'
            + 'Matrices/')
 
 class Test_AIC(unittest.TestCase):
-    """@brief Test AIC matrix elements."""
+    """@brief Test AIC matrix elements.
+       @notes The dAgamma0W_dZeta approximation seems to have more relative error
+       than the dAgamma0_dZeta, but less than 1% for random 0-1% variations in every DoF."""
 
     def setUp(self):
         # Set SharPy output directory and file root.
@@ -112,7 +114,6 @@ class dAgamma0_dzeta(unittest.TestCase):
         
     def test_dAgammaW0_dzeta_unit(self):
         """Test matrix against numerical example."""
-        """Test matrix against numerical example."""
         M=1
         N=1
         K=M*N
@@ -141,7 +142,96 @@ class dAgamma0_dzeta(unittest.TestCase):
                 print((dwApprox - dwExact)/(np.dot(AIC,gammaW0)))
             # check less than 2%
             self.assertLess(np.absolute((dwApprox - dwExact)/(np.dot(AIC,gammaW0))),0.01)
-
+            
+    def test_dAgamma0_dzeta_unit2DM10(self):
+        """Test matrix against numerical example for 2D aerofoil, 10 panels."""
+        #Init AIC
+        m=10
+        n=1
+        k=m*n
+        gamma0=np.ones((k))
+        AIC = np.zeros((k,k))
+        AIC2 = np.zeros((k,k))
+        dAgam0_dzeta = np.zeros((k,3*(m+1)*(n+1)))
+        # initialize grid for 3D solver (Unit VR)
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        spans = (-1000, 1000)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        # gen matrix
+        Cpp_dAgamma0_dZeta(zeta, m, n, gamma0, zeta, m, n, dAgam0_dzeta)        
+        for foo in range(100):
+            # gen random zeta
+            dZeta=np.random.random(len(zeta))/100.0 #10% chord panel vars
+            # calc dw Approx
+            dwApprox = np.dot(dAgam0_dzeta,dZeta)
+            # calc AICs for numerical comparison
+            Cpp_AIC(zeta, m, n, zeta, m, n, AIC)
+            Cpp_AIC(zeta+dZeta, m, n, zeta+dZeta, m, n, AIC2)
+            dwExact = np.dot(AIC2,gamma0) - np.dot(AIC,gamma0)
+            if False:
+                print("test no. ",foo)
+                print(np.dot(AIC,gamma0))
+                print(dwExact)
+                print(dwApprox)
+                print((dwExact-dwApprox)/np.dot(AIC,gamma0))
+            self.assertLess(np.max(np.absolute((dwApprox - dwExact)/(np.dot(AIC,gamma0)))),0.01)
+        
+    def test_dAgammaW0_dzeta_unit2DM10(self):
+        """Test matrix against numerical example for 2D aerofoil, 10 panels, 90 wake panels."""
+        #Init AIC
+        m=10
+        mW=190
+        n=2
+        k=m*n
+        kW=mW*n
+        gammaW0=np.ones((kW))
+        AIC = np.zeros((k,kW))
+        AIC2 = np.zeros((k,kW))
+        dAgamW0_dzeta = np.zeros((k,3*(m+1)*(n+1)))
+        # initialize grid for 3D solver (Unit VR)
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        chordsW = np.linspace(1.0,mW*(1.0/m),mW+1,True)
+        spans = np.linspace(-1000, 1000, n+1,True)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        zetaW=np.zeros(3*len(chordsW)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        kk=0
+        for c in chordsW:
+            for s in spans:
+                zetaW[3*kk]=c
+                zetaW[3*kk+1]=s
+                kk=kk+1
+        # gen matrix
+        Cpp_dAgamma0_dZeta(zetaW, mW, n, gammaW0, zeta, m, n, dAgamW0_dzeta)      
+        for foo in range(100):
+            # gen random zeta
+            dZeta=np.random.random(len(zeta))/1000.0 #1% chord panel vars
+            # calc dw Approx
+            dwApprox = np.dot(dAgamW0_dzeta,dZeta)
+            # calc AICs for numerical comparison
+            Cpp_AIC(zetaW, mW, n, zeta, m, n, AIC)
+            Cpp_AIC(zetaW, mW, n, zeta+dZeta, m, n, AIC2)
+            dwExact = np.dot(AIC2,gammaW0) - np.dot(AIC,gammaW0)
+            if False:
+                print("test no. ",foo)
+                print(np.dot(AIC,gammaW0))
+                print(dwExact)
+                print(dwApprox)
+                print((dwExact-dwApprox)/np.dot(AIC,gammaW0))
+            self.assertLess(np.max(np.absolute((dwApprox - dwExact)/(np.dot(AIC,gammaW0)))),0.01)
+            
+    
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

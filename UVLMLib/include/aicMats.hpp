@@ -9,12 +9,13 @@
 #define AICMATS_HPP_
 
 #include<Eigen/Dense>
+#include<datatypesx.hpp>
 using namespace Eigen;
 
 void genW(const VectorXd& zeta,
 		   const int M,
 		   const int N,
-		   const MatrixXd& W_);
+		   const EigDynMatrixRM& W_);
 
 void getNormals(const VectorXd& zeta,
 		          const int M,
@@ -27,7 +28,7 @@ void genAstar(const VectorXd& zetaSrc,
 		        const VectorXd& zetaTgt,
 		        const unsigned int mTgt,
 		        const unsigned int nTgt,
-		        const MatrixXd& Astar_);
+		        const EigDynMatrixRM& Astar_);
 
 double fGeom(const double* r0,
           const double* r1,
@@ -73,5 +74,11 @@ void AIC(const double* zetaSrc_,
 		  const unsigned int mTgt,
 		  const unsigned int nTgt,
 		  double* dX_);
+
+void dWzetaPri0_dZeta(const double* zeta_,
+					  const unsigned int m,
+					  const unsigned int n,
+					  const double* zetaPri_,
+					  double* dX_);
 
 #endif /* AICMATS_HPP_ */

@@ -170,11 +170,19 @@ void cpp_wrap_dAgamma0_dZeta(const double* zetaSrc_,
 								const double* zetaTgt_,
 								const unsigned int& mTgt,
 								const unsigned int& nTgt,
-								double* Aic_) {
+								double* dAgam0_) {
 	// call function
-	dAgamma0_dZeta(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,Aic_);
+	dAgamma0_dZeta(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,dAgam0_);
 }
 
+void cpp_wrap_dWzetaPri0_dZeta(const double* zeta_,
+								  const unsigned int m,
+								  const unsigned int n,
+								  const double* zetaPri_,
+								  double* dX_) {
+	//call function
+	dWzetaPri0_dZeta(zeta_, m, n, zetaPri_, dX_);
+}
 } // END extern C
 
 

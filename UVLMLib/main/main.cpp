@@ -50,10 +50,10 @@ int main() {
 //			1.0, 1.0, 0.0,
 //			1.0, 2.0, 0.0;
 
-	zeta << 0.0, 0.0, 0.0,
-			0.0, 1.0, 0.0,
-			1.0, 0.0, 0.0,
-			1.0, 1.0, 0.0;
+	zeta << 0.0,    -1000.0, 0.0,
+			0.0,     1000.0, 0.0,
+			0.1,    -1000.0, 0.0,
+			0.1,     1000.0, 0.0;
 
 
 	genW(zeta,M,N,W);
@@ -146,7 +146,7 @@ int main() {
 		 << endl;
 
 	// test variations of the normal vector
-	VectorXd dZeta = VectorXd::Random(zeta.size())/10;
+	VectorXd dZeta = VectorXd::Random(zeta.size())/100;
 	VectorXd normals(3*K);
 	VectorXd approxNormals(3*K);
 	VectorXd dNormals(3*K);
@@ -204,7 +204,7 @@ int main() {
 	cout << endl << "dAgamma_dZeta: ----------------" << endl;
 	dAgamma0_dZeta(zeta.data(),M,N,gam.data(),zeta.data(),M,N,dAgam0_dzeta.data());
 	VectorXd wPdel(K);
-	Eigen::MatrixXd Adel(K,K);
+	MatrixXd Adel(K,K);
 	VectorXd zetaPdel = zeta + dZeta;
 	const double* zetaPdelPtr = zetaPdel.data();
 	AIC(zetaPdelPtr,M,N,zetaPdelPtr,M,N,Adel.data());
@@ -216,4 +216,20 @@ int main() {
 	cout << "dw (approx):" << endl << wApprox << endl;
 	cout << "dw (exact):" << endl << wPdel-w << endl;
 
+	// test dWzetaPri0_dzeta
+	cout << endl << "dWzetaPri0_dzeta: ----------------" << endl;
+	// obtain linearization
+	VectorXd zetaPri0 = VectorXd::Random(zeta.size())*10;
+	const double* zetaPriPtr = zetaPri0.data();
+	EigDynMatrixRM dWzetaPri0_dzeta(K,3*K_zeta);
+	dWzetaPri0_dZeta(zetaPtr,M,N,zetaPriPtr,dWzetaPri0_dzeta.data());
+	VectorXd dwApprox = dWzetaPri0_dzeta*dZeta;
+	// check numerically
+	EigDynMatrixRM W1(K,3*K_zeta), W2(K,3*K_zeta);
+	genW(zeta,M,N,W1);
+	genW(zeta+dZeta,M,N,W2);
+	VectorXd dwExact = W2*zetaPri0 - W1*zetaPri0;
+	cout << "dw (approx):" << endl << dwApprox << endl;
+	cout << "dw (exact):" << endl << dwExact << endl;
+	cout << "dw (normed diff):" << endl << (dwApprox - dwExact).array()/(W1*zetaPri0).array();
 }

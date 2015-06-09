@@ -21,14 +21,14 @@ using namespace std;
 void genW(const ::VectorXd& zeta,
 		  const int M,
 		  const int N,
-		  const ::MatrixXd& W_) {
+		  const EigDynMatrixRM& W_) {
 	/**@brief Populate W, downwash interpolation, matrix.
 	 * @param zeta Vector of lattice vertices.
 	 * @param W downwash interpolation matrix.
 	 */
 
 	// const cast Eigen outputs
-	MatrixXd& W = const_cast<MatrixXd&> (W_);
+	EigDynMatrixRM& W = const_cast<EigDynMatrixRM&> (W_);
 
 	// check relative size of zeta and W
 	assert(zeta.size()==W.cols());
@@ -111,7 +111,7 @@ void genAstar(const VectorXd& zetaSrc,
 		        const VectorXd& zetaTgt,
 		        const unsigned int mTgt,
 		        const unsigned int nTgt,
-		        const MatrixXd& Astar_) {
+		        const EigDynMatrixRM& Astar_) {
 	/**@brief Get vector containing panel normal vectors.
 	 * @param zetaSrc Vector containing lattice vertices of source.
 	 * @param mSrc Spanwise panels in the source lattice.
@@ -124,7 +124,7 @@ void genAstar(const VectorXd& zetaSrc,
 	 */
 
 	// const cast Eigen outputs
-	MatrixXd& Astar = const_cast<MatrixXd&> (Astar_);
+	EigDynMatrixRM& Astar = const_cast<EigDynMatrixRM&> (Astar_);
 
 	// reused panel numbers
 	const unsigned int kSrc = mSrc*nSrc;
@@ -437,7 +437,7 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
-	 * @param dX K x 3K_{\zeta_{src}} matrix output.
+	 * @param dX K x 3K_{\zeta_{tgt}} matrix output.
 	 * @warning If the zeta arguments are the same they must be the same object,
 	 * therefore in the function call the arguments must be previously
 	 * instantiated objects, e.g (zeta+delZeta, ..., zeta+delZeta, ...) is
@@ -448,12 +448,15 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
 	ConstMapVectXd gamma0(gamma0_,mSrc*nSrc);
 	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
-	EigenMapMatrixXd dX(dX_,mTgt*nTgt,3*(mSrc+1)*(nSrc+1));
+	EigenMapMatrixXd dX(dX_,mTgt*nTgt,3*(mTgt+1)*(nTgt+1));
+
+	// Set dX to zero
+	dX.setZero();
 
 	// temps
 	unsigned int kSrc = mSrc*nSrc;
 	unsigned int kTgt = mTgt*nTgt;
-	unsigned int qTgt = 3*(mTgt+1)*(nTgt+1);
+	unsigned int qTgt = (mTgt+1)*(nTgt+1);
 	unsigned int ll = 0; //segment counter
 	unsigned int llp1 = 0; //segment counter
 	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
@@ -503,7 +506,7 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 						q_k(k1,nTgt,3) == q || q_k(k1,nTgt,4) == q ||
 						q_k(k2,nSrc,ll) == q || q_k(k2,nSrc,llp1) == q) {
 
-						// contributions from targets
+						// contributions at targets
 						// calc r0, r1, r2
 						r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0)
 							-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
@@ -551,9 +554,10 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 						if (zetaSrc.data() == zetaTgt.data()) {
 							if (q_k(k2,nSrc,ll) == q) {
 								// add Kronecker delta term, segment start
-								dX.block<1,3>(k2,3*q) += -a*(f_r0+f_r1).transpose();
+								dX.block<1,3>(k1,3*q) += -a*(f_r0+f_r1).transpose();
 							} else if (q_k(k2,nSrc,llp1) == q) {
-								dX.block<1,3>(k2,3*q) += a*(f_r0-f_r2).transpose();
+								// add Kronecker delta term, segment end
+								dX.block<1,3>(k1,3*q) += a*(f_r0-f_r2).transpose();
 							} // end if k2,q (sources)
 						} // end if Src == Tgt
 
@@ -641,6 +645,80 @@ void AIC(const double* zetaSrc_,
 										    r1.data(),
 										    r2.data(),
 										    n.data());
+			}
+		}
+	}
+	return;
+}
+
+void dWzetaPri0_dZeta(const double* zeta_,
+						const unsigned int m,
+						const unsigned int n,
+						const double* zetaPri_,
+						double* dX_) {
+	/**@brief Calculate dWzetaPri0_dZeta matrix.
+	 * @param zeta Lattice coordinates.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @param zetaPri Lattice velocities.
+	 * @param dX output.
+	 */
+
+	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
+	ConstMapVectXd zetaPri(zetaPri_,3*(m+1)*(n+1));
+	EigenMapMatrixXd dX(dX_,m*n,3*(m+1)*(n+1));
+
+	// Set dX to zero
+	dX.setZero();
+
+	// temps
+	unsigned int K=m*n;
+	unsigned int Q1=(m+1)*(n+1);
+	unsigned int Q2=(m+1)*(n+1);
+	Vector3d zetaPriQ1, b, d, e;
+	Matrix3d Xi, dbHat_db;
+
+	for (unsigned int k = 0; k < K; k++) {
+		d = zeta.block<3,1>(3*q_k(k,n,3),0)
+		   -zeta.block<3,1>(3*q_k(k,n,1),0);
+		e = zeta.block<3,1>(3*q_k(k,n,2),0)
+		   -zeta.block<3,1>(3*q_k(k,n,4),0);
+		b = d.cross(e);
+		for (unsigned int q1 = 0; q1 < Q1; q1++) {
+			if (q_k(k,n,1) == q1 || q_k(k,n,2) == q1 ||
+				q_k(k,n,3) == q1 || q_k(k,n,4) == q1) {
+				// get vars
+				zetaPriQ1 = zetaPri.block<3,1>(3*q1,0);
+				XiKernel(k,q1,n,0.5,0.5,Xi);
+				dbHat_db = dxHat_dx(b);
+				for (unsigned int q2 = 0; q2 < Q2; q2++) {
+					//check if q2 is active based on k and corner point
+					if (q_k(k,n,1) == q2) {
+						// movement of corner 1
+						dX.block<1,3>(k,3*q2) += -zetaPriQ1.transpose()
+								             *Xi.transpose()
+								             *dbHat_db
+								             *skew(-e);
+					} else if (q_k(k,n,2) == q2) {
+						// movement of corner 2
+						dX.block<1,3>(k,3*q2) += zetaPriQ1.transpose()
+								             *Xi.transpose()
+								             *dbHat_db
+								             *skew(d);
+					} else if (q_k(k,n,3) == q2) {
+						// movement of corner 3
+						dX.block<1,3>(k,3*q2) += zetaPriQ1.transpose()
+											 *Xi.transpose()
+											 *dbHat_db
+											 *skew(-e);
+					} else if (q_k(k,n,4) == q2) {
+						// movement of corner 4
+						dX.block<1,3>(k,3*q2) += -zetaPriQ1.transpose()
+											 *Xi.transpose()
+											 *dbHat_db
+											 *skew(d);
+					}
+				}
 			}
 		}
 	}
