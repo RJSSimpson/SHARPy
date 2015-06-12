@@ -1,4 +1,5 @@
 eclipse.preferences.version=1
+indexer/filesToParseUpFront=
 indexer/indexAllFiles=true
 indexer/indexOnOpen=true
 indexer/indexUnusedHeadersWithAlternateLang=true

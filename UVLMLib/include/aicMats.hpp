@@ -12,14 +12,14 @@
 #include<datatypesx.hpp>
 using namespace Eigen;
 
-void genW(const VectorXd& zeta,
-		   const int M,
-		   const int N,
-		   const EigDynMatrixRM& W_);
+void genW(const double* zeta_,
+		   const unsigned int M,
+		   const unsigned int N,
+		   double* W_);
 
 void getNormals(const VectorXd& zeta,
-		          const int M,
-		          const int N,
+		          const unsigned int M,
+		          const unsigned int N,
 		          const VectorXd& normals_);
 
 void genAstar(const VectorXd& zetaSrc,

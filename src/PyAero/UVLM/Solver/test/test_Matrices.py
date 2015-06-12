@@ -7,7 +7,7 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta
 from scipy.io import savemat
 
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
@@ -77,7 +77,7 @@ class Test_AIC(unittest.TestCase):
             # end for j
         # end for i
         
-class dAgamma0_dzeta(unittest.TestCase):
+class Test_dAgamma0_dzeta(unittest.TestCase):
     """@brief Test non-zero reference gamma matrix, dAgamma0_dzeta."""
     
     def setUp(self):
@@ -165,7 +165,7 @@ class dAgamma0_dzeta(unittest.TestCase):
                 kk=kk+1
         # gen matrix
         Cpp_dAgamma0_dZeta(zeta, m, n, gamma0, zeta, m, n, dAgam0_dzeta)        
-        for foo in range(100):
+        for foo in range(10):
             # gen random zeta
             dZeta=np.random.random(len(zeta))/100.0 #10% chord panel vars
             # calc dw Approx
@@ -214,7 +214,7 @@ class dAgamma0_dzeta(unittest.TestCase):
                 kk=kk+1
         # gen matrix
         Cpp_dAgamma0_dZeta(zetaW, mW, n, gammaW0, zeta, m, n, dAgamW0_dzeta)      
-        for foo in range(100):
+        for foo in range(1):
             # gen random zeta
             dZeta=np.random.random(len(zeta))/1000.0 #1% chord panel vars
             # calc dw Approx
@@ -230,8 +230,56 @@ class dAgamma0_dzeta(unittest.TestCase):
                 print(dwApprox)
                 print((dwExact-dwApprox)/np.dot(AIC,gammaW0))
             self.assertLess(np.max(np.absolute((dwApprox - dwExact)/(np.dot(AIC,gammaW0)))),0.01)
-            
+
+
+class Test_dWzetaPri0_dzeta(unittest.TestCase):
+    """@brief Test non-zero reference zetaPri matrix, dWzetaPri0_dzeta."""
     
+    def setUp(self):
+        # Set SharPy output directory and file root.
+        Settings.OutputDir = TestDir
+        Settings.OutputFileRoot = 'dWzetaPri0_dzeta'
+
+    def tearDown(self):
+        pass
+    
+    def test_dWzetaPri0_dzeta_unit2DM10(self):
+        "Test matrix for example of aerofoil, 10 chordwise panels."
+        m=10
+        n=2
+        k=m*n
+        zetaPri0=np.ones((3*(m+1)*(n+1)))
+        W = np.zeros((k,3*(m+1)*(n+1)))
+        W2 = np.zeros((k,3*(m+1)*(n+1)))
+        dWzetaPri0_dzeta = np.zeros((k,3*(m+1)*(n+1)))
+        # initialize grid for 3D solver (Unit VR)
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        spans = np.linspace(-1000, 1000, n+1,True)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        # gen matrix
+        Cpp_genW(zeta,m,n,W)
+        Cpp_dWzetaPri0_dZeta(zeta, m, n, zetaPri0, dWzetaPri0_dzeta)
+        for foo in range(1):
+            # gen random zeta
+            dZeta=np.random.random(len(zeta))/1000.0 #1% chord panel vars
+            # calculate approx
+            dwApprox = np.dot(dWzetaPri0_dzeta,dZeta)
+            # claculate exact
+            Cpp_genW(zeta,m,n,W2)
+            dwExact = np.dot(W2,zetaPri0) - np.dot(W,zetaPri0)
+            if True:
+                print("test no. ",foo)
+                print(np.dot(W,zetaPri0))
+                print(dwExact)
+                print(dwApprox)
+                print((dwExact-dwApprox)/np.dot(W,zetaPri0))
+            
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

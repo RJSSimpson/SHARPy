@@ -18,17 +18,18 @@
 using namespace Eigen;
 using namespace std;
 
-void genW(const ::VectorXd& zeta,
-		  const int M,
-		  const int N,
-		  const EigDynMatrixRM& W_) {
+void genW(const double* zeta_,
+		  const unsigned int M,
+		  const unsigned int N,
+		  double* W_) {
 	/**@brief Populate W, downwash interpolation, matrix.
 	 * @param zeta Vector of lattice vertices.
 	 * @param W downwash interpolation matrix.
 	 */
 
 	// const cast Eigen outputs
-	EigDynMatrixRM& W = const_cast<EigDynMatrixRM&> (W_);
+	ConstMapVectXd zeta(zeta_,3*(M+1)*(N+1));
+	EigenMapMatrixXd W(W_,M*N,3*(M+1)*(N+1));
 
 	// check relative size of zeta and W
 	assert(zeta.size()==W.cols());
@@ -62,8 +63,8 @@ void genW(const ::VectorXd& zeta,
 }
 
 void getNormals(const VectorXd& zeta,
-		        const int M,
-		        const int N,
+		        const unsigned int M,
+		        const unsigned int N,
 		        const VectorXd& normals_) {
 	/**@brief Get vector containing panel normal vectors.
 	 * @param zeta Vector containing lattice vertices.
@@ -684,13 +685,13 @@ void dWzetaPri0_dZeta(const double* zeta_,
 		e = zeta.block<3,1>(3*q_k(k,n,2),0)
 		   -zeta.block<3,1>(3*q_k(k,n,4),0);
 		b = d.cross(e);
+		dbHat_db = dxHat_dx(b);
 		for (unsigned int q1 = 0; q1 < Q1; q1++) {
 			if (q_k(k,n,1) == q1 || q_k(k,n,2) == q1 ||
 				q_k(k,n,3) == q1 || q_k(k,n,4) == q1) {
 				// get vars
 				zetaPriQ1 = zetaPri.block<3,1>(3*q1,0);
 				XiKernel(k,q1,n,0.5,0.5,Xi);
-				dbHat_db = dxHat_dx(b);
 				for (unsigned int q2 = 0; q2 < Q2; q2++) {
 					//check if q2 is active based on k and corner point
 					if (q_k(k,n,1) == q2) {

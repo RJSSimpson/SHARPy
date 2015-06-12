@@ -176,13 +176,21 @@ void cpp_wrap_dAgamma0_dZeta(const double* zetaSrc_,
 }
 
 void cpp_wrap_dWzetaPri0_dZeta(const double* zeta_,
-								  const unsigned int m,
-								  const unsigned int n,
+								  const unsigned int& m,
+								  const unsigned int& n,
 								  const double* zetaPri_,
 								  double* dX_) {
 	//call function
 	dWzetaPri0_dZeta(zeta_, m, n, zetaPri_, dX_);
 }
+
+void cpp_wrap_genW(const double* zeta_,
+					  const unsigned int& M,
+					  const unsigned int& N,
+					  double* W_){
+	genW(zeta_,M,N,W_);
+}
+
 } // END extern C
 
 

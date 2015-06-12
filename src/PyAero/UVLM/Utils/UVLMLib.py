@@ -23,6 +23,8 @@ c_test_biotsegment = UVLMLib.c_wrap_test_biotsegment
 cpp_solver_vlm = UVLMLib.cpp_wrap_solver_vlm
 cpp_AIC = UVLMLib.cpp_wrap_AIC
 cpp_dAgamma0_dZeta = UVLMLib.cpp_wrap_dAgamma0_dZeta
+cpp_dWzetaPri0_dZeta = UVLMLib.cpp_wrap_dWzetaPri0_dZeta
+cpp_genW = UVLMLib.cpp_wrap_genW
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -38,6 +40,8 @@ c_test_biotsegment.restype = None
 cpp_solver_vlm.restype = None
 cpp_AIC.restype = None
 cpp_dAgamma0_dZeta.restype = None
+cpp_dWzetaPri0_dZeta.restype = None
+cpp_genW.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -157,7 +161,7 @@ def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC):
     
 
 def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
-    """@details Wrapper for cpp_wrap_AIC.
+    """@details Wrapper for cpp_wrap_dAgamma0_dZeta.
     @param zetaSrc Source grid points.
     @param mSrc Chordwise panels.
     @param nSrc Spanwise.
@@ -165,7 +169,7 @@ def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
     @param zetaTgt Target grid points.
     @param mSrc Chordwise panels.
     @param nSrc Spanwise.
-    @return  influence coefficient matrix."""
+    @return dAgam0 variation of influence coefficient matrix times gamma."""
     cpp_dAgamma0_dZeta(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
                        ct.byref(ct.c_uint(mSrc)),
                        ct.byref(ct.c_uint(nSrc)),
@@ -175,7 +179,29 @@ def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
                        ct.byref(ct.c_uint(nTgt)),
                        dAgam0.ctypes.data_as(ct.POINTER(ct.c_double)))
     
-        
+def Cpp_dWzetaPri0_dZeta(zeta,m,n,zetaPri,dWzetaPri):
+    """@details Wrapper for cpp_wrap_dWzetaPri0_dZeta.
+    @param zeta Grid points.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @param zetaPri0 Reference grid velocities.
+    @param dWzetaPri Variation of downwash matrix times zetaPri."""
+    cpp_dWzetaPri0_dZeta(zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
+                         ct.byref(ct.c_uint(m)),
+                         ct.byref(ct.c_uint(n)),
+                         zetaPri.ctypes.data_as(ct.POINTER(ct.c_double)),
+                         dWzetaPri.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+def Cpp_genW(zeta,m,n,W):
+    """@details Wrapper for cpp_wrap_AIC.
+    @param zeta Source grid points.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @return W Interpolation and projection matrix."""
+    cpp_genW(zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
+             ct.byref(ct.c_uint(m)),
+             ct.byref(ct.c_uint(n)),
+             W.ctypes.data_as(ct.POINTER(ct.c_double)));
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')
