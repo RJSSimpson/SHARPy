@@ -250,8 +250,11 @@ class Test_dWzetaPri0_dzeta(unittest.TestCase):
         k=m*n
         zetaPri0=np.ones((3*(m+1)*(n+1)))
         W = np.zeros((k,3*(m+1)*(n+1)))
+        W[:,:]=0.0 # numpy not initializing to zero!!
         W2 = np.zeros((k,3*(m+1)*(n+1)))
+        W2[:,:] = 0.0
         dWzetaPri0_dzeta = np.zeros((k,3*(m+1)*(n+1)))
+        dWzetaPri0_dzeta[:,:] = 0.0
         # initialize grid for 3D solver (Unit VR)
         chords = np.linspace(0.0, 1.0, m+1, True)
         spans = np.linspace(-1000, 1000, n+1,True)
@@ -265,21 +268,23 @@ class Test_dWzetaPri0_dzeta(unittest.TestCase):
         # gen matrix
         Cpp_genW(zeta,m,n,W)
         Cpp_dWzetaPri0_dZeta(zeta, m, n, zetaPri0, dWzetaPri0_dzeta)
-        for foo in range(1):
+        for foo in range(10):
             # gen random zeta
             dZeta=np.random.random(len(zeta))/1000.0 #1% chord panel vars
             # calculate approx
             dwApprox = np.dot(dWzetaPri0_dzeta,dZeta)
             # claculate exact
-            Cpp_genW(zeta,m,n,W2)
+            Cpp_genW(zeta+dZeta,m,n,W2)
             dwExact = np.dot(W2,zetaPri0) - np.dot(W,zetaPri0)
-            if True:
+            if False:
                 print("test no. ",foo)
                 print(np.dot(W,zetaPri0))
                 print(dwExact)
                 print(dwApprox)
                 print((dwExact-dwApprox)/np.dot(W,zetaPri0))
+            self.assertLess(np.max(np.absolute((dwExact-dwApprox)/np.dot(W,zetaPri0))),0.01)
             
+
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

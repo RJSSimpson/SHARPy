@@ -31,14 +31,11 @@ void genW(const double* zeta_,
 	ConstMapVectXd zeta(zeta_,3*(M+1)*(N+1));
 	EigenMapMatrixXd W(W_,M*N,3*(M+1)*(N+1));
 
-	// check relative size of zeta and W
-	assert(zeta.size()==W.cols());
-
 	// temporary vars
-	VectorXd normals(3*W.rows());
-	MatrixXd norMat(W.rows(),3*W.rows());
-	MatrixXd Xi(3*W.rows(),W.cols());
-	Matrix3d XiKern;
+	VectorXd normals = VectorXd::Zero(3*M*N);
+	MatrixXd norMat = MatrixXd::Zero(M*N,3*M*N);
+	MatrixXd Xi = MatrixXd::Zero(3*M*N,3*(M+1)*(N+1));
+	Matrix3d XiKern = Matrix3d::Zero();
 
 	// calculate normal vectors
 	getNormals(zeta,M,N,normals);

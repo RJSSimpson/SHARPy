@@ -38,11 +38,11 @@ int main() {
 	const int K=M*N;
 	const int K_zeta = (M+1)*(N+1);
 
-	Eigen::VectorXd zeta(3*K_zeta);
-	Eigen::MatrixXd W(K,3*K_zeta);
-	Eigen::MatrixXd Astar(3*K_zeta,K);
+	Eigen::VectorXd zeta(3*K_zeta); zeta.setZero();
+	Eigen::MatrixXd W(K,3*K_zeta); W.setZero();
+	Eigen::MatrixXd Astar(3*K_zeta,K); Astar.setZero();
 	Eigen::VectorXd gam(K); gam.setOnes(); // init gamma as 1
-	Eigen::MatrixXd dAgam0_dzeta(K,3*K_zeta);
+	Eigen::MatrixXd dAgam0_dzeta(K,3*K_zeta); dAgam0_dzeta.setZero();
 
 //	zeta << 0.0, 0.0, 0.0,
 //			0.0, 1.0, 0.0,
@@ -56,183 +56,180 @@ int main() {
 			0.1,    -1000.0, 0.0,
 			0.1,     1000.0, 0.0;
 
-//VectorXd dZeta = VectorXd::Random(zeta.size())/100;
+	const double* zetaPtr = zeta.data();
 
-//	const double* zetaPtr = zeta.data();
+	VectorXd dZeta = VectorXd::Random(zeta.size())/100;
+	VectorXd zetaPdel = zeta + dZeta;
+	const double* zetaPdelPtr = zetaPdel.data();
 
+	genW(zetaPtr,M,N,W.data());
 
-//	VectorXd dZeta = VectorXd::Random(zeta.size())/100;
-//	VectorXd zetaPdel = zeta + dZeta;
-//	const double* zetaPdelPtr = zetaPdel.data();
-//
-//	genW(zetaPtr,M,N,W.data());
-//
-//	genAstar(zeta,M,N,zeta,M,N,Astar);
-//
-//	// test dAgam_dzeta subroutines
-//	// dxHat_dx
-//	Matrix3d dX;
-//	Vector3d x(1.0,1.0,1.0);
-//	Vector3d dx = Vector3d::Random()/(10.0*x.norm());
-//	Vector3d f = (x + dx).normalized();
-//	dX = dxHat_dx(x);
-//	Vector3d fApprox = x.normalized() + dX * dx;
-//	Vector3d diff = f-fApprox;
-//	cout << "dxHat_dx: ---------------" << endl << "dx:" << endl << dx
-//	     << endl << "norm (l-2) rel error:" << endl << diff.norm()/dx.norm()
-//	     << endl
-//	     << endl;
-//
-//	// Init matrices for df_dGeom tests
-//	Vector3d f_r0, f_r1, f_r2, f_n;
-//	//df_dr0
-//	double r0[3] = {1.0,0.0,0.0};
-//	double r1[3] = {1.0,1.0,0.0};
-//	double r2[3] = {0.0,1.0,0.0};
-//	double n[3] = {0.0,0.0,1.0};
-//	// calc variations
-//	df_dgeom(r0,r1,r2,n,f_r0,f_r1,f_r2,f_n);
-//	double dr0[3] = {fRand(-1,1)/(10*NormTriad(r0)),
-//					  fRand(-1,1)/(10*NormTriad(r0)),
-//					  fRand(-1,1)/(10*NormTriad(r0))};
-//	double dr1[3] = {fRand(-1,1)/(10*NormTriad(r1)),
-//					  fRand(-1,1)/(10*NormTriad(r1)),
-//					  fRand(-1,1)/(10*NormTriad(r1))};
-//	double dr2[3] = {fRand(-1,1)/(10*NormTriad(r2)),
-//					  fRand(-1,1)/(10*NormTriad(r2)),
-//					  fRand(-1,1)/(10*NormTriad(r2))};
-//	double dn[3] = {fRand(-1,1)/(10*NormTriad(n)),
-//					  fRand(-1,1)/(10*NormTriad(n)),
-//					  fRand(-1,1)/(10*NormTriad(n))};
-//
-//	// test vars in r0
-//	cout << "df_dr0: ---------------" << endl << "dr0:"
-//		 << endl << Vector3d(dr0[0],dr0[1],dr0[2])
-//		 << endl;
-//	double r0Test[3];
-//	AddTriad(r0,dr0,r0Test);
-//	double fGeomExactR0 = fGeom(r0Test,r1,r2,n);
-//	double fGeomAppDr0 = fGeom(r0,r1,r2,n);
-//	double fLinDeltaR0 = f_r0.transpose()*Vector3d(dr0[0],dr0[1],dr0[2]);
-//	cout << "error:" << endl << fGeomExactR0 - (fGeomAppDr0 + fLinDeltaR0)
-//	     << endl;
-//
-//	// test vars in r1
-//	cout << "df_dr1: ---------------" << endl << "dr1:"
-//		 << endl << Vector3d(dr1[0],dr1[1],dr1[2])
-//		 << endl;
-//	double r1Test[3];
-//	AddTriad(r1,dr1,r1Test);
-//	double fGeomExactR1 = fGeom(r0,r1Test,r2,n);
-//	double fGeomAppDr1 = fGeom(r0,r1,r2,n);
-//	double fLinDeltaR1 = f_r1.transpose()*Vector3d(dr1[0],dr1[1],dr1[2]);
-//	cout << "error:" << endl << fGeomExactR1 - (fGeomAppDr1 + fLinDeltaR1)
-//		 << endl;
-//
-//	// test vars in r2
-//	cout << "df_dr2: ---------------" << endl << "dr2:"
-//		 << endl << Vector3d(dr2[0],dr2[1],dr2[2])
-//		 << endl;
-//	double r2Test[3];
-//	AddTriad(r2,dr2,r2Test);
-//	double fGeomExactR2 = fGeom(r0,r1,r2Test,n);
-//	double fGeomAppDr2 = fGeom(r0,r1,r2,n);
-//	double fLinDeltaR2 = f_r2.transpose()*Vector3d(dr2[0],dr2[1],dr2[2]);
-//	cout << "error:" << endl << fGeomExactR2 - (fGeomAppDr2 + fLinDeltaR2)
-//		 << endl;
-//
-//	// test vars in n
-//	cout << "df_dn: ----------------" << endl << "dn:"
-//		 << endl << Vector3d(dn[0],dn[1],dn[2])
-//		 << endl;
-//	double nTest[3];
-//	AddTriad(n,dn,nTest);
-//	double fGeomExactN = fGeom(r0,r1,r2,nTest);
-//	double fGeomAppDn = fGeom(r0,r1,r2,n);
-//	double fLinDeltaN = f_n.transpose()*Vector3d(dn[0],dn[1],dn[2]);
-//	cout << "error:" << endl << fGeomExactN - (fGeomAppDn + fLinDeltaN)
-//		 << endl;
-//
-//	// test variations of the normal vector
-//	VectorXd normals(3*K);
-//	VectorXd approxNormals(3*K);
-//	VectorXd dNormals(3*K);
-//	getNormals(zeta,M,N,normals);
-//	getNormals(zetaPdel,M,N,approxNormals);
-//	for (int k = 0; k < K; k++) {
-//		// 1st diagonal
-//		Vector3d d = Vector3d(zeta[3*q_k(k,N,3)],
-//							  zeta[3*q_k(k,N,3)+1],
-//							  zeta[3*q_k(k,N,3)+2])
-//					-Vector3d(zeta[3*q_k(k,N,1)],
-//							  zeta[3*q_k(k,N,1)+1],
-//							  zeta[3*q_k(k,N,1)+2]);
-//		// 2nd diagonal (corner 4 to corner 2)
-//		Vector3d e = Vector3d(zeta[3*q_k(k,N,2)],
-//							  zeta[3*q_k(k,N,2)+1],
-//							  zeta[3*q_k(k,N,2)+2])
-//					-Vector3d(zeta[3*q_k(k,N,4)],
-//							  zeta[3*q_k(k,N,4)+1],
-//							  zeta[3*q_k(k,N,4)+2]);
-//		Matrix3d dN_dd = dn_dd(d,e);
-//		Matrix3d dN_de = dn_de(d,e);
-//		// calculate dNormals
-//		dNormals.block<3,1>(3*k,0) = dN_dd *
-//									 ( Vector3d(dZeta[3*q_k(k,N,3)],
-//									   		    dZeta[3*q_k(k,N,3)+1],
-//											    dZeta[3*q_k(k,N,3)+2])
-//									  -Vector3d(dZeta[3*q_k(k,N,1)],
-//											    dZeta[3*q_k(k,N,1)+1],
-//											    dZeta[3*q_k(k,N,1)+2]) ) +
-//									 dN_de *
-//									 ( Vector3d(dZeta[3*q_k(k,N,2)],
-//												dZeta[3*q_k(k,N,2)+1],
-//												dZeta[3*q_k(k,N,2)+2])
-//									  -Vector3d(dZeta[3*q_k(k,N,4)],
-//												dZeta[3*q_k(k,N,4)+1],
-//												dZeta[3*q_k(k,N,4)+2]) );
-//	}
-//	// add contribution of variations to approx result
-//	cout << "dn_dzeta: ----------------" << endl << "dZeta:"
-//			 << endl << dZeta
-//			 << endl;
-//	cout << "error in normals:" << endl << (dNormals - (approxNormals-normals))
-//	     << endl;
-//
-//	// test A
-//	cout << endl << "A(zeta): ----------------" << endl;
-//	Eigen::MatrixXd A(K,K);
-//	AIC(zetaPtr,M,N,zetaPtr,M,N,A.data());
-//	cout << A << endl;
-//
-//	// test dAgamma_dZeta matrix
-//	cout << endl << "dAgamma_dZeta: ----------------" << endl;
-//	dAgamma0_dZeta(zeta.data(),M,N,gam.data(),zeta.data(),M,N,dAgam0_dzeta.data());
-//	VectorXd wPdel(K);
-//	MatrixXd Adel(K,K);
-//	AIC(zetaPdelPtr,M,N,zetaPdelPtr,M,N,Adel.data());
-//	wPdel = Adel*gam;
-//	VectorXd w(K);
-//	w = A*gam;
-//	VectorXd wApprox(K);
-//	wApprox = dAgam0_dzeta*dZeta;
-//	cout << "dw (approx):" << endl << wApprox << endl;
-//	cout << "dw (exact):" << endl << wPdel-w << endl;
-//
-//	// test dWzetaPri0_dzeta
-//	cout << endl << "dWzetaPri0_dzeta: ----------------" << endl;
-//	// obtain linearization
-//	VectorXd zetaPri0 = VectorXd::Random(zeta.size())*10;
-//	const double* zetaPriPtr = zetaPri0.data();
-//	EigDynMatrixRM dWzetaPri0_dzeta(K,3*K_zeta);
-//	dWzetaPri0_dZeta(zetaPtr,M,N,zetaPriPtr,dWzetaPri0_dzeta.data());
-//	VectorXd dwApprox = dWzetaPri0_dzeta*dZeta;
-//	// check numerically
-//	EigDynMatrixRM W1(K,3*K_zeta), W2(K,3*K_zeta);
-//	genW(zetaPtr,M,N,W1.data());
-//	genW(zetaPdelPtr,M,N,W2.data());
-//	VectorXd dwExact = W2*zetaPri0 - W1*zetaPri0;
-//	cout << "dw (approx):" << endl << dwApprox << endl;
-//	cout << "dw (exact):" << endl << dwExact << endl;
-//	cout << "dw (normed diff):" << endl << (dwApprox - dwExact).array()/(W1*zetaPri0).array();
+	genAstar(zeta,M,N,zeta,M,N,Astar);
+
+	// test dAgam_dzeta subroutines
+	// dxHat_dx
+	Matrix3d dX;
+	Vector3d x(1.0,1.0,1.0);
+	Vector3d dx = Vector3d::Random()/(10.0*x.norm());
+	Vector3d f = (x + dx).normalized();
+	dX = dxHat_dx(x);
+	Vector3d fApprox = x.normalized() + dX * dx;
+	Vector3d diff = f-fApprox;
+	cout << "dxHat_dx: ---------------" << endl << "dx:" << endl << dx
+	     << endl << "norm (l-2) rel error:" << endl << diff.norm()/dx.norm()
+	     << endl
+	     << endl;
+
+	// Init matrices for df_dGeom tests
+	Vector3d f_r0, f_r1, f_r2, f_n;
+	//df_dr0
+	double r0[3] = {1.0,0.0,0.0};
+	double r1[3] = {1.0,1.0,0.0};
+	double r2[3] = {0.0,1.0,0.0};
+	double n[3] = {0.0,0.0,1.0};
+	// calc variations
+	df_dgeom(r0,r1,r2,n,f_r0,f_r1,f_r2,f_n);
+	double dr0[3] = {fRand(-1,1)/(10*NormTriad(r0)),
+					  fRand(-1,1)/(10*NormTriad(r0)),
+					  fRand(-1,1)/(10*NormTriad(r0))};
+	double dr1[3] = {fRand(-1,1)/(10*NormTriad(r1)),
+					  fRand(-1,1)/(10*NormTriad(r1)),
+					  fRand(-1,1)/(10*NormTriad(r1))};
+	double dr2[3] = {fRand(-1,1)/(10*NormTriad(r2)),
+					  fRand(-1,1)/(10*NormTriad(r2)),
+					  fRand(-1,1)/(10*NormTriad(r2))};
+	double dn[3] = {fRand(-1,1)/(10*NormTriad(n)),
+					  fRand(-1,1)/(10*NormTriad(n)),
+					  fRand(-1,1)/(10*NormTriad(n))};
+
+	// test vars in r0
+	cout << "df_dr0: ---------------" << endl << "dr0:"
+		 << endl << Vector3d(dr0[0],dr0[1],dr0[2])
+		 << endl;
+	double r0Test[3];
+	AddTriad(r0,dr0,r0Test);
+	double fGeomExactR0 = fGeom(r0Test,r1,r2,n);
+	double fGeomAppDr0 = fGeom(r0,r1,r2,n);
+	double fLinDeltaR0 = f_r0.transpose()*Vector3d(dr0[0],dr0[1],dr0[2]);
+	cout << "error:" << endl << fGeomExactR0 - (fGeomAppDr0 + fLinDeltaR0)
+	     << endl;
+
+	// test vars in r1
+	cout << "df_dr1: ---------------" << endl << "dr1:"
+		 << endl << Vector3d(dr1[0],dr1[1],dr1[2])
+		 << endl;
+	double r1Test[3];
+	AddTriad(r1,dr1,r1Test);
+	double fGeomExactR1 = fGeom(r0,r1Test,r2,n);
+	double fGeomAppDr1 = fGeom(r0,r1,r2,n);
+	double fLinDeltaR1 = f_r1.transpose()*Vector3d(dr1[0],dr1[1],dr1[2]);
+	cout << "error:" << endl << fGeomExactR1 - (fGeomAppDr1 + fLinDeltaR1)
+		 << endl;
+
+	// test vars in r2
+	cout << "df_dr2: ---------------" << endl << "dr2:"
+		 << endl << Vector3d(dr2[0],dr2[1],dr2[2])
+		 << endl;
+	double r2Test[3];
+	AddTriad(r2,dr2,r2Test);
+	double fGeomExactR2 = fGeom(r0,r1,r2Test,n);
+	double fGeomAppDr2 = fGeom(r0,r1,r2,n);
+	double fLinDeltaR2 = f_r2.transpose()*Vector3d(dr2[0],dr2[1],dr2[2]);
+	cout << "error:" << endl << fGeomExactR2 - (fGeomAppDr2 + fLinDeltaR2)
+		 << endl;
+
+	// test vars in n
+	cout << "df_dn: ----------------" << endl << "dn:"
+		 << endl << Vector3d(dn[0],dn[1],dn[2])
+		 << endl;
+	double nTest[3];
+	AddTriad(n,dn,nTest);
+	double fGeomExactN = fGeom(r0,r1,r2,nTest);
+	double fGeomAppDn = fGeom(r0,r1,r2,n);
+	double fLinDeltaN = f_n.transpose()*Vector3d(dn[0],dn[1],dn[2]);
+	cout << "error:" << endl << fGeomExactN - (fGeomAppDn + fLinDeltaN)
+		 << endl;
+
+	// test variations of the normal vector
+	VectorXd normals(3*K);
+	VectorXd approxNormals(3*K);
+	VectorXd dNormals(3*K);
+	getNormals(zeta,M,N,normals);
+	getNormals(zetaPdel,M,N,approxNormals);
+	for (int k = 0; k < K; k++) {
+		// 1st diagonal
+		Vector3d d = Vector3d(zeta[3*q_k(k,N,3)],
+							  zeta[3*q_k(k,N,3)+1],
+							  zeta[3*q_k(k,N,3)+2])
+					-Vector3d(zeta[3*q_k(k,N,1)],
+							  zeta[3*q_k(k,N,1)+1],
+							  zeta[3*q_k(k,N,1)+2]);
+		// 2nd diagonal (corner 4 to corner 2)
+		Vector3d e = Vector3d(zeta[3*q_k(k,N,2)],
+							  zeta[3*q_k(k,N,2)+1],
+							  zeta[3*q_k(k,N,2)+2])
+					-Vector3d(zeta[3*q_k(k,N,4)],
+							  zeta[3*q_k(k,N,4)+1],
+							  zeta[3*q_k(k,N,4)+2]);
+		Matrix3d dN_dd = dn_dd(d,e);
+		Matrix3d dN_de = dn_de(d,e);
+		// calculate dNormals
+		dNormals.block<3,1>(3*k,0) = dN_dd *
+									 ( Vector3d(dZeta[3*q_k(k,N,3)],
+									   		    dZeta[3*q_k(k,N,3)+1],
+											    dZeta[3*q_k(k,N,3)+2])
+									  -Vector3d(dZeta[3*q_k(k,N,1)],
+											    dZeta[3*q_k(k,N,1)+1],
+											    dZeta[3*q_k(k,N,1)+2]) ) +
+									 dN_de *
+									 ( Vector3d(dZeta[3*q_k(k,N,2)],
+												dZeta[3*q_k(k,N,2)+1],
+												dZeta[3*q_k(k,N,2)+2])
+									  -Vector3d(dZeta[3*q_k(k,N,4)],
+												dZeta[3*q_k(k,N,4)+1],
+												dZeta[3*q_k(k,N,4)+2]) );
+	}
+	// add contribution of variations to approx result
+	cout << "dn_dzeta: ----------------" << endl << "dZeta:"
+			 << endl << dZeta
+			 << endl;
+	cout << "error in normals:" << endl << (dNormals - (approxNormals-normals))
+	     << endl;
+
+	// test A
+	cout << endl << "A(zeta): ----------------" << endl;
+	Eigen::MatrixXd A(K,K);
+	AIC(zetaPtr,M,N,zetaPtr,M,N,A.data());
+	cout << A << endl;
+
+	// test dAgamma_dZeta matrix
+	cout << endl << "dAgamma_dZeta: ----------------" << endl;
+	dAgamma0_dZeta(zeta.data(),M,N,gam.data(),zeta.data(),M,N,dAgam0_dzeta.data());
+	VectorXd wPdel(K);
+	MatrixXd Adel(K,K);
+	AIC(zetaPdelPtr,M,N,zetaPdelPtr,M,N,Adel.data());
+	wPdel = Adel*gam;
+	VectorXd w(K);
+	w = A*gam;
+	VectorXd wApprox(K);
+	wApprox = dAgam0_dzeta*dZeta;
+	cout << "dw (approx):" << endl << wApprox << endl;
+	cout << "dw (exact):" << endl << wPdel-w << endl;
+
+	// test dWzetaPri0_dzeta
+	cout << endl << "dWzetaPri0_dzeta: ----------------" << endl;
+	// obtain linearization
+	VectorXd zetaPri0 = VectorXd::Random(zeta.size())*10;
+	const double* zetaPriPtr = zetaPri0.data();
+	EigDynMatrixRM dWzetaPri0_dzeta(K,3*K_zeta);
+	dWzetaPri0_dZeta(zetaPtr,M,N,zetaPriPtr,dWzetaPri0_dzeta.data());
+	VectorXd dwApprox = dWzetaPri0_dzeta*dZeta;
+	// check numerically
+	EigDynMatrixRM W1(K,3*K_zeta), W2(K,3*K_zeta);
+	genW(zetaPtr,M,N,W1.data());
+	genW(zetaPdelPtr,M,N,W2.data());
+	VectorXd dwExact = W2*zetaPri0 - W1*zetaPri0;
+	cout << "dw (approx):" << endl << dwApprox << endl;
+	cout << "dw (exact):" << endl << dwExact << endl;
+	cout << "dw (normed diff):" << endl << (dwApprox - dwExact).array()/(W1*zetaPri0).array();
 }
