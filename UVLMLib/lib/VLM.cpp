@@ -17,6 +17,7 @@
 #include <assert.h>
 #include "omp.h"
 #include <aicMats.hpp>
+#include <iostream>
 
 void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 		const double* ZetaStar_Vec, const double* GammaStar_Vec,\
@@ -850,7 +851,7 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	}
 
 	//solve for gamma
-	std::cout << "AIC matrix:" << std::endl << Aic << std::endl;
+//	std::cout << "AIC matrix:" << std::endl << Aic << std::endl;
 	Gamma = Aic.colPivHouseholderQr().solve(RHS);
 
 	//set GammaStar to TE velocities
