@@ -35,9 +35,15 @@ double PanelArea(const double* p1, const double* p2, \
 
 void XiKernel(const unsigned int k,
 		      const unsigned int q,
-		      const int N,
+		      const unsigned int N,
 		      const double eta1,
-		      double eta2,
+		      const double eta2,
 		      const Eigen::Matrix3d& XiKern_);
+
+void hKernel(const unsigned int q,
+			  const unsigned int k,
+			  const unsigned int l,
+			  const unsigned int N,
+			  const Eigen::Matrix3d& hKern_);
 
 #endif /* PANELTOOLS_HPP_ */

@@ -231,5 +231,15 @@ int main() {
 	VectorXd dwExact = W2*zetaPri0 - W1*zetaPri0;
 	cout << "dw (approx):" << endl << dwApprox << endl;
 	cout << "dw (exact):" << endl << dwExact << endl;
-	cout << "dw (normed diff):" << endl << (dwApprox - dwExact).array()/(W1*zetaPri0).array();
+	cout << "dw (normed diff):" << endl << (dwApprox - dwExact).array()/(W1*zetaPri0).array() << endl;
+
+	// check elements of H matrix
+	const unsigned int M2=2;
+	const unsigned int N2=1;
+	const unsigned int K2=M2*N2;
+	const unsigned int K_zeta2=(M2+1)*(N2+1);
+	EigDynMatrixRM H = MatrixXd::Zero(3*K_zeta2,12*K2);
+	genH(M2,N2,H.data());
+	cout << endl << "H matrix: -------------------" << endl;
+	cout << endl << H << endl;
 }

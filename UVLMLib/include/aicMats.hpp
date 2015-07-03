@@ -81,4 +81,8 @@ void dWzetaPri0_dZeta(const double* zeta_,
 					  const double* zetaPri_,
 					  double* dX_);
 
+void genH(const unsigned int m,
+		   const unsigned int n,
+		   double* H_);
+
 #endif /* AICMATS_HPP_ */

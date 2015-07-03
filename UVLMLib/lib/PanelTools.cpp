@@ -9,6 +9,7 @@
 #include <triads.hpp>
 #include <indices.hpp>
 #include <iostream>
+#include <stdexcept>
 
 void PanelNormal(const double* p1, const double* p2, \
 				 const double* p3, const double* p4, \
@@ -131,14 +132,14 @@ double PanelArea(const double* p1, const double* p2, \
 
 void XiKernel(const unsigned int k,
 		      const unsigned int q,
-		      const int N,
+		      const unsigned int N,
 		      const double eta1,
 		      const double eta2,
 		      const Eigen::Matrix3d& XiKern_) {
-	/** @brief Calculate 3x3 kernal of interpolation matrix, \Xi.
+	/** @brief Calculate 3x3 kernel of interpolation matrix, \Xi.
 	 */
 
-	// const cast Eigen inputs
+	// const cast Eigen outputs
 	Eigen::Matrix3d& XiKern = const_cast<Eigen::Matrix3d&> (XiKern_);
 
 	// switch depending on q_k
@@ -153,5 +154,47 @@ void XiKernel(const unsigned int k,
 	} else {
 		XiKern = Eigen::Matrix3d::Zero();
 	}
+	return;
+}
+
+void hKernel(const unsigned int q,
+			  const unsigned int k,
+			  const unsigned int l,
+			  const unsigned int N,
+			  const Eigen::Matrix3d& hKern_) {
+	/** @brief Calculate 3x3 kernel of interpolation matrix, H.
+	  */
+
+	// const cast Eigen outputs
+	Eigen::Matrix3d& hKern = const_cast<Eigen::Matrix3d&> (hKern_);
+
+	//temps
+	double eta1;
+	double eta2;
+
+	// get comp coords of segment midpoint within panel
+	switch(l){
+		case(1):
+			eta1=0.0;
+			eta2=0.5;
+			break;
+		case(2):
+			eta1=0.5;
+			eta2=1.0;
+			break;
+		case(3):
+			eta1=1.0;
+			eta2=0.5;
+			break;
+		case(4):
+			eta1=0.5;
+			eta2=0.0;
+			break;
+		default:
+			throw std::invalid_argument("received bad sub-panel segment index");
+	}
+
+	// get corresponding matrix
+	XiKernel(k,q,N,eta1,eta2,hKern);
 	return;
 }

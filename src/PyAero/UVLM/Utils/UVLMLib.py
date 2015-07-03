@@ -25,6 +25,7 @@ cpp_AIC = UVLMLib.cpp_wrap_AIC
 cpp_dAgamma0_dZeta = UVLMLib.cpp_wrap_dAgamma0_dZeta
 cpp_dWzetaPri0_dZeta = UVLMLib.cpp_wrap_dWzetaPri0_dZeta
 cpp_genW = UVLMLib.cpp_wrap_genW
+cpp_genH = UVLMLib.cpp_wrap_genH
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -42,6 +43,7 @@ cpp_AIC.restype = None
 cpp_dAgamma0_dZeta.restype = None
 cpp_dWzetaPri0_dZeta.restype = None
 cpp_genW.restype = None
+cpp_genH.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -193,7 +195,7 @@ def Cpp_dWzetaPri0_dZeta(zeta,m,n,zetaPri,dWzetaPri):
                          dWzetaPri.ctypes.data_as(ct.POINTER(ct.c_double)))
     
 def Cpp_genW(zeta,m,n,W):
-    """@details Wrapper for cpp_wrap_AIC.
+    """@details Wrapper for cpp_wrap_genW.
     @param zeta Source grid points.
     @param m Chordwise panels.
     @param n Spanwise.
@@ -202,6 +204,15 @@ def Cpp_genW(zeta,m,n,W):
              ct.byref(ct.c_uint(m)),
              ct.byref(ct.c_uint(n)),
              W.ctypes.data_as(ct.POINTER(ct.c_double)));
+             
+def Cpp_genH(m,n,H):
+    """@details Wrapper for cpp_wrap_genH.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @return H sgement to lattice vertex distribution matrix."""
+    cpp_genH(ct.byref(ct.c_uint(m)),
+             ct.byref(ct.c_uint(n)),
+             H.ctypes.data_as(ct.POINTER(ct.c_double)));
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')

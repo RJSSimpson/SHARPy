@@ -191,6 +191,12 @@ void cpp_wrap_genW(const double* zeta_,
 	genW(zeta_,M,N,W_);
 }
 
+void cpp_wrap_genH(const unsigned int& m,
+		   	   	     const unsigned int& n,
+		   	   	     double* H_){
+	genH(m,n,H_);
+}
+
 } // END extern C
 
 

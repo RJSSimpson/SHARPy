@@ -7,7 +7,7 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH
 from scipy.io import savemat
 
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
@@ -244,7 +244,7 @@ class Test_dWzetaPri0_dzeta(unittest.TestCase):
         pass
     
     def test_dWzetaPri0_dzeta_unit2DM10(self):
-        "Test matrix for example of aerofoil, 10 chordwise panels."
+        """Test matrix for example of aerofoil, 10 chordwise panels."""
         m=10
         n=2
         k=m*n
@@ -284,6 +284,28 @@ class Test_dWzetaPri0_dzeta(unittest.TestCase):
                 print((dwExact-dwApprox)/np.dot(W,zetaPri0))
             self.assertLess(np.max(np.absolute((dwExact-dwApprox)/np.dot(W,zetaPri0))),0.01)
             
+class Test_H(unittest.TestCase):
+    """@brief Test segment to lattice vertex distribution matrix."""
+    
+    def setUp(self):
+        # Set SharPy output directory and file root.
+        Settings.OutputDir = TestDir
+        Settings.OutputFileRoot = 'H'
+
+    def tearDown(self):
+        pass
+    
+    def test_HvKnown(self):
+        """Test matrix against trusted result."""
+        m=2
+        n=1
+        k=m*n
+        kZeta=(m+1)*(n+1)
+        H = np.zeros((3*kZeta,12*k))
+        Cpp_genH(m,n,H)
+        data = np.loadtxt(TestDir + "H_M2N1.dat")
+        self.assertTrue(np.array_equal(H, data))
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

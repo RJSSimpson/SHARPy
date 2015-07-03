@@ -666,7 +666,7 @@ void dWzetaPri0_dZeta(const double* zeta_,
 	ConstMapVectXd zetaPri(zetaPri_,3*(m+1)*(n+1));
 	EigenMapMatrixXd dX(dX_,m*n,3*(m+1)*(n+1));
 
-	// Set dX to zero
+	// Set Eigen memory to zero just in case
 	dX.setZero();
 
 	// temps
@@ -718,6 +718,36 @@ void dWzetaPri0_dZeta(const double* zeta_,
 					}
 				}
 			}
+		}
+	}
+	return;
+}
+
+void genH(const unsigned int m,
+		   const unsigned int n,
+		   double* H_){
+	/**@brief Calculate the segment to lattice vertex distribution matrix, H.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @param H Segment to lattice vertex distribution matrix.
+	 */
+
+	// temps
+	unsigned int k = m*n;
+	unsigned int kZeta = (m+1)*(n+1);
+	unsigned int kk, ll;
+	Matrix3d hKern = Matrix3d::Zero();
+
+	// create Eigen map to memory
+	EigenMapMatrixXd H(H_,3*kZeta,12*k);
+
+	for (unsigned int q = 0; q < kZeta; q++) {
+		for (unsigned int s = 0; s < 4*k; s++) {
+			// infer kk, ll
+			kk = s/4; // panel index
+			ll = s%4 + 1; // sub-panel segments are numbered 1,2,3,4
+			hKernel(q,kk,ll,n,hKern);
+			H.block<3,3>(3*q,3*s) = hKern;
 		}
 	}
 	return;
