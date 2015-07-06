@@ -29,6 +29,8 @@ typedef boost::multi_array<double, 2> BoostArray2D;
 typedef boost::multi_array<double, 3> BoostArray3D;
 typedef Eigen::Map<Eigen::VectorXd> EigenMapVectXd;
 typedef Eigen::Map<const Eigen::VectorXd> ConstMapVectXd;
+typedef Eigen::Map<Eigen::Vector3d> MapVect3d;
+typedef Eigen::Map<const Eigen::Vector3d> ConstMapVect3d;
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>  EigDynMatrixRM;
 typedef Eigen::Map<EigDynMatrixRM> EigenMapMatrixXd;
 

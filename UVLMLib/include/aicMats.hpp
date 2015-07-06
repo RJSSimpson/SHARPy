@@ -35,6 +35,11 @@ double fGeom(const double* r0,
 	 	  const double* r2,
 	 	  const double* n);
 
+void fGeom3(const double* r0,
+          const double* r1,
+	 	  const double* r2,
+	 	  double* out);
+
 void df_dgeom(const double* r0,
 		        const double* r1,
 			 	const double* r2,
@@ -84,5 +89,22 @@ void dWzetaPri0_dZeta(const double* zeta_,
 void genH(const unsigned int m,
 		   const unsigned int n,
 		   double* H_);
+
+void AIC3(const double* zetaSrc_,
+		  const unsigned int mSrc,
+		  const unsigned int nSrc,
+		  const double* zetaTgt_,
+		  const unsigned int mTgt,
+		  const unsigned int nTgt,
+		  double* dX_);
+
+void dA3gamma0_dZeta(const double* zetaSrc_,
+					 const unsigned int mSrc,
+					 const unsigned int nSrc,
+					 const double* gamma0_,
+					 const double* zetaTgt_,
+					 const unsigned int mTgt,
+					 const unsigned int nTgt,
+					 double* dX_);
 
 #endif /* AICMATS_HPP_ */

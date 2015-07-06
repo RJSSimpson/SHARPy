@@ -242,4 +242,23 @@ int main() {
 	genH(M2,N2,H.data());
 	cout << endl << "H matrix: -------------------" << endl;
 	cout << endl << H << endl;
+
+	// print out 3 component AIC
+	EigDynMatrixRM aic3 = MatrixXd::Zero(3*K,K);
+	AIC3(zeta.data(),M,N,zeta.data(),M,N,aic3.data());
+	cout << endl << "AIC3 --------------------" << endl << aic3 << endl;
+
+	// print out dA3gamma0_dZeta matrix
+	EigDynMatrixRM dA3 = MatrixXd::Zero(3*K,3*K_zeta);
+	dA3gamma0_dZeta(zeta.data(),M,N,gam.data(),zeta.data(),M,N,dA3.data());
+	cout << endl << "dA3 -------------------------" << endl << endl << dA3 << endl;
+
+	// test numerically
+	EigDynMatrixRM aic3Pdel = MatrixXd::Zero(3*K,K);
+	AIC3(zetaPdelPtr,M,N,zetaPdelPtr,M,N,aic3Pdel.data());
+	dwExact = aic3Pdel*gam - aic3*gam;
+	dwApprox = dA3*dZeta;
+	cout << "dw (approx):" << endl << dwApprox << endl;
+	cout << "dw (exact):" << endl << dwExact << endl;
+	cout << "dw (normed diff):" << endl << (dwApprox - dwExact).array()/(aic3*gam).norm() << endl;
 }

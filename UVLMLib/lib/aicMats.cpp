@@ -227,11 +227,55 @@ double fGeom(const double* r0,
 		NormaliseTriad(r1,r1hat);
 		NormaliseTriad(r2,r2hat);
 
-		// sum them
+		// subtract them
 		SubTriad(r1hat,r2hat,normSub);
 
 		return DotTriad(r0,normSub)*DotTriad(x,n);
 	}
+}
+
+void fGeom3(const double* r0,
+          const double* r1,
+	 	  const double* r2,
+	 	  double* out) {
+	/**@brief Calculate geometry influence function f.
+	 * @param r0 Vector r0.
+	 * @param r1 Vector r1.
+	 * @param r2 Vector r2.
+	 * @param out Output 'velocity' vector.
+	 */
+
+	// zero output
+	out[0]=0.0;
+	out[1]=0.0;
+	out[2]=0.0;
+
+	// temps
+	double u[3] = {0.0,0.0,0.0};
+	double r1hat[3] = {0.0,0.0,0.0}; // normalized r1
+	double r2hat[3] = {0.0,0.0,0.0}; // normalized r2
+	double normSub[3] = {0.0,0.0,0.0};
+	double x[3] = {0.0,0.0,0.0};
+
+	// get u
+	CrossTriad(r1,r2,u);
+	if (NormTriad(u) <= 1.0e-5) {
+		return;
+	} else {
+		// get x
+		MulTriad(u,1.0/pow(NormTriad(u),2.0),x);
+
+		// get normalised triads
+		NormaliseTriad(r1,r1hat);
+		NormaliseTriad(r2,r2hat);
+
+		// subtract them
+		SubTriad(r1hat,r2hat,normSub);
+
+		// calculate output r0^T normSub * x.
+		MulTriad(x,DotTriad(r0,normSub),out);
+	}
+	return;
 }
 
 void df_dgeom(const double* r0,
@@ -320,6 +364,75 @@ void df_dgeom(const double* r0,
 	// get f_n
 	f_n = DotTriad(r0,normSub)*xV; // f_n needs to be transposed
 
+	return;
+}
+
+void df3_dgeom(const double* r0,
+		        const double* r1,
+			 	const double* r2,
+			 	const Matrix3d& f3_r0_,
+			 	const Matrix3d& f3_r1_,
+			 	const Matrix3d& f3_r2_) {
+	/**@brief Calculate df/dr and df/dn, row vectors.
+	 * @param r0 Vector r0.
+     * @param r1 Vector r1.
+     * @param r2 Vector r2.
+     * @param f3_r0 Matrix, gradient of f3 w.r.t r0.
+     * @param f3_r1 Matrix, gradient of f3 w.r.t r1.
+     * @param f3_r2 Matrix, gradient of f3 w.r.t r2.
+     */
+
+	// const cast Eigen outputs
+	Matrix3d& f3_r0 = const_cast<Matrix3d&> (f3_r0_);
+	Matrix3d& f3_r1 = const_cast<Matrix3d&> (f3_r1_);
+	Matrix3d& f3_r2 = const_cast<Matrix3d&> (f3_r2_);
+
+	// temps
+	double u[3] = {0.0,0.0,0.0};
+	double r1hat[3] = {0.0,0.0,0.0}; // normalized r1
+	double r2hat[3] = {0.0,0.0,0.0}; // normalized r2
+	double normSub[3] = {0.0,0.0,0.0};
+	double x[3] = {0.0,0.0,0.0};
+
+	// get u
+	CrossTriad(r1,r2,u);
+
+	// get x
+	MulTriad(u,1.0/pow(NormTriad(u),2.0),x);
+
+	// get normalised triads
+	NormaliseTriad(r1,r1hat);
+	NormaliseTriad(r2,r2hat);
+
+	// sum them
+	SubTriad(r1hat,r2hat,normSub);
+
+	// create Eigen maps
+	ConstMapVect3d xV(x);
+	ConstMapVect3d rHatV(normSub);
+	ConstMapVect3d r0v(r0);
+	ConstMapVect3d r1v(r1);
+	ConstMapVect3d r2v(r2);
+
+	// if within cut-off radius, r-vector derivatives are set to zero
+	if (NormTriad(u) <= 1.0e-5) {
+
+		f3_r0.setZero();
+		f3_r1.setZero();
+		f3_r2.setZero();
+
+	} else {
+		// get f3_r0
+		f3_r0 = xV*rHatV.transpose();
+
+		// get f_r1
+		f3_r1 = r0v.dot(rHatV) * duHat2_dr1(r1v,r2v)
+				+ xV*r0v.transpose() * dxHat_dx(r1v);
+
+		// get f_r2
+		f3_r2 = r0v.dot(rHatV) * duHat2_dr2(r1v,r2v)
+				- xV*r0v.transpose() * dxHat_dx(r2v);
+	}
 	return;
 }
 
@@ -643,6 +756,200 @@ void AIC(const double* zetaSrc_,
 										    r1.data(),
 										    r2.data(),
 										    n.data());
+			}
+		}
+	}
+	return;
+}
+
+void dA3gamma0_dZeta(const double* zetaSrc_,
+					 const unsigned int mSrc,
+					 const unsigned int nSrc,
+					 const double* gamma0_,
+					 const double* zetaTgt_,
+					 const unsigned int mTgt,
+					 const unsigned int nTgt,
+					 double* dX_) {
+	/**@brief Calculate tensor-free derivative of (A^c gamma_0) w.r.t zeta.
+	 * @param zetaSrc Grid points of source lattice.
+	 * @param mSrc chordwise panels on source lattice.
+	 * @param nSrc spanwise panels on source lattice.
+	 * @param gamma0 Reference circulation distribution on source lattice.
+	 * @param zetaTgt Grid points of target lattice.
+	 * @param mTgt chordwise panels on target lattice.
+	 * @param nTgt spanwise panels on target lattice.
+	 * @param dX 3K x 3K_{\zeta_{tgt}} matrix output.
+	 * @warning If the zeta arguments are the same they must be the same object,
+	 * therefore in the function call the arguments must be previously
+	 * instantiated objects, e.g (zeta+delZeta, ..., zeta+delZeta, ...) is
+	 * invalid because a two temps are instantiated.
+	 */
+
+	// eigen map output matrix
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd gamma0(gamma0_,mSrc*nSrc);
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,3*mTgt*nTgt,3*(mTgt+1)*(nTgt+1));
+
+	// Set dX to zero
+	dX.setZero();
+
+	// temps
+	unsigned int kSrc = mSrc*nSrc;
+	unsigned int kTgt = mTgt*nTgt;
+	unsigned int qTgt = (mTgt+1)*(nTgt+1);
+	unsigned int ll = 0; //segment counter
+	unsigned int llp1 = 0; //segment counter
+	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
+	Vector3d r0, r1, r2; // Biot-Savart kernel vectors
+	Matrix3d f3_r0, f3_r1, f3_r2; //drvtvs. required for target/source variation
+	Matrix3d Xi; // interpolating matrix
+	double a; // prefactor (\gamma_0(k2)/(4 \pi)).
+
+	// loop through DoFs to make (1x3) submatrices
+	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
+		// calc n, dn_dd, dn_de, colloc point only once for each target panel
+		c1 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,1),0);
+		c2 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,2),0);
+		c3 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,3),0);
+		c4 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,4),0);
+		// collocation point
+		BilinearInterpTriad(c1.data(),
+							c2.data(),
+							c3.data(),
+							c4.data(),
+							cp.data(),
+							0.5,0.5,false);
+		for (unsigned int k2 = 0; k2 < kSrc; k2++) {
+			a = gamma0(k2)/(4*M_PI);
+			for (unsigned int q = 0; q < qTgt; q++) {
+				for (unsigned int l = 1; l < 5; l++) {
+					// roll around segment index
+					if (l < 4) {
+						ll = l;
+						llp1 = l+1;
+					} else if (l == 4) {
+						ll = l;
+						llp1= 1;
+					}
+					// check if either k1 or k2 are active based on q
+					if (q_k(k1,nTgt,1) == q || q_k(k1,nTgt,2) == q ||
+						q_k(k1,nTgt,3) == q || q_k(k1,nTgt,4) == q ||
+						q_k(k2,nSrc,ll) == q || q_k(k2,nSrc,llp1) == q) {
+
+						// contributions at targets
+						// calc r0, r1, r2
+						r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0)
+							-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+						// r1
+						r1 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+						// r2
+						r2 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
+
+						// calc f_r0, f_r1, f_r2, f_n
+						df3_dgeom(r0.data(),
+								 r1.data(),
+								 r2.data(),
+								 f3_r0,
+								 f3_r1,
+								 f3_r2);
+
+						// add effect to output matrix
+						XiKernel(k1,q,nTgt,0.5,0.5,Xi);
+
+						if (q_k(k1,nTgt,1) == q || q_k(k1,nTgt,2) == q ||
+							q_k(k1,nTgt,3) == q || q_k(k1,nTgt,4) == q) {
+							// add Xi terms at corners c1-c4
+							dX.block<3,3>(3*k1,3*q) += a*(f3_r1 + f3_r2)*Xi;
+						} // end if k1,q (targets)
+
+						// contributions from sources
+						if (zetaSrc.data() == zetaTgt.data()) {
+							if (q_k(k2,nSrc,ll) == q) {
+								// add Kronecker delta term, segment start
+								dX.block<3,3>(3*k1,3*q) += -a*(f3_r0+f3_r1);
+							} else if (q_k(k2,nSrc,llp1) == q) {
+								// add Kronecker delta term, segment end
+								dX.block<3,3>(3*k1,3*q) += a*(f3_r0-f3_r2);
+							} // end if k2,q (sources)
+						} // end if Src == Tgt
+
+					} else {
+						continue;
+					} // end if k,q
+				} // for l
+			} // for q
+		} // for k2
+	} // for k1
+	return;
+}
+
+void AIC3(const double* zetaSrc_,
+		  const unsigned int mSrc,
+		  const unsigned int nSrc,
+		  const double* zetaTgt_,
+		  const unsigned int mTgt,
+		  const unsigned int nTgt,
+		  double* dX_) {
+	/**@brief Calculate AIC matrix (3 components of velocity).
+	 * @param zetaSrc Grid points of source lattice.
+	 * @param mSrc chordwise panels on source lattice.
+	 * @param nSrc spanwise panels on source lattice.
+	 * @param zetaTgt Grid points of target lattice.
+	 * @param mTgt chordwise panels on target lattice.
+	 * @param nTgt spanwise panels on target lattice.
+	 * @param dX 3*K_tgt x K_src matrix output.
+	 */
+
+	// Create Eigen maps to memory
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,3*mTgt*nTgt,mSrc*nSrc);
+	// Set dX to zero
+	dX.setZero();
+
+	// temps
+	unsigned int kSrc = mSrc*nSrc;
+	unsigned int kTgt = mTgt*nTgt;
+	unsigned int ll = 0; //segment counter
+	unsigned int llp1 = 0; //segment counter
+	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
+	Vector3d r0, r1, r2, v; // Biot-Savart kernel vectors, velocity.
+
+	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
+		// calc n, colloc point only once for each target panel
+		c1 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,1),0);
+		c2 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,2),0);
+		c3 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,3),0);
+		c4 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,4),0);
+		// collocation point
+		BilinearInterpTriad(c1.data(),
+							c2.data(),
+							c3.data(),
+							c4.data(),
+							cp.data(),
+							0.5,0.5,false);
+		for (unsigned int k2 = 0; k2 < kSrc; k2++) {
+			for (unsigned int l = 1; l < 5; l++) {
+				// roll around segment index
+				if (l < 4) {
+					ll = l;
+					llp1 = l+1;
+				} else if (l == 4) {
+					ll = l;
+					llp1= 1;
+				}
+
+				// calc r0
+				r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0)
+					-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+				// r1
+				r1 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+				// r2
+				r2 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
+				// AIC entry (3 components)
+				fGeom3(r0.data(),r1.data(),r2.data(),v.data());
+				dX.block<3,1>(3*k1,k2) += 1.0/(4.0*M_PI)*v;
 			}
 		}
 	}

@@ -7,7 +7,7 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_AIC3
 from scipy.io import savemat
 
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
@@ -306,6 +306,43 @@ class Test_H(unittest.TestCase):
         data = np.loadtxt(TestDir + "H_M2N1.dat")
         self.assertTrue(np.array_equal(H, data))
         
+class Test_AIC3(unittest.TestCase):
+    """@brief Test 3 component AIC."""
+    
+    def setUp(self):
+        # Set SharPy output directory and file root.
+        Settings.OutputDir = TestDir
+        Settings.OutputFileRoot = 'AIC3'
+
+    def tearDown(self):
+        pass
+    
+    def test_AIC3vAIC(self):
+        """Test against trusted result of typical AIC."""
+        #Init AIC
+        m=5
+        n=1
+        k=m*n
+        AIC = np.zeros((k,k))
+        AIC3 = np.zeros((3*k,k))
+        # initialize grid for 3D solver (Unit VR)
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        spans = (-1000, 1000)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        # call AIC matrix function
+        Cpp_AIC(zeta, m, n, zeta, m, n, AIC)
+        Cpp_AIC3(zeta, m, n, zeta, m, n, AIC3)
+        for i in range(k-1):
+            for j in range(k-1):
+                self.assertAlmostEqual(AIC3[3*i+2,j],AIC[i,j],4)
+            # end for j
+        # end for i
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

@@ -26,6 +26,7 @@ cpp_dAgamma0_dZeta = UVLMLib.cpp_wrap_dAgamma0_dZeta
 cpp_dWzetaPri0_dZeta = UVLMLib.cpp_wrap_dWzetaPri0_dZeta
 cpp_genW = UVLMLib.cpp_wrap_genW
 cpp_genH = UVLMLib.cpp_wrap_genH
+cpp_AIC3 = UVLMLib.cpp_wrap_AIC3
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -44,6 +45,7 @@ cpp_dAgamma0_dZeta.restype = None
 cpp_dWzetaPri0_dZeta.restype = None
 cpp_genW.restype = None
 cpp_genH.restype = None
+cpp_AIC3.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -213,6 +215,23 @@ def Cpp_genH(m,n,H):
     cpp_genH(ct.byref(ct.c_uint(m)),
              ct.byref(ct.c_uint(n)),
              H.ctypes.data_as(ct.POINTER(ct.c_double)));
+             
+def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
+    """@details Wrapper for cpp_wrap_AIC.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param zetaTgt Target grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @return AIC3 3-component influence coefficient matrix."""
+    cpp_AIC3(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mSrc)),
+            ct.byref(ct.c_uint(nSrc)),
+            zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mTgt)),
+            ct.byref(ct.c_uint(nTgt)),
+            AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')
