@@ -107,4 +107,10 @@ void dA3gamma0_dZeta(const double* zetaSrc_,
 					 const unsigned int nTgt,
 					 double* dX_);
 
+void Y1(const double* vC_,
+		const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y1_);
+
 #endif /* AICMATS_HPP_ */

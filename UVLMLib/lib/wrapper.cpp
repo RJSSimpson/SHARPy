@@ -207,6 +207,26 @@ void cpp_wrap_AIC3(const double* zetaSrc_,
 	AIC3(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,dX_);
 }
 
+void cpp_wrap_dA3gamma0_dZeta(const double* zetaSrc_,
+								const unsigned int& mSrc,
+								const unsigned int& nSrc,
+								const double* gamma0_,
+								const double* zetaTgt_,
+								const unsigned int& mTgt,
+								const unsigned int& nTgt,
+								double* dA3gam0_) {
+	// call function
+	dA3gamma0_dZeta(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,dA3gam0_);
+}
+
+void cpp_wrap_Y1(const double* vC_,
+				   const double* zeta_,
+				   const unsigned int& m,
+				   const unsigned int& n,
+				   double* Y1_) {
+	Y1(vC_,zeta_,m,n,Y1_);
+}
+
 } // END extern C
 
 

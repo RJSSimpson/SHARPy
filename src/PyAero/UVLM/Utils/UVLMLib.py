@@ -27,6 +27,8 @@ cpp_dWzetaPri0_dZeta = UVLMLib.cpp_wrap_dWzetaPri0_dZeta
 cpp_genW = UVLMLib.cpp_wrap_genW
 cpp_genH = UVLMLib.cpp_wrap_genH
 cpp_AIC3 = UVLMLib.cpp_wrap_AIC3
+cpp_dA3gamma0_dZeta = UVLMLib.cpp_wrap_dA3gamma0_dZeta
+cpp_Y1 = UVLMLib.cpp_wrap_Y1
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -46,6 +48,8 @@ cpp_dWzetaPri0_dZeta.restype = None
 cpp_genW.restype = None
 cpp_genH.restype = None
 cpp_AIC3.restype = None
+cpp_dA3gamma0_dZeta.restype = None
+cpp_Y1.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -232,6 +236,38 @@ def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
             ct.byref(ct.c_uint(mTgt)),
             ct.byref(ct.c_uint(nTgt)),
             AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+def Cpp_dA3gamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dA3gam0):
+    """@details Wrapper for cpp_wrap_dAgamma0_dZeta.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param gamma0 Reference circulation distribution.
+    @param zetaTgt Target grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @return dAgam0 variation of influence coefficient matrix times gamma."""
+    cpp_dA3gamma0_dZeta(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       ct.byref(ct.c_uint(mSrc)),
+                       ct.byref(ct.c_uint(nSrc)),
+                       gamma0.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       ct.byref(ct.c_uint(mTgt)),
+                       ct.byref(ct.c_uint(nTgt)),
+                       dA3gam0.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+def Cpp_Y1(vC,zeta,m,n,Y1):
+    """@details Wrapper for cpp_wrap_Y1.
+    @param vC Collocation point fluid-grid relative velocities.
+    @param zeta Lattice vertices.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @return Y1 Matrix (12K x K) transforming dGamma."""
+    cpp_Y1(vC.ctypes.data_as(ct.POINTER(ct.c_double)),
+           zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
+           ct.byref(ct.c_uint(m)),
+           ct.byref(ct.c_uint(n)),
+           Y1.ctypes.data_as(ct.POINTER(ct.c_double)))
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')

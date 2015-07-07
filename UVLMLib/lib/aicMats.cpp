@@ -1059,3 +1059,45 @@ void genH(const unsigned int m,
 	}
 	return;
 }
+
+void Y1(const double* vC_,
+		const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y1_) {
+	/**@brief Calculate velocity-segment cross-product matrix for dGamma, Y1.
+	 * @param vC 3-component fluid-grid relative vel at the collocation points.
+	 * @param zeta Bound lattice vertices.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @param Y1 output.
+	 */
+
+	// map Eigen types
+	ConstMapVectXd vC(vC_,3*m*n);
+	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
+	EigenMapMatrixXd Y1(Y1_,12*m*n,m*n);
+
+	//temps
+	Vector3d c1 = Vector3d::Zero();
+	Vector3d c2 = Vector3d::Zero();
+	Vector3d c3 = Vector3d::Zero();
+	Vector3d c4 = Vector3d::Zero();
+	VectorXd yKern = VectorXd::Zero(12);
+
+	// loop through panels
+	for (unsigned int kk = 0; kk < m*n; kk++) {
+		// corner points
+		c1 = zeta.block<3,1>(3*q_k(kk,n,1),0);
+		c2 = zeta.block<3,1>(3*q_k(kk,n,2),0);
+		c3 = zeta.block<3,1>(3*q_k(kk,n,3),0);
+		c4 = zeta.block<3,1>(3*q_k(kk,n,4),0);
+		// kernel
+		yKern.block<3,1>(0,0) = vC.block<3,1>(3*kk,0).cross(c2-c1);
+		yKern.block<3,1>(3,0) = vC.block<3,1>(3*kk,0).cross(c3-c2);
+		yKern.block<3,1>(6,0) = vC.block<3,1>(3*kk,0).cross(c4-c3);
+		yKern.block<3,1>(9,0) = vC.block<3,1>(3*kk,0).cross(c1-c4);
+		// add to full matrix
+		Y1.block<12,1>(12*kk,kk)=yKern;
+	}
+}
