@@ -227,6 +227,37 @@ void cpp_wrap_Y1(const double* vC_,
 	Y1(vC_,zeta_,m,n,Y1_);
 }
 
+void cpp_wrap_Y2(const double* gamma_,
+				   const double* vC_,
+				   const unsigned int& m,
+				   const unsigned int& n,
+				   double* Y2_) {
+	Y2(gamma_,vC_,m,n,Y2_);
+}
+
+void cpp_wrap_Y3(const double* gamma_,
+				   const double* zeta_,
+				   const unsigned int& m,
+				   const unsigned int& n,
+				   double* Y3_) {
+	Y3(gamma_,zeta_,m,n,Y3_);
+}
+
+void cpp_wrap_Y4(const double* zeta_,
+				  const unsigned int& m,
+				  const unsigned int& n,
+				  double* Y4_) {
+	Y4(zeta_,m,n,Y4_);
+}
+
+void cpp_wrap_Y5(const double* gammaPri_,
+				   const double* zeta_,
+				   const unsigned int& m,
+				   const unsigned int& n,
+				   double* Y5_) {
+	Y5(gammaPri_,zeta_,m,n,Y5_);
+}
+
 } // END extern C
 
 

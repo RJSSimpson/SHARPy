@@ -113,4 +113,27 @@ void Y1(const double* vC_,
 		const unsigned int n,
 		double* Y1_);
 
+void Y2(const double* gamma_,
+		const double* vC_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y2_);
+
+void Y3(const double* gamma_,
+		const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y3_);
+
+void Y4(const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y4_);
+
+void Y5(const double* gammaPri_,
+		const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y5_);
+
 #endif /* AICMATS_HPP_ */

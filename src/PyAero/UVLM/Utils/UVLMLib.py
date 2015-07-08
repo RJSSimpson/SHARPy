@@ -29,6 +29,10 @@ cpp_genH = UVLMLib.cpp_wrap_genH
 cpp_AIC3 = UVLMLib.cpp_wrap_AIC3
 cpp_dA3gamma0_dZeta = UVLMLib.cpp_wrap_dA3gamma0_dZeta
 cpp_Y1 = UVLMLib.cpp_wrap_Y1
+cpp_Y2 = UVLMLib.cpp_wrap_Y2
+cpp_Y3 = UVLMLib.cpp_wrap_Y3
+cpp_Y4 = UVLMLib.cpp_wrap_Y4
+cpp_Y5 = UVLMLib.cpp_wrap_Y5
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -50,6 +54,10 @@ cpp_genH.restype = None
 cpp_AIC3.restype = None
 cpp_dA3gamma0_dZeta.restype = None
 cpp_Y1.restype = None
+cpp_Y2.restype = None
+cpp_Y3.restype = None
+cpp_Y4.restype = None
+cpp_Y5.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -268,6 +276,56 @@ def Cpp_Y1(vC,zeta,m,n,Y1):
            ct.byref(ct.c_uint(m)),
            ct.byref(ct.c_uint(n)),
            Y1.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+def Cpp_Y2(gamma,vC,m,n,Y2):
+    """@details Wrapper for cpp_wrap_Y2.
+    @param gamma Panel circulation strengths.
+    @param vC Collocation point fluid-grid relative velocities.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @return Y2 Matrix (12K x 3K_zeta) transforming dZeta."""
+    cpp_Y2(gamma.ctypes.data_as(ct.POINTER(ct.c_double)),
+           vC.ctypes.data_as(ct.POINTER(ct.c_double)),
+           ct.byref(ct.c_uint(m)),
+           ct.byref(ct.c_uint(n)),
+           Y2.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+def Cpp_Y3(gamma,zeta,m,n,Y3):
+    """@details Wrapper for cpp_wrap_Y3.
+    @param gamma Panel circulation strengths.
+    @param zeta Lattice vertices.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @return Y3 Matrix (12K x 3K) transforming coolocation velocities."""
+    cpp_Y3(gamma.ctypes.data_as(ct.POINTER(ct.c_double)),
+           zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
+           ct.byref(ct.c_uint(m)),
+           ct.byref(ct.c_uint(n)),
+           Y3.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+def Cpp_Y4(zeta,m,n,Y4):
+    """@details Wrapper for cpp_wrap_Y4.
+    @param zeta Lattice vertices.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @return Y4 Matrix (3K x K) transforming dGammaPrime."""
+    cpp_Y4(zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
+           ct.byref(ct.c_uint(m)),
+           ct.byref(ct.c_uint(n)),
+           Y4.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
+def Cpp_Y5(gammaPri,zeta,m,n,Y5):
+    """@details Wrapper for cpp_wrap_Y5.
+    @param gammaPri Rate of change of circulation strengths.
+    @param zeta Lattice vertices.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @return Y5 Matrix (3K x 3K_zeta) transforming dZeta."""
+    cpp_Y5(gammaPri.ctypes.data_as(ct.POINTER(ct.c_double)),
+           zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
+           ct.byref(ct.c_uint(m)),
+           ct.byref(ct.c_uint(n)),
+           Y5.ctypes.data_as(ct.POINTER(ct.c_double)))
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')

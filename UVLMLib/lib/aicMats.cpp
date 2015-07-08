@@ -24,7 +24,9 @@ void genW(const double* zeta_,
 		  double* W_) {
 	/**@brief Populate W, downwash interpolation, matrix.
 	 * @param zeta Vector of lattice vertices.
-	 * @param W downwash interpolation matrix.
+	 * @param M Chordwise panels.
+	 * @param N Spanwise panels.
+	 * @return W downwash interpolation matrix.
 	 */
 
 	// const cast Eigen outputs
@@ -67,7 +69,7 @@ void getNormals(const VectorXd& zeta,
 	 * @param zeta Vector containing lattice vertices.
 	 * @param M chordwise panels.
 	 * @param N spanwise panels.
-	 * @param normals Vector containing normal vectors.
+	 * @return normals Vector containing normal vectors.
 	 */
 
 	// const cast Eigen outputs
@@ -118,7 +120,7 @@ void genAstar(const VectorXd& zetaSrc,
 	 * @param mTgt Spanwise panels in the source lattice.
 	 * @param nTgt Spanwise panels in the target lattice.
 	 * @param N spanwise panels.
-	 * @param Astar AIC matrix from source to target.
+	 * @return Astar AIC matrix from source to target.
 	 */
 
 	// const cast Eigen outputs
@@ -206,6 +208,7 @@ double fGeom(const double* r0,
 	 * @param r1 Vector r1.
 	 * @param r2 Vector r2.
 	 * @param n Normal vector of target panel.
+	 * @return Geometrical part of biot-Savart kernel.
 	 */
 
 	// temps
@@ -242,7 +245,7 @@ void fGeom3(const double* r0,
 	 * @param r0 Vector r0.
 	 * @param r1 Vector r1.
 	 * @param r2 Vector r2.
-	 * @param out Output 'velocity' vector.
+	 * @return out Output 'velocity' vector.
 	 */
 
 	// zero output
@@ -291,10 +294,10 @@ void df_dgeom(const double* r0,
      * @param r1 Vector r1.
      * @param r2 Vector r2.
      * @param n Normal vector of target panel.
-     * @param f_r0 Row vector, gradient of f w.r.t r0.
-     * @param f_r1 Row vector, gradient of f w.r.t r1.
-     * @param f_r2 Row vector, gradient of f w.r.t r2.
-     * @param f_n Row vector, gradient of f w.r.t n.
+     * @return f_r0 Row vector, gradient of f w.r.t r0.
+     * @return f_r1 Row vector, gradient of f w.r.t r1.
+     * @return f_r2 Row vector, gradient of f w.r.t r2.
+     * @return f_n Row vector, gradient of f w.r.t n.
      */
 
 	// const cast Eigen outputs
@@ -377,9 +380,9 @@ void df3_dgeom(const double* r0,
 	 * @param r0 Vector r0.
      * @param r1 Vector r1.
      * @param r2 Vector r2.
-     * @param f3_r0 Matrix, gradient of f3 w.r.t r0.
-     * @param f3_r1 Matrix, gradient of f3 w.r.t r1.
-     * @param f3_r2 Matrix, gradient of f3 w.r.t r2.
+     * @return f3_r0 Matrix, gradient of f3 w.r.t r0.
+     * @return f3_r1 Matrix, gradient of f3 w.r.t r1.
+     * @return f3_r2 Matrix, gradient of f3 w.r.t r2.
      */
 
 	// const cast Eigen outputs
@@ -548,7 +551,7 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
-	 * @param dX K x 3K_{\zeta_{tgt}} matrix output.
+	 * @return dX K x 3K_{\zeta_{tgt}} matrix output.
 	 * @warning If the zeta arguments are the same they must be the same object,
 	 * therefore in the function call the arguments must be previously
 	 * instantiated objects, e.g (zeta+delZeta, ..., zeta+delZeta, ...) is
@@ -696,7 +699,7 @@ void AIC(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
-	 * @param dX K_tgt x K_src matrix output.
+	 * @return dX K_tgt x K_src matrix output.
 	 */
 
 	// Create Eigen maps to memory
@@ -778,7 +781,7 @@ void dA3gamma0_dZeta(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
-	 * @param dX 3K x 3K_{\zeta_{tgt}} matrix output.
+	 * @return dX 3K x 3K_{\zeta_{tgt}} matrix output.
 	 * @warning If the zeta arguments are the same they must be the same object,
 	 * therefore in the function call the arguments must be previously
 	 * instantiated objects, e.g (zeta+delZeta, ..., zeta+delZeta, ...) is
@@ -898,7 +901,7 @@ void AIC3(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
-	 * @param dX 3*K_tgt x K_src matrix output.
+	 * @return dX 3*K_tgt x K_src matrix output.
 	 */
 
 	// Create Eigen maps to memory
@@ -966,7 +969,7 @@ void dWzetaPri0_dZeta(const double* zeta_,
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
 	 * @param zetaPri Lattice velocities.
-	 * @param dX output.
+	 * @return dX output.
 	 */
 
 	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
@@ -1036,7 +1039,7 @@ void genH(const unsigned int m,
 	/**@brief Calculate the segment to lattice vertex distribution matrix, H.
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
-	 * @param H Segment to lattice vertex distribution matrix.
+	 * @return H Segment to lattice vertex distribution matrix.
 	 */
 
 	// temps
@@ -1070,7 +1073,7 @@ void Y1(const double* vC_,
 	 * @param zeta Bound lattice vertices.
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
-	 * @param Y1 output.
+	 * @return Y1 output.
 	 */
 
 	// map Eigen types
@@ -1099,5 +1102,169 @@ void Y1(const double* vC_,
 		yKern.block<3,1>(9,0) = vC.block<3,1>(3*kk,0).cross(c1-c4);
 		// add to full matrix
 		Y1.block<12,1>(12*kk,kk)=yKern;
+	}
+}
+
+void Y2(const double* gamma_,
+		const double* vC_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y2_) {
+	/**@brief Calculate force due to segment length vector variation (dZeta), Y2.
+	 * @param gamma Panel circulation strengths.
+	 * @param vC 3-component fluid-grid relative vel at the collocation points.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @return Y2 output.
+	 */
+
+	//map Eigen types
+	ConstMapVectXd gamma(gamma_,m*n);
+	ConstMapVectXd vC(vC_,3*m*n);
+	EigenMapMatrixXd Y2(Y2_,12*m*n,3*(m+1)*(n+1));
+
+	//temps
+	Matrix3d yKern = Matrix3d::Zero();
+	unsigned int ss = 0;
+
+	// loop through panels
+	for (unsigned int kk = 0; kk < m*n; kk++) {
+		yKern = gamma(kk)*skew(vC.block<3,1>(3*kk,0));
+		// loop through segments
+		for (unsigned int ll = 1; ll < 5; ll++) {
+			for (unsigned int qq = 0; qq < (m+1)*(n+1); qq++) {
+				if (ll < 4) {
+					if (qq == q_k(kk,n,ll)) {
+						Y2.block<3,3>(3*ss,3*qq) = -yKern;
+					} else if (qq == q_k(kk,n,ll+1)) {
+						Y2.block<3,3>(3*ss,3*qq) = yKern;
+					}
+				} else {
+					if (qq == q_k(kk,n,4)) {
+						Y2.block<3,3>(3*ss,3*qq) = -yKern;
+					} else if (qq == q_k(kk,n,1)) {
+						Y2.block<3,3>(3*ss,3*qq) = yKern;
+					}
+				}
+			}
+			ss++;
+		}
+	}
+}
+
+void Y3(const double* gamma_,
+		const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y3_) {
+	/**@brief Calculate gamma *skew(segment) matrix for dvC, Y3.
+	 * @param gamma Panel circulation strengths.
+	 * @param zeta Bound lattice vertices.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @return Y3 Output.
+	 */
+
+	// map Eigen types
+	ConstMapVectXd gamma(gamma_,m*n);
+	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
+	EigenMapMatrixXd Y3(Y3_,12*m*n,3*m*n);
+
+	// temps
+	Vector3d c1 = Vector3d::Zero();
+	Vector3d c2 = Vector3d::Zero();
+	Vector3d c3 = Vector3d::Zero();
+	Vector3d c4 = Vector3d::Zero();
+	MatrixXd yKern = MatrixXd::Zero(12,3);
+
+	// loop through panels
+	for (unsigned int kk = 0; kk < m*n; kk++) {
+		// corner points
+		c1 = zeta.block<3,1>(3*q_k(kk,n,1),0);
+		c2 = zeta.block<3,1>(3*q_k(kk,n,2),0);
+		c3 = zeta.block<3,1>(3*q_k(kk,n,3),0);
+		c4 = zeta.block<3,1>(3*q_k(kk,n,4),0);
+		// kernel
+		yKern.block<3,3>(0,0) = gamma(kk)*skew(c2-c1);
+		yKern.block<3,3>(3,0) = gamma(kk)*skew(c3-c2);
+		yKern.block<3,3>(6,0) = gamma(kk)*skew(c4-c3);
+		yKern.block<3,3>(9,0) = gamma(kk)*skew(c1-c4);
+		// add to full matrix
+		Y3.block<12,3>(12*kk,3*kk)=yKern;
+	}
+}
+
+void Y4(const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y4_) {
+	/**@brief Calculate A_k n_k matrix for dGammaPrime, Y4.
+	 * @param zeta Bound lattice vertices.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @return Y4 Output.
+	 */
+
+	// map Eigen types
+	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
+	EigenMapMatrixXd Y4(Y4_,3*m*n,m*n);
+
+	//temps
+	Vector3d d = Vector3d::Zero();
+	Vector3d e = Vector3d::Zero();
+
+	// loop through panels
+	for (unsigned int kk = 0; kk < m*n; kk++) {
+		d = zeta.block<3,1>(3*q_k(kk,n,3),0)
+				-zeta.block<3,1>(3*q_k(kk,n,1),0);
+		e = zeta.block<3,1>(3*q_k(kk,n,2),0)
+			    -zeta.block<3,1>(3*q_k(kk,n,4),0);
+		Y4.block<3,1>(3*kk,kk) = 0.5*d.cross(e);
+	}
+}
+
+void Y5(const double* gammaPri_,
+		const double* zeta_,
+		const unsigned int m,
+		const unsigned int n,
+		double* Y5_) {
+	/**@brief Calculate force due to A_k n_k variation (dZeta), Y5.
+	 * @param gammaPri Rate of change of panel circulation strengths.
+	 * @param zeta Lattice vertices.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @return Y5 output.
+	 */
+
+	// map Eigen types
+	ConstMapVectXd gammaPri(gammaPri_,m*n);
+	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
+	EigenMapMatrixXd Y5(Y5_,3*m*n,3*(m+1)*(n+1));
+
+	//temps
+	Vector3d d = Vector3d::Zero();
+	Vector3d e = Vector3d::Zero();
+	Matrix3d dFac = Matrix3d::Zero();
+	Matrix3d eFac = Matrix3d::Zero();
+
+	// loop through panels
+	for (unsigned int kk = 0; kk < m*n; kk++) {
+		d = zeta.block<3,1>(3*q_k(kk,n,3),0)
+				-zeta.block<3,1>(3*q_k(kk,n,1),0);
+		e = zeta.block<3,1>(3*q_k(kk,n,2),0)
+				-zeta.block<3,1>(3*q_k(kk,n,4),0);
+		dFac=0.5*gammaPri(kk)*skew(d);
+		eFac=0.5*gammaPri(kk)*skew(e);
+		for (unsigned int qq = 0; qq < (m+1)*(n+1); qq++) {
+			if (qq == q_k(kk,n,1)) {
+				Y5.block<3,3>(3*kk,3*qq) = eFac;
+			} else if (qq == q_k(kk,n,2)) {
+				Y5.block<3,3>(3*kk,3*qq) = dFac;
+			} else if (qq == q_k(kk,n,3)) {
+				Y5.block<3,3>(3*kk,3*qq) = -eFac;
+			} else if (qq == q_k(kk,n,4)) {
+				Y5.block<3,3>(3*kk,3*qq) = -dFac;
+			}
+		}
 	}
 }

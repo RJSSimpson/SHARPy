@@ -7,7 +7,7 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1, Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5
 from scipy.io import savemat
 
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
@@ -530,7 +530,111 @@ class Test_Ys(unittest.TestCase):
         # init Y1
         Y1 = np.zeros((12*m*n,m*n))
         Cpp_Y1(vC, zeta, m, n, Y1)
-        np.array_equal(Y1, [-1.0, 0., 0., 0., 1.0, 0.0, 1.0, 0., 0., 0., 1.0, 0.])
+        self.assertTrue(np.array_equal(np.squeeze(Y1), [-1.0, 0., 0.,
+                                                        0., 1.0, 0.0,
+                                                        1.0, 0., 0.,
+                                                        0., -1.0, 0.]))
+        
+    def test_Y2(self):
+        """Test Y2 matrix generation."""
+        m=1
+        n=1
+        # colloc velocities
+        vC = np.zeros((3*m*n))
+        vC[2:3*m*n:3]=1.0 # z component
+        # gamma
+        gamma = np.ones((m*n))
+        # init Y1
+        Y2 = np.zeros((12*m*n,3*(m+1)*(n+1)))
+        Cpp_Y2(gamma, vC, m, n, Y2)
+        self.assertTrue(np.array_equal(Y2, 
+            [[-0.,  1., -0.,  0., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,],
+             [-1., -0.,  0.,  1.,  0., -0.,  0.,  0.,  0.,  0.,  0.,  0.,],
+             [ 0., -0., -0., -0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,],
+             [ 0.,  0.,  0., -0.,  1., -0.,  0.,  0.,  0.,  0., -1.,  0.,],
+             [ 0.,  0.,  0., -1., -0.,  0.,  0.,  0.,  0.,  1.,  0., -0.,],
+             [ 0.,  0.,  0.,  0., -0., -0.,  0.,  0.,  0., -0.,  0.,  0.,],
+             [ 0.,  0.,  0.,  0.,  0.,  0.,  0., -1.,  0., -0.,  1., -0.,],
+             [ 0.,  0.,  0.,  0.,  0.,  0.,  1.,  0., -0., -1., -0.,  0.,],
+             [ 0.,  0.,  0.,  0.,  0.,  0., -0.,  0.,  0.,  0., -0., -0.,],
+             [ 0., -1.,  0.,  0.,  0.,  0., -0.,  1., -0.,  0.,  0.,  0.,],
+             [ 1.,  0., -0.,  0.,  0.,  0., -1., -0.,  0.,  0.,  0.,  0.,],
+             [-0.,  0.,  0.,  0.,  0.,  0.,  0., -0., -0.,  0.,  0.,  0.,]]))
+
+    def test_Y3(self):
+        """Test Y3 matrix generation."""
+        m=1
+        n=1
+        gamma = np.ones((m*n))
+        # zeta
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        spans = np.linspace(0.0, 1.0, n+1, True)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        # init Y1
+        Y3 = np.zeros((12*m*n,3*m*n))
+        Cpp_Y3(gamma, zeta, m, n, Y3)
+        self.assertTrue(np.array_equal(Y3, [[ 0., -0.,  1.],
+                                            [ 0.,  0., -0.],
+                                            [-1.,  0.,  0.],
+                                            [ 0., -0.,  0.],
+                                            [ 0.,  0., -1.],
+                                            [-0.,  1.,  0.],
+                                            [ 0., -0., -1.],
+                                            [ 0.,  0., -0.],
+                                            [ 1.,  0.,  0.],
+                                            [ 0., -0.,  0.],
+                                            [ 0.,  0.,  1.],
+                                            [-0., -1.,  0.]] ))
+        
+
+    def test_Y4(self):
+        """Test Y4 matrix generation."""
+        m=1
+        n=1
+        # zeta
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        spans = np.linspace(0.0, 1.0, n+1, True)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        # init Y1
+        Y4 = np.zeros((3*m*n,m*n))
+        Cpp_Y4(zeta, m, n, Y4)
+        self.assertTrue(np.array_equal(np.squeeze(Y4), [0., 0., 1.0]))
+        
+    def test_Y5(self):
+        """Test Y5 matrix generation."""
+        m=1
+        n=1
+        # gammaPri
+        gammaPri=np.ones((m*n))
+        # zeta
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        spans = np.linspace(0.0, 1.0, n+1, True)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        # init Y1
+        Y5 = np.zeros((3*m*n,3*(m+1)*(n+1)))
+        Cpp_Y5(gammaPri, zeta, m, n, Y5)
+        self.assertTrue(np.array_equal(Y5,
+            [[ 0.,  -0.,   0.5,  0.,  -0.,   0.5, -0.,   0.,  -0.5, -0.,   0.,  -0.5],
+             [ 0.,   0.,   0.5,  0.,   0.,  -0.5, -0.,  -0.,   0.5, -0.,  -0.,  -0.5],
+             [-0.5, -0.5,  0.,  -0.5,  0.5,  0.,   0.5, -0.5, -0.,   0.5,  0.5, -0., ]]))
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
