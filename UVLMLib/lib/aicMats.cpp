@@ -1063,6 +1063,33 @@ void genH(const unsigned int m,
 	return;
 }
 
+void genXi(const unsigned int m,
+		    const unsigned int n,
+		    const double eta1,
+		    const double eta2,
+		    double* Xi_) {
+	/**@brief Calculate the interpolation matrix, Xi.
+	 * @param m Chordwise panels.
+	 * @param n Spanwise panels.
+	 * @param eta1 Computational coord in chordwise sense.
+	 * @param eta2 computational coord in spanwise sense.
+	 * @return Xi Lattice to sub-panel interpolation/distribution matrix.
+	 */
+
+	// map Eigen types
+	EigenMapMatrixXd Xi(Xi_,3*m*n,3*(m+1)*(n+1));
+
+	//temp
+	Matrix3d xiKern = Matrix3d::Zero();
+
+	for (unsigned int k = 0; k < m*n; k++) {
+		for (unsigned int q = 0; q < (m+1)*(n+1); q++) {
+			XiKernel(k,q,n,eta1,eta2,xiKern);
+			Xi.block<3,3>(3*k,3*q) = xiKern;
+		}
+	}
+}
+
 void Y1(const double* vC_,
 		const double* zeta_,
 		const unsigned int m,

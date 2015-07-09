@@ -7,7 +7,7 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1, Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1, Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5
 from scipy.io import savemat
 
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
@@ -305,6 +305,33 @@ class Test_H(unittest.TestCase):
         Cpp_genH(m,n,H)
         data = np.loadtxt(TestDir + "H_M2N1.dat")
         self.assertTrue(np.array_equal(H, data))
+        
+class Test_Xi(unittest.TestCase):
+    """@brief Test vertex to collocation interpolation matrix."""
+    
+    def setUp(self):
+        # Set SharPy output directory and file root.
+        Settings.OutputDir = TestDir
+        Settings.OutputFileRoot = 'Xi'
+
+    def tearDown(self):
+        pass
+    
+    def test_XiVknown(self):
+        """Test Xi against trusted result."""
+        m=2
+        n=1
+        eta1=0.5
+        eta2=0.5
+        Xi=np.zeros((3*m*n,3*(m+1)*(n+1)))
+        Cpp_genXi(m, n, eta1, eta2, Xi)
+        self.assertTrue(np.array_equal(Xi,
+            [[ 0.25, 0.,   0.,   0.25, 0.,   0.,   0.25, 0.,   0.,   0.25, 0.,   0.,   0., 0.,   0.,   0.,   0.,   0., ],
+             [ 0.,   0.25, 0.,   0.,   0.25, 0.,   0.,   0.25, 0.,   0.,   0.25, 0.,   0., 0.,   0.,   0.,   0.,   0., ],
+             [ 0.,   0.,   0.25, 0.,   0.,   0.25, 0.,   0.,   0.25, 0.,   0.,   0.25, 0., 0.,   0.,   0.,   0.,   0., ],
+             [ 0.,   0.,   0.,   0.,   0.,   0.,   0.25, 0.,   0.,   0.25, 0.,   0., 0.25, 0.,   0.,   0.25, 0.,   0., ],
+             [ 0.,   0.,   0.,   0.,   0.,   0.,   0.,   0.25, 0.,   0.,   0.25, 0., 0., 0.25,   0.,   0.,   0.25, 0., ],
+             [ 0.,   0.,   0.,   0.,   0.,   0.,   0.,   0.,   0.25, 0.,   0., 0.25, 0.,   0.,   0.25, 0.,   0.,   0.25]]))
         
 class Test_AIC3(unittest.TestCase):
     """@brief Test 3 component AIC."""
@@ -639,7 +666,7 @@ class Test_Ys(unittest.TestCase):
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     #unittest.main()
-    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_Ys)
+    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_Xi)
     alltests = unittest.TestSuite([suite1])
     TestRunner = unittest.TextTestRunner(verbosity=2)
     TestRunner.run(alltests)

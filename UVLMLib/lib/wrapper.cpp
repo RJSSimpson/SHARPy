@@ -197,6 +197,14 @@ void cpp_wrap_genH(const unsigned int& m,
 	genH(m,n,H_);
 }
 
+void cpp_wrap_genXi(const unsigned int& m,
+		    		 const unsigned int& n,
+		    		 const double& eta1,
+		    		 const double& eta2,
+		    		 double* Xi_) {
+	genXi(m,n,eta1,eta2,Xi_);
+}
+
 void cpp_wrap_AIC3(const double* zetaSrc_,
 		  const unsigned int& mSrc,
 		  const unsigned int& nSrc,

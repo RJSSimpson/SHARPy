@@ -90,6 +90,12 @@ void genH(const unsigned int m,
 		   const unsigned int n,
 		   double* H_);
 
+void genXi(const unsigned int m,
+		    const unsigned int n,
+		    const double eta1,
+		    const double eta2,
+		    double* Xi_);
+
 void AIC3(const double* zetaSrc_,
 		  const unsigned int mSrc,
 		  const unsigned int nSrc,

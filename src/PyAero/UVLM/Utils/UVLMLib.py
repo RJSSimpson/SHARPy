@@ -26,6 +26,7 @@ cpp_dAgamma0_dZeta = UVLMLib.cpp_wrap_dAgamma0_dZeta
 cpp_dWzetaPri0_dZeta = UVLMLib.cpp_wrap_dWzetaPri0_dZeta
 cpp_genW = UVLMLib.cpp_wrap_genW
 cpp_genH = UVLMLib.cpp_wrap_genH
+cpp_genXi = UVLMLib.cpp_wrap_genXi
 cpp_AIC3 = UVLMLib.cpp_wrap_AIC3
 cpp_dA3gamma0_dZeta = UVLMLib.cpp_wrap_dA3gamma0_dZeta
 cpp_Y1 = UVLMLib.cpp_wrap_Y1
@@ -51,6 +52,7 @@ cpp_dAgamma0_dZeta.restype = None
 cpp_dWzetaPri0_dZeta.restype = None
 cpp_genW.restype = None
 cpp_genH.restype = None
+cpp_genXi.restype = None
 cpp_AIC3.restype = None
 cpp_dA3gamma0_dZeta.restype = None
 cpp_Y1.restype = None
@@ -227,6 +229,19 @@ def Cpp_genH(m,n,H):
     cpp_genH(ct.byref(ct.c_uint(m)),
              ct.byref(ct.c_uint(n)),
              H.ctypes.data_as(ct.POINTER(ct.c_double)));
+             
+def Cpp_genXi(m,n,eta1,eta2,Xi):
+    """@details Wrapper for cpp_wrap_genXi.
+    @param m Chordwise panels.
+    @param n Spanwise.
+    @param eta1 Computational coordinate in axis 1.
+    @param eta2 Computational coordinate in axis 2.
+    @return Xi Lattice vertex to collocation interpolation matrix (3Kx3K_zeta)."""
+    cpp_genXi(ct.byref(ct.c_uint(m)),
+             ct.byref(ct.c_uint(n)),
+             ct.byref(ct.c_double(eta1)),
+             ct.byref(ct.c_double(eta2)),
+             Xi.ctypes.data_as(ct.POINTER(ct.c_double)));
              
 def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
     """@details Wrapper for cpp_wrap_AIC.
