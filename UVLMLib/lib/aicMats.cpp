@@ -714,9 +714,17 @@ void AIC(const double* zetaSrc_,
 	unsigned int kTgt = mTgt*nTgt;
 	unsigned int ll = 0; //segment counter
 	unsigned int llp1 = 0; //segment counter
-	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
-	Vector3d d, e, n; // panel diagonal and normal vectors
-	Vector3d r0, r1, r2; // Biot-Savart kernel vectors
+	Vector3d c1 = Vector3d::Zero();// panel corner points, collocation point
+	Vector3d c2 = Vector3d::Zero();
+	Vector3d c3 = Vector3d::Zero();
+	Vector3d c4 = Vector3d::Zero();
+	Vector3d cp = Vector3d::Zero();
+	Vector3d d = Vector3d::Zero(); // panel diagonal and normal vectors
+	Vector3d e = Vector3d::Zero();
+	Vector3d n = Vector3d::Zero();
+	Vector3d r0 = Vector3d::Zero(); // Biot-Savart kernel vectors
+	Vector3d r1 = Vector3d::Zero();
+	Vector3d r2 = Vector3d::Zero();
 
 	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
 		// calc n, colloc point only once for each target panel

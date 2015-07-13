@@ -46,7 +46,6 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     Cpp_AIC(zeta, m, n, zeta, m, n, AIC)
     AICw= np.zeros((m*n,mW*n))
     Cpp_AIC(zetaW, mW, n, zeta, m, n, AICw)
-    print("\n AICw:\n",AICw)
     E[0:m*n,0:m*n] = AIC
     E[0:m*n,m*n:m*n+mW*n] = AICw
     E[m*n:m*n+mW*n,m*n:m*n+mW*n] = np.eye(mW*n)
@@ -65,13 +64,10 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     # populate G
     W = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_genW(zeta, m, n, W)
-    print("\n W:\n",W)
     dAgam_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_dAgamma0_dZeta(zeta, m, n, gam, zeta, m, n, dAgam_dZeta)
-    print("\n dAgam_dZeta:\n",dAgam_dZeta)
     dAwGamW_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_dAgamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAwGamW_dZeta)
-    print("\n dAwGamW_dZeta:\n",dAwGamW_dZeta)
     dWzetaPri_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_dWzetaPri0_dZeta(zeta, m, n, zetaPri, dWzetaPri_dZeta)
     print("\n dWzetaPri0_dZeta:\n",dWzetaPri_dZeta)
@@ -132,7 +128,7 @@ if __name__ == '__main__':
     gamW=np.ones((mW*n))
     gamPri=np.ones((m*n))
     chords = np.linspace(0.0, 1.0, m+1, True)
-    chordsW = np.linspace(1.0, 2.0, m+1, True)
+    chordsW = np.linspace(1.0, 2.0, mW+1, True)
     spans = np.linspace(0.0, 1.0, n+1, True)
     zeta=np.zeros(3*len(chords)*len(spans))
     zetaW=np.zeros(3*len(chordsW)*len(spans))
