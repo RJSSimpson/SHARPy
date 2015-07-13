@@ -99,6 +99,27 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     Cpp_dA3gamma0_dZeta(zeta, m, n, gam, zeta, m, n, dA3gam_dZeta)
     Cpp_dA3gamma0_dZeta(zetaW, mW, n, gam, zeta, m, n, dAw3gamW_dZeta)
     
+    # generate Y matrices
+    vC0 = np.zeros((3*m*n)) # collocation fluid-grid relative velocities
+    vC0[:] = np.dot(AIC3,gam) + np.dot(AIC3w,gamW) -np.dot(Xi,zetaPri)
+    Cpp_Y1(vC0, zeta, m, n, Y1)
+    Cpp_Y2(gam, vC0, m, n, Y2)
+    Cpp_Y3(gam, zeta, m, n, Y3)
+    Cpp_Y4(zeta, m, n, Y4)
+    Cpp_Y5(gamPri, zeta, m, n, Y5)
+    
+    # Matrix C
+    C[:,0:m*n] = np.dot(H, (Y1 - np.dot(Y3,AIC3)))
+    C[:,m*n:m*n+mW*n] = np.dot(H, np.dot(Y3,AIC3w))
+    C[:,m*n+mW*n:] = np.dot(np.transpose(Xi),Y4)
+    
+    # Matrix D
+    D[:,0:3*(m+1)*(n+1)] = np.dot(H, np.dot(Y3, Xi))
+    D[:,3*(m+1)*(n+1):6*(m+1)*(n+1)] = ( np.dot(H,Y2) 
+        - np.dot(H, np.dot(Y3, dA3gam_dZeta + dAw3gamW_dZeta))
+        + np.dot(np.transpose(Xi),Y5)                        )
+    D[:,6*(m+1)*(n+1):] = -np.dot(H, np.dot(Y3, Xi))
+    
     print("\n------ ------ ------ ------ genSSuvlm done. \n")
     return E,F,G,C,D
 
@@ -136,3 +157,7 @@ if __name__ == '__main__':
     print("\n E matrix:\n",E)
     print("\n F matrix:\n",F)
     print("\n G matrix:\n",G)
+    print("\n C matrix:\n",C)
+    print("\n D[:,0:3K_\zeta] matrix:\n",D[:,0:3*(m+1)*(n+1)])
+    print("\n D[:,3K_\zeta:6K_\zeta] matrix:\n",D[:,3*(m+1)*(n+1):6*(m+1)*(n+1)])
+    print("\n D[:,6*K_\zeta:] matrix:\n",D[:,6*(m+1)*(n+1):])
