@@ -13,6 +13,8 @@ from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta
 from UVLMLib import Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1
 from UVLMLib import Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5
 
+np.set_printoptions(precision = 3)
+
 def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     """@details generate state-space matrices for linear UVLM.
     @param gam Reference circulation distribution on body.
@@ -44,23 +46,66 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     Cpp_AIC(zeta, m, n, zeta, m, n, AIC)
     AICw= np.zeros((m*n,mW*n))
     Cpp_AIC(zetaW, mW, n, zeta, m, n, AICw)
-    eye1 = np.eye(mW*n)
-    eye2 = np.eye(m*n)
+    print("\n AICw:\n",AICw)
     E[0:m*n,0:m*n] = AIC
     E[0:m*n,m*n:m*n+mW*n] = AICw
-    E[m*n:m*n+mW*n,m*n:m*n+mW*n] = eye1
-    E[m*n+mW*n:,0:m*n] = -eye2
-    E[m*n+mW*n:,m*n+mW*n:] = delS*eye1
+    E[m*n:m*n+mW*n,m*n:m*n+mW*n] = np.eye(mW*n)
+    E[m*n+mW*n:,0:m*n] = -np.eye(m*n)
+    E[m*n+mW*n:,m*n+mW*n:] = delS*np.eye(m*n)
     
-    #populate F
-    #TODO
+    # populate F
+    Cgam = np.zeros((mW*n,m*n))
+    Cgam[0:n,m*n-n:m*n] = np.eye(n)
+    CgamW = np.zeros((mW*n,mW*n))
+    CgamW[n:,0:mW*n-n] = np.eye(n*(mW-1))
+    F[m*n:m*n+mW*n,0:m*n] = Cgam
+    F[m*n:m*n+mW*n,m*n:m*n+mW*n] = CgamW
+    F[m*n+mW*n:,0:m*n] = np.eye(m*n)
     
+    # populate G
+    W = np.zeros((m*n,3*(m+1)*(n+1)))
+    Cpp_genW(zeta, m, n, W)
+    print("\n W:\n",W)
+    dAgam_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
+    Cpp_dAgamma0_dZeta(zeta, m, n, gam, zeta, m, n, dAgam_dZeta)
+    print("\n dAgam_dZeta:\n",dAgam_dZeta)
+    dAwGamW_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
+    Cpp_dAgamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAwGamW_dZeta)
+    print("\n dAwGamW_dZeta:\n",dAwGamW_dZeta)
+    dWzetaPri_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
+    Cpp_dWzetaPri0_dZeta(zeta, m, n, zetaPri, dWzetaPri_dZeta)
+    print("\n dWzetaPri0_dZeta:\n",dWzetaPri_dZeta)
+    G[0:m*n,0:3*(m+1)*(n+1)] = W
+    G[0:m*n,3*(m+1)*(n+1):6*(m+1)*(n+1)] = - dAgam_dZeta - dAwGamW_dZeta + dWzetaPri_dZeta
+    G[0:m*n,6*(m+1)*(n+1):] = -W
+    
+    # populate output matrices C and D
+    Xi = np.zeros((3*m*n,3*(m+1)*(n+1)))
+    H = np.zeros((3*(m+1)*(n+1),12*m*n))
+    Y1 = np.zeros((12*m*n,m*n))
+    Y2 = np.zeros((12*m*n,3*(m+1)*(n+1)))
+    Y3 = np.zeros((12*m*n,3*m*n))
+    Y4 = np.zeros((3*m*n,m*n))
+    Y5 = np.zeros((3*m*n,3*(m+1)*(n+1)))
+    AIC3 = np.zeros((3*m*n,m*n))
+    AIC3w = np.zeros((3*m*n,mW*n))
+    dA3gam_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
+    dAw3gamW_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
+    
+    Cpp_genXi(m, n, 0.5, 0.5, Xi) #TODO: check these too!
+    Cpp_genH(m, n, H)
+    Cpp_AIC3(zeta, m, n, zeta, m, n, AIC3)
+    Cpp_AIC3(zetaW, mW, n, zeta, m, n, AIC3w)
+    Cpp_dA3gamma0_dZeta(zeta, m, n, gam, zeta, m, n, dA3gam_dZeta)
+    Cpp_dA3gamma0_dZeta(zetaW, mW, n, gam, zeta, m, n, dAw3gamW_dZeta)
+    
+    print("\n------ ------ ------ ------ genSSuvlm done. \n")
     return E,F,G,C,D
 
 if __name__ == '__main__':
     m=1
     n=1
-    mW=1
+    mW=2
     delS=1
     gam=np.ones((m*n))
     gamW=np.ones((mW*n))
@@ -88,4 +133,6 @@ if __name__ == '__main__':
     # end for c
     zetaPri = np.ones((3*len(chords)*len(spans)))
     E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, m, n, mW, delS)
-    print(E)
+    print("\n E matrix:\n",E)
+    print("\n F matrix:\n",F)
+    print("\n G matrix:\n",G)
