@@ -70,7 +70,6 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     Cpp_dAgamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAwGamW_dZeta)
     dWzetaPri_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_dWzetaPri0_dZeta(zeta, m, n, zetaPri, dWzetaPri_dZeta)
-    print("\n dWzetaPri0_dZeta:\n",dWzetaPri_dZeta)
     G[0:m*n,0:3*(m+1)*(n+1)] = W
     G[0:m*n,3*(m+1)*(n+1):6*(m+1)*(n+1)] = - dAgam_dZeta - dAwGamW_dZeta + dWzetaPri_dZeta
     G[0:m*n,6*(m+1)*(n+1):] = -W
@@ -116,7 +115,6 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
         + np.dot(np.transpose(Xi),Y5)                        )
     D[:,6*(m+1)*(n+1):] = -np.dot(H, np.dot(Y3, Xi))
     
-    print("\n------ ------ ------ ------ genSSuvlm done. \n")
     return E,F,G,C,D
 
 if __name__ == '__main__':
@@ -128,10 +126,11 @@ if __name__ == '__main__':
     gamW=np.ones((mW*n))
     gamPri=np.ones((m*n))
     chords = np.linspace(0.0, 1.0, m+1, True)
-    chordsW = np.linspace(1.0, 2.0, mW+1, True)
+    chordsW = np.linspace(1.0, 3.0, mW+1, True)
     spans = np.linspace(0.0, 1.0, n+1, True)
     zeta=np.zeros(3*len(chords)*len(spans))
     zetaW=np.zeros(3*len(chordsW)*len(spans))
+    zetaPri = np.ones((3*len(chords)*len(spans)))
     kk=0
     for c in chords:
         for s in spans:
@@ -148,7 +147,6 @@ if __name__ == '__main__':
             kk=kk+1
         # end for s
     # end for c
-    zetaPri = np.ones((3*len(chords)*len(spans)))
     E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, m, n, mW, delS)
     print("\n E matrix:\n",E)
     print("\n F matrix:\n",F)
