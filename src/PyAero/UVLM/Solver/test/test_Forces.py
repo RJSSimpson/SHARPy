@@ -31,12 +31,12 @@ class Test_linearForces(unittest.TestCase):
         # Init steady problem at 1 deg AoA
         aoa = 1*np.pi/180.0
         V = 1
-        m=100
+        m=1
         n=1
         mW=1
         delS=1
         chords = np.linspace(-1.0, 0.0, m+1, True)
-        chordsW = np.linspace(0.0, 100000.0, mW+1, True)
+        chordsW = np.linspace(0.0, 10000.0, mW+1, True)
         spans = np.linspace(-1000.0, 1000.0, n+1, True)
         zeta0=np.zeros(3*len(chords)*len(spans))
         zetaW0=np.zeros(3*len(chordsW)*len(spans))
@@ -78,11 +78,43 @@ class Test_linearForces(unittest.TestCase):
         Cpp_Solver_VLM(zeta0, zetaPri0, nu, zetaW0, VMOPTS, f0, gam0, gamW0)
         self.assertAlmostEqual((sum((f0[2::3])/1000.0))/aoa,2*np.pi,1)
         
-        #TODO: test python force calc routine
-        
-        # rate of change of gamma
+        # test independent force calculation
+        f0i = np.zeros((3*len(chords)*len(spans)))
         gamPri0=np.zeros((m*n))
-
+        gam_tm1=gam0-gamPri0
+        Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0i)
+        self.assertAlmostEqual((sum((f0[2::3])/1000.0))/aoa,2*np.pi,1)
+        
+        # generate linear output eqs at x0, u0
+        foo1, foo2, foo3, C, D = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, m, n, mW, delS)
+        del foo1, foo2, foo3
+        
+        # innit delta vectors for testing
+        dX = np.zeros((2*m*n+mW*n))
+        dU = np.zeros((9*len(chords)*len(spans)))
+        
+        # variations in gamma
+        dX[0:m*n] = np.random.random((m*n))/10000.0
+        gamPdX = gam0+dX[0:m*n]
+        f0idGamma = np.zeros_like(f0i)
+        Cpp_KJForces(zeta0, gamPdX, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0idGamma)
+        f_dGamma = f0idGamma - f0i
+        print(f_dGamma)
+        print(np.dot(C,dX)+np.dot(D,dU))
+        print("\n diff:\n",f_dGamma-np.dot(C,dX)-np.dot(D,dU))
+       
+        # variations in gamma w
+        dX[:]=0.0
+        dX[m*n:m*n+mW*n] = np.random.random((mW*n))/10000.0
+        gamWpDx = gamW0 + dX[m*n:m*n+mW*n]
+        f0idGammaW = np.zeros_like(f0i)
+        Cpp_KJForces(zeta0, gam0, zetaW0, gamWpDx, zetaPri0, nu, VMOPTS, gam_tm1, f0idGammaW)
+        f_dGammaW = f0idGammaW - f0i
+        print(f_dGammaW)
+        print(np.dot(C,dX)+np.dot(D,dU))
+        print("\n diff:\n",f_dGammaW-np.dot(C,dX)-np.dot(D,dU))
+        
+        
     def test_linVnln(self):
         """Test ss UVLM output equations against full nonlinear calcs."""
         
@@ -138,7 +170,7 @@ class Test_linearForces(unittest.TestCase):
         
         # claculate forces
         Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0)
-        print(f0)
+        #print(f0)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

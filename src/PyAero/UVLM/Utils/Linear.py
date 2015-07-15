@@ -87,12 +87,12 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     dA3gam_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
     dAw3gamW_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
     
-    Cpp_genXi(m, n, 0.5, 0.5, Xi) #TODO: check these too!
+    Cpp_genXi(m, n, 0.5, 0.5, Xi)
     Cpp_genH(m, n, H)
     Cpp_AIC3(zeta, m, n, zeta, m, n, AIC3)
     Cpp_AIC3(zetaW, mW, n, zeta, m, n, AIC3w)
     Cpp_dA3gamma0_dZeta(zeta, m, n, gam, zeta, m, n, dA3gam_dZeta)
-    Cpp_dA3gamma0_dZeta(zetaW, mW, n, gam, zeta, m, n, dAw3gamW_dZeta)
+    Cpp_dA3gamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAw3gamW_dZeta)
     
     # generate Y matrices
     vC0 = np.zeros((3*m*n)) # collocation fluid-grid relative velocities
@@ -118,9 +118,9 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     return E,F,G,C,D
 
 if __name__ == '__main__':
-    m=1
+    m=10
     n=1
-    mW=2
+    mW=100
     delS=1
     gam=np.ones((m*n))
     gamW=np.ones((mW*n))
