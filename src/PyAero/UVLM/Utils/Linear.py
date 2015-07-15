@@ -11,11 +11,11 @@
 import numpy as np
 from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta
 from UVLMLib import Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1
-from UVLMLib import Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5
+from UVLMLib import Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5, Cpp_AIC3noTE
 
 np.set_printoptions(precision = 3)
 
-def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
+def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     """@details generate state-space matrices for linear UVLM.
     @param gam Reference circulation distribution on body.
     @param gamW Reference circulation distribution in the wake.
@@ -84,6 +84,8 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     Y5 = np.zeros((3*m*n,3*(m+1)*(n+1)))
     AIC3 = np.zeros((3*m*n,m*n))
     AIC3w = np.zeros((3*m*n,mW*n))
+    AIC3noTE = np.zeros((3*m*n,m*n))
+    AIC3wNoTE = np.zeros((3*m*n,mW*n))
     dA3gam_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
     dAw3gamW_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
     
@@ -91,12 +93,14 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     Cpp_genH(m, n, H)
     Cpp_AIC3(zeta, m, n, zeta, m, n, AIC3)
     Cpp_AIC3(zetaW, mW, n, zeta, m, n, AIC3w)
+    Cpp_AIC3noTE(zeta, m, n, zeta, m, n, False, AIC3noTE)
+    Cpp_AIC3noTE(zetaW, mW, n, zeta, m, n, True, AIC3wNoTE)
     Cpp_dA3gamma0_dZeta(zeta, m, n, gam, zeta, m, n, dA3gam_dZeta)
     Cpp_dA3gamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAw3gamW_dZeta)
     
     # generate Y matrices
     vC0 = np.zeros((3*m*n)) # collocation fluid-grid relative velocities
-    vC0[:] = np.dot(AIC3,gam) + np.dot(AIC3w,gamW) -np.dot(Xi,zetaPri)
+    vC0[:] = np.dot(AIC3noTE,gam) + np.dot(AIC3w,gamW) + np.dot(Xi,nu) - np.dot(Xi,zetaPri)
     Cpp_Y1(vC0, zeta, m, n, Y1)
     Cpp_Y2(gam, vC0, m, n, Y2)
     Cpp_Y3(gam, zeta, m, n, Y3)
@@ -104,7 +108,13 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,m,n,mW,delS):
     Cpp_Y5(gamPri, zeta, m, n, Y5)
     
     # Matrix C
-    C[:,0:m*n] = np.dot(H, (Y1 - np.dot(Y3,AIC3)))
+    C[:,0:m*n] = np.dot(H, (Y1 - np.dot(Y3,AIC3noTE)))
+    print("\n H:\n",H)
+    print("\n vC:\n",vC0)
+    print("\n Y1:\n",Y1)
+    print("\n Y3:\n",Y3)
+    print("\n AIC3:\n",AIC3)
+    print("\n H*Y1:\n",np.dot(H,Y1))
     C[:,m*n:m*n+mW*n] = np.dot(H, np.dot(Y3,AIC3w))
     C[:,m*n+mW*n:] = np.dot(np.transpose(Xi),Y4)
     
@@ -131,6 +141,7 @@ if __name__ == '__main__':
     zeta=np.zeros(3*len(chords)*len(spans))
     zetaW=np.zeros(3*len(chordsW)*len(spans))
     zetaPri = np.ones((3*len(chords)*len(spans)))
+    nu = np.zeros_like(zetaPri)
     kk=0
     for c in chords:
         for s in spans:
@@ -147,7 +158,7 @@ if __name__ == '__main__':
             kk=kk+1
         # end for s
     # end for c
-    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, m, n, mW, delS)
+    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, n, mW, delS)
     print("\n E matrix:\n",E)
     print("\n F matrix:\n",F)
     print("\n G matrix:\n",G)

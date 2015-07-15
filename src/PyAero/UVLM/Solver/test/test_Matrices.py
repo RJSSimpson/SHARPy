@@ -559,7 +559,7 @@ class Test_Ys(unittest.TestCase):
         Cpp_Y1(vC, zeta, m, n, Y1)
         self.assertTrue(np.array_equal(np.squeeze(Y1), [-1.0, 0., 0.,
                                                         0., 1.0, 0.0,
-                                                        1.0, 0., 0.,
+                                                        0., 0., 0.,
                                                         0., -1.0, 0.]))
         
     def test_Y2(self):
@@ -612,9 +612,9 @@ class Test_Ys(unittest.TestCase):
                                             [ 0., -0.,  0.],
                                             [ 0.,  0., -1.],
                                             [-0.,  1.,  0.],
-                                            [ 0., -0., -1.],
+                                            [ 0., -0., 0.],
                                             [ 0.,  0., -0.],
-                                            [ 1.,  0.,  0.],
+                                            [ 0.,  0.,  0.],
                                             [ 0., -0.,  0.],
                                             [ 0.,  0.,  1.],
                                             [-0., -1.,  0.]] ))

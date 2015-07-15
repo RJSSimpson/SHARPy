@@ -967,6 +967,87 @@ void AIC3(const double* zetaSrc_,
 	return;
 }
 
+void AIC3noTE(const double* zetaSrc_,
+		  	  const unsigned int mSrc,
+		  	  const unsigned int nSrc,
+		  	  const double* zetaTgt_,
+		  	  const unsigned int mTgt,
+		  	  const unsigned int nTgt,
+		  	  const bool wakeSrc,
+		  	  double* dX_) {
+	/**@brief Calculate AIC matrix (3 components of velocity).
+	 * @param zetaSrc Grid points of source lattice.
+	 * @param mSrc chordwise panels on source lattice.
+	 * @param nSrc spanwise panels on source lattice.
+	 * @param zetaTgt Grid points of target lattice.
+	 * @param mTgt chordwise panels on target lattice.
+	 * @param nTgt spanwise panels on target lattice.
+	 * @param wakeSrc The source is a wake, TE induced vels omitted.
+	 * @return dX 3*K_tgt x K_src matrix output.
+	 * @note the velocity induced by vorticity at the TE is omitted.
+	 */
+
+	// Create Eigen maps to memory
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,3*mTgt*nTgt,mSrc*nSrc);
+	// Set dX to zero
+	dX.setZero();
+
+	// temps
+	unsigned int kSrc = mSrc*nSrc;
+	unsigned int kTgt = mTgt*nTgt;
+	unsigned int ll = 0; //segment counter
+	unsigned int llp1 = 0; //segment counter
+	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
+	Vector3d r0, r1, r2, v; // Biot-Savart kernel vectors, velocity.
+	unsigned int mmSrc = 0;
+
+	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
+		// calc n, colloc point only once for each target panel
+		c1 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,1),0);
+		c2 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,2),0);
+		c3 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,3),0);
+		c4 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,4),0);
+		// collocation point
+		BilinearInterpTriad(c1.data(),
+							c2.data(),
+							c3.data(),
+							c4.data(),
+							cp.data(),
+							0.5,0.5,false);
+		for (unsigned int k2 = 0; k2 < kSrc; k2++) {
+			mmSrc = k2/nSrc;
+			for (unsigned int l = 1; l < 5; l++) {
+				if (   (mmSrc == mSrc-1 && l == 3 && wakeSrc == false)
+					|| (mmSrc == 0      && l == 1 && wakeSrc == true)  ){
+					continue; // if segment is at TE
+				}
+				// roll around segment index
+				if (l < 4) {
+					ll = l;
+					llp1 = l+1;
+				} else if (l == 4) {
+					ll = l;
+					llp1= 1;
+				}
+
+				// calc r0
+				r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0)
+					-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+				// r1
+				r1 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+				// r2
+				r2 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
+				// AIC entry (3 components)
+				fGeom3(r0.data(),r1.data(),r2.data(),v.data());
+				dX.block<3,1>(3*k1,k2) += 1.0/(4.0*M_PI)*v;
+			}
+		}
+	}
+	return;
+}
+
 void dWzetaPri0_dZeta(const double* zeta_,
 						const unsigned int m,
 						const unsigned int n,
@@ -1109,6 +1190,7 @@ void Y1(const double* vC_,
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
 	 * @return Y1 output.
+	 * @note If at the trailing edge the direct effect of dGamma is set zero.
 	 */
 
 	// map Eigen types
@@ -1117,6 +1199,7 @@ void Y1(const double* vC_,
 	EigenMapMatrixXd Y1(Y1_,12*m*n,m*n);
 
 	//temps
+	unsigned int mm = 0;
 	Vector3d c1 = Vector3d::Zero();
 	Vector3d c2 = Vector3d::Zero();
 	Vector3d c3 = Vector3d::Zero();
@@ -1125,6 +1208,8 @@ void Y1(const double* vC_,
 
 	// loop through panels
 	for (unsigned int kk = 0; kk < m*n; kk++) {
+		// infer mm
+		mm = kk/n;
 		// corner points
 		c1 = zeta.block<3,1>(3*q_k(kk,n,1),0);
 		c2 = zeta.block<3,1>(3*q_k(kk,n,2),0);
@@ -1133,7 +1218,9 @@ void Y1(const double* vC_,
 		// kernel
 		yKern.block<3,1>(0,0) = vC.block<3,1>(3*kk,0).cross(c2-c1);
 		yKern.block<3,1>(3,0) = vC.block<3,1>(3*kk,0).cross(c3-c2);
-		yKern.block<3,1>(6,0) = vC.block<3,1>(3*kk,0).cross(c4-c3);
+		if (mm < m-1) { // at TE
+			yKern.block<3,1>(6,0) = vC.block<3,1>(3*kk,0).cross(c4-c3);
+		}
 		yKern.block<3,1>(9,0) = vC.block<3,1>(3*kk,0).cross(c1-c4);
 		// add to full matrix
 		Y1.block<12,1>(12*kk,kk)=yKern;
@@ -1198,6 +1285,7 @@ void Y3(const double* gamma_,
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
 	 * @return Y3 Output.
+	 * @note If at the trailing edge the direct effect of dGamma is set zero.
 	 */
 
 	// map Eigen types
@@ -1206,6 +1294,7 @@ void Y3(const double* gamma_,
 	EigenMapMatrixXd Y3(Y3_,12*m*n,3*m*n);
 
 	// temps
+	unsigned int mm = 0;
 	Vector3d c1 = Vector3d::Zero();
 	Vector3d c2 = Vector3d::Zero();
 	Vector3d c3 = Vector3d::Zero();
@@ -1214,6 +1303,8 @@ void Y3(const double* gamma_,
 
 	// loop through panels
 	for (unsigned int kk = 0; kk < m*n; kk++) {
+		// infer mm
+		mm = kk/n;
 		// corner points
 		c1 = zeta.block<3,1>(3*q_k(kk,n,1),0);
 		c2 = zeta.block<3,1>(3*q_k(kk,n,2),0);
@@ -1222,7 +1313,9 @@ void Y3(const double* gamma_,
 		// kernel
 		yKern.block<3,3>(0,0) = gamma(kk)*skew(c2-c1);
 		yKern.block<3,3>(3,0) = gamma(kk)*skew(c3-c2);
-		yKern.block<3,3>(6,0) = gamma(kk)*skew(c4-c3);
+		if (mm < m-1) { // at TE
+			yKern.block<3,3>(6,0) = gamma(kk)*skew(c4-c3);
+		}
 		yKern.block<3,3>(9,0) = gamma(kk)*skew(c1-c4);
 		// add to full matrix
 		Y3.block<12,3>(12*kk,3*kk)=yKern;

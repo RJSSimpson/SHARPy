@@ -31,7 +31,7 @@ class Test_linearForces(unittest.TestCase):
         # Init steady problem at 1 deg AoA
         aoa = 1*np.pi/180.0
         V = 1
-        m=1
+        m=2
         n=1
         mW=1
         delS=1
@@ -86,7 +86,7 @@ class Test_linearForces(unittest.TestCase):
         self.assertAlmostEqual((sum((f0[2::3])/1000.0))/aoa,2*np.pi,1)
         
         # generate linear output eqs at x0, u0
-        foo1, foo2, foo3, C, D = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, m, n, mW, delS)
+        foo1, foo2, foo3, C, D = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, nu, m, n, mW, delS)
         del foo1, foo2, foo3
         
         # innit delta vectors for testing
@@ -99,78 +99,94 @@ class Test_linearForces(unittest.TestCase):
         f0idGamma = np.zeros_like(f0i)
         Cpp_KJForces(zeta0, gamPdX, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0idGamma)
         f_dGamma = f0idGamma - f0i
-        print(f_dGamma)
-        print(np.dot(C,dX)+np.dot(D,dU))
-        print("\n diff:\n",f_dGamma-np.dot(C,dX)-np.dot(D,dU))
+        dfApprox = np.dot(C,dX)+np.dot(D,dU)
+        print("\n df_dGamma:\n",f_dGamma)
+        print("\n dfApprox:\n",dfApprox)
+        print("\n diff:\n",f_dGamma-dfApprox)
+        
+        dLexact = sum(f_dGamma[2::3])
+        dLapprox = sum(dfApprox[2::3])
+        print("\n dL (exact) = ",dLexact,"\t dL (approx) = ", dLapprox)
+        
+        dDexact = sum(f_dGamma[0::3])
+        dDapprox = sum(dfApprox[0::3])
+        print("\n dD (exact) = ",dDexact,"\t dD (approx) = ", dDapprox)
+        
+        dSexact = sum(f_dGamma[1::3])
+        dSapprox = sum(dfApprox[1::3])
+        print("\n dS (exact) = ",dSexact,"\t dS (approx) = ", dSapprox)
+        
+        print("\n\n---------------------------------------------\n C (gamma):\n",
+              C[:,m*n])
        
         # variations in gamma w
-        dX[:]=0.0
-        dX[m*n:m*n+mW*n] = np.random.random((mW*n))/10000.0
-        gamWpDx = gamW0 + dX[m*n:m*n+mW*n]
-        f0idGammaW = np.zeros_like(f0i)
-        Cpp_KJForces(zeta0, gam0, zetaW0, gamWpDx, zetaPri0, nu, VMOPTS, gam_tm1, f0idGammaW)
-        f_dGammaW = f0idGammaW - f0i
-        print(f_dGammaW)
-        print(np.dot(C,dX)+np.dot(D,dU))
-        print("\n diff:\n",f_dGammaW-np.dot(C,dX)-np.dot(D,dU))
+#         dX[:]=0.0
+#         dX[m*n:m*n+mW*n] = np.random.random((mW*n))/10000.0
+#         gamWpDx = gamW0 + dX[m*n:m*n+mW*n]
+#         f0idGammaW = np.zeros_like(f0i)
+#         Cpp_KJForces(zeta0, gam0, zetaW0, gamWpDx, zetaPri0, nu, VMOPTS, gam_tm1, f0idGammaW)
+#         f_dGammaW = f0idGammaW - f0i
+#         print(f_dGammaW)
+#         print(np.dot(C,dX)+np.dot(D,dU))
+#         print("\n diff:\n",f_dGammaW-np.dot(C,dX)-np.dot(D,dU))
         
         
-    def test_linVnln(self):
-        """Test ss UVLM output equations against full nonlinear calcs."""
-        
-        # define test case
-        m=1
-        n=1
-        mW=2
-        delS=1
-        gam0=np.ones((m*n))
-        gamW0=np.ones((mW*n))
-        gamPri0=0.5*np.ones((m*n))
-        chords = np.linspace(0.0, 1.0, m+1, True)
-        chordsW = np.linspace(1.0, 3.0, mW+1, True)
-        spans = np.linspace(0.0, 1.0, n+1, True)
-        zeta0=np.zeros(3*len(chords)*len(spans))
-        zetaW0=np.zeros(3*len(chordsW)*len(spans))
-        zetaPri0 = np.ones((3*len(chords)*len(spans)))
-        kk=0
-        for c in chords:
-            for s in spans:
-                zeta0[3*kk]=c
-                zeta0[3*kk+1]=s
-                kk=kk+1
-            # end for s
-        # end for c
-        kk=0
-        for c in chordsW:
-            for s in spans:
-                zetaW0[3*kk]=c
-                zetaW0[3*kk+1]=s
-                kk=kk+1
-            # end for s
-        # end for c
-        
-        # generate linear model
-        C = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, m, n, mW, delS)[3]
-        D = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, m, n, mW, delS)[4]
-        
-        # get reference forces
-        nu = -np.ones((3*len(chords)*len(spans))) # atmospheric velocity
-        f0 = np.zeros((3*len(chords)*len(spans))) # forces
-        VMOPTS = VMopts(m, n, False, # image methods
-                        mW,
-                        False,
-                        True,
-                        False,
-                        delS,
-                        False, 
-                        1) #numCores
-        
-        # get gamma at previous time step
-        gam_tm1=gam0-delS*gamPri0
-        
-        # claculate forces
-        Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0)
-        #print(f0)
+#     def test_linVnln(self):
+#         """Test ss UVLM output equations against full nonlinear calcs."""
+#         
+#         # define test case
+#         m=1
+#         n=1
+#         mW=1
+#         delS=1
+#         gam0=np.ones((m*n))
+#         gamW0=np.ones((mW*n))
+#         gamPri0=0.5*np.ones((m*n))
+#         chords = np.linspace(0.0, 1.0, m+1, True)
+#         chordsW = np.linspace(1.0, 3.0, mW+1, True)
+#         spans = np.linspace(0.0, 1.0, n+1, True)
+#         zeta0=np.zeros(3*len(chords)*len(spans))
+#         zetaW0=np.zeros(3*len(chordsW)*len(spans))
+#         zetaPri0 = np.ones((3*len(chords)*len(spans)))
+#         nu0 = np.ones((3*len(chords)*len(spans)))
+#         kk=0
+#         for c in chords:
+#             for s in spans:
+#                 zeta0[3*kk]=c
+#                 zeta0[3*kk+1]=s
+#                 kk=kk+1
+#             # end for s
+#         # end for c
+#         kk=0
+#         for c in chordsW:
+#             for s in spans:
+#                 zetaW0[3*kk]=c
+#                 zetaW0[3*kk+1]=s
+#                 kk=kk+1
+#             # end for s
+#         # end for c
+#         
+#         # generate linear model
+#         C = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, nu0, m, n, mW, delS)[3]
+#         D = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, nu0, m, n, mW, delS)[4]
+#         
+#         # get reference forces
+#         f0 = np.zeros((3*len(chords)*len(spans))) # forces
+#         VMOPTS = VMopts(m, n, False, # image methods
+#                         mW,
+#                         False,
+#                         True,
+#                         False,
+#                         delS,
+#                         False, 
+#                         1) #numCores
+#         
+#         # get gamma at previous time step
+#         gam_tm1=gam0-delS*gamPri0
+#         
+#         # claculate forces
+#         Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu0, VMOPTS, gam_tm1, f0)
+#         #print(f0)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

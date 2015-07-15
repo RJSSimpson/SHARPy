@@ -28,6 +28,7 @@ cpp_genW = UVLMLib.cpp_wrap_genW
 cpp_genH = UVLMLib.cpp_wrap_genH
 cpp_genXi = UVLMLib.cpp_wrap_genXi
 cpp_AIC3 = UVLMLib.cpp_wrap_AIC3
+cpp_AIC3noTE = UVLMLib.cpp_wrap_AIC3noTE
 cpp_dA3gamma0_dZeta = UVLMLib.cpp_wrap_dA3gamma0_dZeta
 cpp_Y1 = UVLMLib.cpp_wrap_Y1
 cpp_Y2 = UVLMLib.cpp_wrap_Y2
@@ -55,6 +56,7 @@ cpp_genW.restype = None
 cpp_genH.restype = None
 cpp_genXi.restype = None
 cpp_AIC3.restype = None
+cpp_AIC3noTE.restype = None
 cpp_dA3gamma0_dZeta.restype = None
 cpp_Y1.restype = None
 cpp_Y2.restype = None
@@ -244,9 +246,9 @@ def Cpp_genXi(m,n,eta1,eta2,Xi):
              ct.byref(ct.c_double(eta1)),
              ct.byref(ct.c_double(eta2)),
              Xi.ctypes.data_as(ct.POINTER(ct.c_double)));
-             
+
 def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
-    """@details Wrapper for cpp_wrap_AIC.
+    """@details Wrapper for cpp_wrap_AICnoTE.
     @param zetaSrc Source grid points.
     @param mSrc Chordwise panels.
     @param nSrc Spanwise.
@@ -260,6 +262,25 @@ def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
             zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mTgt)),
             ct.byref(ct.c_uint(nTgt)),
+            AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
+       
+def Cpp_AIC3noTE(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,isWakeSrc,AIC3):
+    """@details Wrapper for cpp_wrap_AICnoTE.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param zetaTgt Target grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param isWakeSrc.
+    @return AIC3 3-component influence coefficient matrix."""
+    cpp_AIC3noTE(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mSrc)),
+            ct.byref(ct.c_uint(nSrc)),
+            zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mTgt)),
+            ct.byref(ct.c_uint(nTgt)),
+            ct.byref(ct.c_bool(isWakeSrc)),
             AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
     
 def Cpp_dA3gamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dA3gam0):

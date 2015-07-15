@@ -254,6 +254,17 @@ void cpp_wrap_AIC3(const double* zetaSrc_,
 	AIC3(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,dX_);
 }
 
+void cpp_wrap_AIC3noTE(const double* zetaSrc_,
+		  const unsigned int& mSrc,
+		  const unsigned int& nSrc,
+		  const double* zetaTgt_,
+		  const unsigned int& mTgt,
+		  const unsigned int& nTgt,
+		  const bool& wakeSrc,
+		  double* dX_){
+	AIC3noTE(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,wakeSrc,dX_);
+}
+
 void cpp_wrap_dA3gamma0_dZeta(const double* zetaSrc_,
 								const unsigned int& mSrc,
 								const unsigned int& nSrc,

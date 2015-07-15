@@ -64,7 +64,6 @@ void VortexSegment::BiotSavart(double* pX, double* Uind, bool ImageMethod) {
 	 */
 
 	//check if contribution is required
-	// TODO: consider atTE as condition for zero return
 	if (this->Gamma() == 0.0 || atImage == true) {
 		Uind[0] = 0.0;
 		Uind[1] = 0.0;
