@@ -108,7 +108,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     Cpp_Y5(gamPri, zeta, m, n, Y5)
     
     # Matrix C
-    C[:,0:m*n] = np.dot(H, (Y1 - np.dot(Y3,AIC3noTE)))
+    C[:,0:m*n] = np.dot(H, Y1 - np.dot(Y3,AIC3noTE))
     print("\n H:\n",H)
     print("\n vC:\n",vC0)
     print("\n Y1:\n",Y1)

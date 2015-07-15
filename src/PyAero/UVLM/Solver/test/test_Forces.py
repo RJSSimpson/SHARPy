@@ -37,7 +37,7 @@ class Test_linearForces(unittest.TestCase):
         delS=1
         chords = np.linspace(-1.0, 0.0, m+1, True)
         chordsW = np.linspace(0.0, 10000.0, mW+1, True)
-        spans = np.linspace(-1000.0, 1000.0, n+1, True)
+        spans = np.linspace(-10000.0, 10000.0, n+1, True)
         zeta0=np.zeros(3*len(chords)*len(spans))
         zetaW0=np.zeros(3*len(chordsW)*len(spans))
         kk=0
@@ -76,14 +76,16 @@ class Test_linearForces(unittest.TestCase):
                         1) #numCores
         
         Cpp_Solver_VLM(zeta0, zetaPri0, nu, zetaW0, VMOPTS, f0, gam0, gamW0)
-        self.assertAlmostEqual((sum((f0[2::3])/1000.0))/aoa,2*np.pi,1)
+        self.assertAlmostEqual((sum((f0[2::3])/10000.0))/aoa,2*np.pi,1)
+        print("\n st D = ", sum(f0[0:3])/10000.0)
         
         # test independent force calculation
         f0i = np.zeros((3*len(chords)*len(spans)))
         gamPri0=np.zeros((m*n))
         gam_tm1=gam0-gamPri0
         Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0i)
-        self.assertAlmostEqual((sum((f0[2::3])/1000.0))/aoa,2*np.pi,1)
+        self.assertAlmostEqual((sum((f0[2::3])/10000.0))/aoa,2*np.pi,1)
+        print("\n st D = ", sum(f0i[0:3])/10000.0)
         
         # generate linear output eqs at x0, u0
         foo1, foo2, foo3, C, D = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, nu, m, n, mW, delS)
