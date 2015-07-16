@@ -31,13 +31,13 @@ class Test_linearForces(unittest.TestCase):
         # Init steady problem at 1 deg AoA
         aoa = 1*np.pi/180.0
         V = 1
-        m=2
+        m=10
         n=1
         mW=1
         delS=1
         chords = np.linspace(-1.0, 0.0, m+1, True)
         chordsW = np.linspace(0.0, 10000.0, mW+1, True)
-        spans = np.linspace(-10000.0, 10000.0, n+1, True)
+        spans = np.linspace(-10000, 10000, n+1, True)
         zeta0=np.zeros(3*len(chords)*len(spans))
         zetaW0=np.zeros(3*len(chordsW)*len(spans))
         kk=0
@@ -96,7 +96,8 @@ class Test_linearForces(unittest.TestCase):
         dU = np.zeros((9*len(chords)*len(spans)))
         
         # variations in gamma
-        dX[0:m*n] = np.random.random((m*n))/10000.0
+        for i in range(m*n):
+            dX[i] = 0.00002/(m*n)*(i+1)
         gamPdX = gam0+dX[0:m*n]
         f0idGamma = np.zeros_like(f0i)
         Cpp_KJForces(zeta0, gamPdX, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0idGamma)
