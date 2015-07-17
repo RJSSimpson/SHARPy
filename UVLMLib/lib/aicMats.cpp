@@ -811,11 +811,19 @@ void dA3gamma0_dZeta(const double* zetaSrc_,
 	unsigned int qTgt = (mTgt+1)*(nTgt+1);
 	unsigned int ll = 0; //segment counter
 	unsigned int llp1 = 0; //segment counter
-	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
-	Vector3d r0, r1, r2; // Biot-Savart kernel vectors
-	Matrix3d f3_r0, f3_r1, f3_r2; //drvtvs. required for target/source variation
-	Matrix3d Xi; // interpolating matrix
-	double a; // prefactor (\gamma_0(k2)/(4 \pi)).
+	Vector3d c1 = Vector3d::Zero(); // panel corner points, collocation point
+	Vector3d c2 = Vector3d::Zero();
+	Vector3d c3 = Vector3d::Zero();
+	Vector3d c4 = Vector3d::Zero();
+	Vector3d cp = Vector3d::Zero();
+	Vector3d r0 = Vector3d::Zero(); // Biot-Savart kernel vectors
+	Vector3d r1 = Vector3d::Zero();
+	Vector3d r2 = Vector3d::Zero();
+	Matrix3d f3_r0 = Matrix3d::Zero(); //drvtvs. required for target/source variation
+	Matrix3d f3_r1 = Matrix3d::Zero();
+	Matrix3d f3_r2 = Matrix3d::Zero();
+	Matrix3d Xi = Matrix3d::Zero(); // interpolating matrix
+	double a = 0.0; // prefactor (\gamma_0(k2)/(4 \pi)).
 
 	// loop through DoFs to make (1x3) submatrices
 	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
@@ -1220,6 +1228,8 @@ void Y1(const double* vC_,
 		yKern.block<3,1>(3,0) = vC.block<3,1>(3*kk,0).cross(c3-c2);
 		if (mm < m-1) { // at TE
 			yKern.block<3,1>(6,0) = vC.block<3,1>(3*kk,0).cross(c4-c3);
+		} else {
+			yKern.block<3,1>(6,0) = Vector3d::Zero();
 		}
 		yKern.block<3,1>(9,0) = vC.block<3,1>(3*kk,0).cross(c1-c4);
 		// add to full matrix
@@ -1315,6 +1325,8 @@ void Y3(const double* gamma_,
 		yKern.block<3,3>(3,0) = gamma(kk)*skew(c3-c2);
 		if (mm < m-1) { // at TE
 			yKern.block<3,3>(6,0) = gamma(kk)*skew(c4-c3);
+		} else {
+			yKern.block<3,3>(6,0) = Matrix3d::Zero();
 		}
 		yKern.block<3,3>(9,0) = gamma(kk)*skew(c1-c4);
 		// add to full matrix
