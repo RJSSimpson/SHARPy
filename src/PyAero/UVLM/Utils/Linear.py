@@ -102,7 +102,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     
     # generate Y matrices
     vC0 = np.zeros((3*m*n)) # collocation fluid-grid relative velocities
-    vC0[:] = np.dot(AIC3noTE,gam) + np.dot(AIC3wNoTE,gamW) + np.dot(Xi,nu) - np.dot(Xi,zetaPri)
+    vC0[:] = np.dot(AIC3,gam) + np.dot(AIC3w,gamW) + np.dot(Xi,nu) - np.dot(Xi,zetaPri)
     Cpp_Y1(vC0, zeta, m, n, Y1)
     Cpp_Y2(gam, vC0, m, n, Y2)
     Cpp_Y3(gam, zeta, m, n, Y3)
@@ -110,7 +110,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     Cpp_Y5(gamPri, zeta, m, n, Y5)
     
     # Matrix C
-    C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AIC3noTE))
+    C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AIC3))
     print("\n H:\n",H)
     print("\n vC:\n",vC0)
     print("\n Y1:\n",Y1)

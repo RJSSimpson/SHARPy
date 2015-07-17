@@ -7,7 +7,7 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 from PyAero.UVLM.Utils.Linear import genSSuvlm
-from PyAero.UVLM.Utils.UVLMLib import Cpp_KJForces, Cpp_Solver_VLM
+from PyAero.UVLM.Utils.UVLMLib import Cpp_KJForces, Cpp_Solver_VLM, Cpp_KJForces_vC
 from PyAero.UVLM.Utils.DerivedTypesAero import VMopts
 
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
@@ -31,7 +31,7 @@ class Test_linearForces(unittest.TestCase):
         # Init steady problem at 1 deg AoA
         aoa = 1*np.pi/180.0
         V = 1
-        m=10
+        m=1
         n=1
         mW=1
         delS=1
@@ -77,15 +77,15 @@ class Test_linearForces(unittest.TestCase):
         
         Cpp_Solver_VLM(zeta0, zetaPri0, nu, zetaW0, VMOPTS, f0, gam0, gamW0)
         self.assertAlmostEqual((sum((f0[2::3])/10000.0))/aoa,2*np.pi,1)
-        print("\n st D = ", sum(f0[0:3])/10000.0)
+        print("\n steady D = ", sum(f0[0:3])/10000.0)
         
         # test independent force calculation
         f0i = np.zeros((3*len(chords)*len(spans)))
         gamPri0=np.zeros((m*n))
         gam_tm1=gam0-gamPri0
-        Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0i)
+        Cpp_KJForces_vC(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0i)
         self.assertAlmostEqual((sum((f0[2::3])/10000.0))/aoa,2*np.pi,1)
-        print("\n st D = ", sum(f0i[0:3])/10000.0)
+        print("\n steady D = ", sum(f0i[0:3])/10000.0)
         
         # generate linear output eqs at x0, u0
         foo1, foo2, foo3, C, D = genSSuvlm(gam0, gamW0, gamPri0, zeta0, zetaW0, zetaPri0, nu, m, n, mW, delS)
@@ -100,7 +100,7 @@ class Test_linearForces(unittest.TestCase):
             dX[i] = 0.00002/(m*n)*(i+1)
         gamPdX = gam0+dX[0:m*n]
         f0idGamma = np.zeros_like(f0i)
-        Cpp_KJForces(zeta0, gamPdX, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0idGamma)
+        Cpp_KJForces_vC(zeta0, gamPdX, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0idGamma)
         f_dGamma = f0idGamma - f0i
         dfApprox = np.dot(C,dX)+np.dot(D,dU)
         print("\n df_dGamma:\n",f_dGamma)

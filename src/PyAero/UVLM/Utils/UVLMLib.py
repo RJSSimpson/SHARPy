@@ -36,6 +36,7 @@ cpp_Y3 = UVLMLib.cpp_wrap_Y3
 cpp_Y4 = UVLMLib.cpp_wrap_Y4
 cpp_Y5 = UVLMLib.cpp_wrap_Y5
 cpp_KJforces = UVLMLib.cpp_wrap_KJMethodForces
+cpp_KJforces_vC = UVLMLib.cpp_wrap_KJMethodForces_vC
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -64,6 +65,7 @@ cpp_Y3.restype = None
 cpp_Y4.restype = None
 cpp_Y5.restype = None
 cpp_KJforces.restype = None
+cpp_KJforces_vC.restype = None
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -379,6 +381,38 @@ def Cpp_KJForces(zeta,gamma,zetaW,gammaW,zetaDot,nu,VMOPTS,gamma_tm1,f):
     """
     
     cpp_KJforces(zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
+                 gamma.ctypes.data_as(ct.POINTER(ct.c_double)),
+                 zetaW.ctypes.data_as(ct.POINTER(ct.c_double)),
+                 gammaW.ctypes.data_as(ct.POINTER(ct.c_double)),
+                 zetaDot.ctypes.data_as(ct.POINTER(ct.c_double)),
+                 nu.ctypes.data_as(ct.POINTER(ct.c_double)),
+                 ct.byref(VMOPTS.M),
+                 ct.byref(VMOPTS.N),
+                 ct.byref(VMOPTS.ImageMethod),
+                 ct.byref(VMOPTS.Mstar),
+                 ct.byref(VMOPTS.Steady),
+                 ct.byref(VMOPTS.KJMeth),
+                 ct.byref(VMOPTS.NewAIC),
+                 ct.byref(VMOPTS.DelTime),
+                 ct.byref(VMOPTS.Rollup),
+                 ct.byref(VMOPTS.NumCores),
+                 gamma_tm1.ctypes.data_as(ct.POINTER(ct.c_double)),
+                 f.ctypes.data_as(ct.POINTER(ct.c_double)) )
+    
+def Cpp_KJForces_vC(zeta,gamma,zetaW,gammaW,zetaDot,nu,VMOPTS,gamma_tm1,f):
+    """@details Wrapper force Joukowski method force calculations.
+    @param zeta Lattice vertices.
+    @param gamma Bound circulations.
+    @param zetaW Wake lattice vertices.
+    @param gammaW Wake circulations.
+    @param zetaDot Bound lattice vertex velocities.
+    @param nu External velocities.
+    @param VMOPTS Derived type discretization and solver info.
+    @return f forces at the lattice vertices.
+    @note Dimensional variables used here. 
+    """
+    
+    cpp_KJforces_vC(zeta.ctypes.data_as(ct.POINTER(ct.c_double)),
                  gamma.ctypes.data_as(ct.POINTER(ct.c_double)),
                  zetaW.ctypes.data_as(ct.POINTER(ct.c_double)),
                  gammaW.ctypes.data_as(ct.POINTER(ct.c_double)),
