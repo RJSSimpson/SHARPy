@@ -230,6 +230,45 @@ void cpp_wrap_KJMethodForces_vC(const double* Zeta_Vec,
 
 }
 
+void cpp_wrap_KJMethodForces_vC_mod(const double* Zeta_Vec,
+					  const double* Gamma_Vec,
+					  const double* ZetaStar_Vec,
+					  const double* GammaStar_Vec,
+					  const double* ZetaDot_Vec,
+					  const double* Uext_Vec,
+					  unsigned int& VMOPTS_M,
+					  unsigned int& VMOPTS_N,
+					  bool& VMOPTS_ImageMethod,
+					  unsigned int& VMOPTS_Mstar,
+					  bool& VMOPTS_Steady,
+					  bool& VMOPTS_KJMeth,
+					  bool& VMOPTS_NewAIC,
+					  double& VMOPTS_DelTime,
+					  bool& VMOPTS_Rollup,
+					  unsigned int& VMOPTS_NumCores,
+					  const double* Gamma_tm1_Vec,
+					  double* Forces_Vec) {
+	/** @brief wrapper for cpp_solver_vlm
+	 */
+
+	// Convert VMOPTS_* into class
+	VMopts VMOPTS;
+	VMOPTS.M = VMOPTS_M;
+	VMOPTS.N = VMOPTS_N;
+	VMOPTS.ImageMethod = VMOPTS_ImageMethod;
+	VMOPTS.Mstar = VMOPTS_Mstar;
+	VMOPTS.Steady = VMOPTS_Steady;
+	VMOPTS.KJMeth = VMOPTS_KJMeth;
+	VMOPTS.NewAIC = VMOPTS_NewAIC;
+	VMOPTS.DelTime = VMOPTS_DelTime;
+	VMOPTS.Rollup = VMOPTS_Rollup;
+	VMOPTS.NumCores = VMOPTS_NumCores;
+
+	KJMethodForces_vC_mod(Zeta_Vec, Gamma_Vec, ZetaStar_Vec, GammaStar_Vec,
+				   ZetaDot_Vec, Uext_Vec, VMOPTS, Gamma_tm1_Vec, Forces_Vec);
+
+}
+
 void cpp_wrap_AIC(double* zetaSrc_,
 					unsigned int& mSrc,
 					unsigned int& nSrc,

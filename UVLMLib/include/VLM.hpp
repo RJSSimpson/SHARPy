@@ -34,4 +34,12 @@ void KJMethodForces_vC(const double* Zeta_Vec, const double* Gamma_Vec,\
 		const double* Gamma_tm1_Vec,\
 		double* Forces_Vec);
 
+void KJMethodForces_vC_mod(const double* Zeta_Vec, const double* Gamma_Vec,\
+		const double* ZetaStar_Vec, const double* GammaStar_Vec,\
+		const double* ZetaDot_Vec, \
+		const double* Uext_Vec, \
+		VMopts VMOPTS,\
+		const double* Gamma_tm1_Vec,\
+		double* Forces_Vec);
+
 #endif /* VLM_HPP_ */
