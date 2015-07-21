@@ -7,8 +7,13 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1, Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1, Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5, Cpp_AIC3s
 from scipy.io import savemat
+from PyAero.UVLM.Utils.UVLMLib import Cpp_q_k
+from scipy.interpolate import griddata
+import matplotlib.pyplot as plt
+from PyAero.UVLM.Utils.UVLMLib import Cpp_Solver_VLM
+from PyAero.UVLM.Utils.DerivedTypesAero import VMopts
 
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
            + 'Matrices/')
@@ -371,6 +376,164 @@ class Test_AIC3(unittest.TestCase):
             # end for j
         # end for i
         
+class Test_AIC3s(unittest.TestCase):
+    """@brief Test 3 component AIC at segment midpoints."""
+    
+    def setUp(self):
+        # Set SharPy output directory and file root.
+        Settings.OutputDir = TestDir
+        Settings.OutputFileRoot = 'AIC3'
+
+    def tearDown(self):
+        pass
+    
+    def getCollocs(self,zeta,m,n):
+        """@brief get collocatio points from grid.
+        @param zeta 3*(m+1)*(n+1) grid coords.
+        @param m Chordwise panels.
+        @param n Spanwise panels."""
+        
+        # init colloc vector
+        zetaC = np.zeros((3*m*n))
+        # corner points
+        c1 = np.zeros((3))
+        c2 = np.zeros((3))
+        c3 = np.zeros((3))
+        c4 = np.zeros((3))
+        
+        for k in range(m*n):
+            c1[:] = zeta[3*Cpp_q_k(k, n, 1):3*Cpp_q_k(k, n, 1)+3]
+            c2[:] = zeta[3*Cpp_q_k(k, n, 2):3*Cpp_q_k(k, n, 2)+3]
+            c3[:] = zeta[3*Cpp_q_k(k, n, 3):3*Cpp_q_k(k, n, 3)+3]
+            c4[:] = zeta[3*Cpp_q_k(k, n, 4):3*Cpp_q_k(k, n, 4)+3]
+            zetaC[3*k:3*k+3]=0.25*(c1+c2+c3+c4)
+            
+        return zetaC
+    
+    def getMidpoints(self,zeta,m,n):
+        """@brief get collocatio points from grid.
+        @param zeta 3*(m+1)*(n+1) grid coords.
+        @param m Chordwise panels.
+        @param n Spanwise panels."""
+        
+        # init colloc vector
+        zetaM = np.zeros((12*m*n))
+        # corner points
+        c1 = np.zeros((3))
+        c2 = np.zeros((3))
+        c3 = np.zeros((3))
+        c4 = np.zeros((3))
+        
+        for k in range(m*n):
+            c1[:] = zeta[3*Cpp_q_k(k, n, 1):3*Cpp_q_k(k, n, 1)+3]
+            c2[:] = zeta[3*Cpp_q_k(k, n, 2):3*Cpp_q_k(k, n, 2)+3]
+            c3[:] = zeta[3*Cpp_q_k(k, n, 3):3*Cpp_q_k(k, n, 3)+3]
+            c4[:] = zeta[3*Cpp_q_k(k, n, 4):3*Cpp_q_k(k, n, 4)+3]
+            
+            zetaM[12*k:12*k+3]=0.5*(c1+c2)
+            zetaM[12*k+3:12*k+6]=0.5*(c2+c3)
+            zetaM[12*k+6:12*k+9]=0.5*(c3+c4)
+            zetaM[12*k+9:12*k+12]=0.5*(c4+c1)    
+        # end for k    
+        return zetaM
+    
+    def test_AIC3s(self):
+        """Run on AR4 wing to generate basis for interpolation."""
+        # Init steady problem at 1 deg AoA
+        aoa = 0.01*np.pi/180.0
+        V = 100
+        m=3
+        n=6
+        mW=1
+        delS=1.0
+        chords = np.linspace(-1.0, 0.0, m+1, True)
+        chordsW = np.linspace(0.0, 10000.0, mW+1, True)
+        spans = np.linspace(-2, 2, n+1, True)
+        zeta0=np.zeros(3*len(chords)*len(spans))
+        zetaW0=np.zeros(3*len(chordsW)*len(spans))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta0[3*kk]=np.cos(aoa)*c
+                zeta0[3*kk+1]=s
+                zeta0[3*kk+2]=-np.sin(aoa)*c
+                kk=kk+1
+            # end for s
+        # end for c
+        kk=0
+        for c in chordsW:
+            for s in spans:
+                zetaW0[3*kk]=c
+                zetaW0[3*kk+1]=s
+                kk=kk+1
+            # end for s
+        # end for c
+        zetaPri0 = np.zeros((3*len(chords)*len(spans)))
+        nu = np.zeros((3*len(chords)*len(spans))) # atmospheric velocity
+        nu[0::3]=V
+        
+        # to be solved 
+        gam0=np.zeros((m*n))
+        gamW0=np.zeros((mW*n))
+        f0 = np.zeros((3*len(chords)*len(spans))) # forces
+        
+        VMOPTS = VMopts(m, n, False, # image methods
+                        mW,
+                        True, # steady
+                        True, # KJ is true
+                        True,
+                        delS,
+                        False, 
+                        1) #numCores
+        
+        # solve for gamma
+        Cpp_Solver_VLM(zeta0, zetaPri0, nu, zetaW0, VMOPTS, f0, gam0, gamW0)
+        
+        # call AIC matrix function
+        AIC3 = np.zeros((3*m*n,m*n))
+        AIC3s = np.zeros((12*m*n,m*n))
+        Cpp_AIC3(zeta0, m, n, zeta0, m, n, AIC3)
+        Cpp_AIC3s(zeta0, m, n, zeta0, m, n, AIC3s)
+        
+        # unit gamma
+        colVel = np.dot(AIC3,gam0)
+        midVel = np.dot(AIC3s,gam0)
+        
+        #get geometry
+        zetaC = self.getCollocs(zeta0,m,n)
+        zetaM = self.getMidpoints(zeta0,m,n)
+        
+        # interpolate onto fine grid
+        grid_x, grid_y = np.mgrid[min(chords):max(chords):100j,min(spans):max(spans):100j]
+        wGrid = griddata(np.transpose(np.array([zetaM[0::3],zetaM[1::3]])),
+                         midVel[2::3], (grid_x, grid_y), method='cubic')
+        
+        plt.subplot(211)
+        plt.imshow(wGrid.T, extent=(-1,0,-2,2))
+        plt.plot(zetaM[0::3], zetaM[1::3], 'ks', ms = 4)
+        plt.title('Midpoint velocity field [v_z]')
+        
+        # collocation vels
+        wGridc = griddata(np.transpose(np.array([zetaC[0::3],zetaC[1::3]])),
+                         colVel[2::3], (grid_x, grid_y), method='cubic')
+        
+        plt.subplot(212)
+        plt.imshow(wGridc.T, extent=(-1,0,-2,2))
+        plt.plot(zetaC[0::3], zetaC[1::3], 'ko', ms = 4)
+        plt.title('Collocation velocity field [v_z]')
+        plt.show()
+        
+        # save data to matlab
+        savemat('/home/rjs10/Desktop/AICinterp',
+                {'m': m, 'n': n, 'zetaC': zetaC,
+                 'colVel': colVel, 'zetaM': zetaM,
+                 'midVel': midVel,
+                 'wGridC': wGridc,
+                 'wGridM': wGrid,
+                 'gridX': grid_x,
+                 'gridY': grid_y},
+                appendmat = True)
+        
 class Test_dA3gamma0_dZeta(unittest.TestCase):
     """@brief Test variations of 3 component AIC matrix."""
     
@@ -666,7 +829,7 @@ class Test_Ys(unittest.TestCase):
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     #unittest.main()
-    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_Xi)
+    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_AIC3s)
     alltests = unittest.TestSuite([suite1])
     TestRunner = unittest.TextTestRunner(verbosity=2)
     TestRunner.run(alltests)

@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <datatypesx.hpp>
 #include <aicMats.hpp>
+#include <indices.hpp>
 
 // forward declare some useful functions
 
@@ -392,6 +393,22 @@ void cpp_wrap_Y5(const double* gammaPri_,
 				   const unsigned int& n,
 				   double* Y5_) {
 	Y5(gammaPri_,zeta_,m,n,Y5_);
+}
+
+void cpp_wrap_AIC3s(const double* zetaSrc_,
+		  const unsigned int& mSrc,
+		  const unsigned int& nSrc,
+		  const double* zetaTgt_,
+		  const unsigned int& mTgt,
+		  const unsigned int& nTgt,
+		  double* dX_){
+	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,dX_);
+}
+
+unsigned int cpp_wrap_q_k(const unsigned int k_,
+				   	         const unsigned int N,
+				   	         const unsigned int no) {
+	return(q_k(k_,N,no));
 }
 
 } // END extern C

@@ -28,6 +28,7 @@ cpp_genW = UVLMLib.cpp_wrap_genW
 cpp_genH = UVLMLib.cpp_wrap_genH
 cpp_genXi = UVLMLib.cpp_wrap_genXi
 cpp_AIC3 = UVLMLib.cpp_wrap_AIC3
+cpp_AIC3s = UVLMLib.cpp_wrap_AIC3s
 cpp_AIC3noTE = UVLMLib.cpp_wrap_AIC3noTE
 cpp_dA3gamma0_dZeta = UVLMLib.cpp_wrap_dA3gamma0_dZeta
 cpp_Y1 = UVLMLib.cpp_wrap_Y1
@@ -38,6 +39,7 @@ cpp_Y5 = UVLMLib.cpp_wrap_Y5
 cpp_KJforces = UVLMLib.cpp_wrap_KJMethodForces
 cpp_KJforces_vC = UVLMLib.cpp_wrap_KJMethodForces_vC
 cpp_KJforces_vC_mod = UVLMLib.cpp_wrap_KJMethodForces_vC_mod
+cpp_q_k = UVLMLib.cpp_wrap_q_k
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -58,6 +60,7 @@ cpp_genW.restype = None
 cpp_genH.restype = None
 cpp_genXi.restype = None
 cpp_AIC3.restype = None
+cpp_AIC3s.restype = None
 cpp_AIC3noTE.restype = None
 cpp_dA3gamma0_dZeta.restype = None
 cpp_Y1.restype = None
@@ -68,6 +71,10 @@ cpp_Y5.restype = None
 cpp_KJforces.restype = None
 cpp_KJforces_vC.restype = None
 cpp_KJforces_vC_mod.restype = None
+cpp_q_k.restype = ct.c_uint
+
+# arg types
+cpp_q_k.argtypes = [ct.c_uint, ct.c_uint, ct.c_uint]
 
 def AreEqual(arg1,arg2):
     """@brief Returns true if argumants are equal."""
@@ -261,6 +268,24 @@ def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
     @param nSrc Spanwise.
     @return AIC3 3-component influence coefficient matrix."""
     cpp_AIC3(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mSrc)),
+            ct.byref(ct.c_uint(nSrc)),
+            zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mTgt)),
+            ct.byref(ct.c_uint(nTgt)),
+            AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
+
+ 
+def Cpp_AIC3s(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
+    """@details Wrapper for cpp_wrap_AICnoTE.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param zetaTgt Target grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @return AIC3 3-component influence coefficient matrix at segment midpoints."""
+    cpp_AIC3s(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mSrc)),
             ct.byref(ct.c_uint(nSrc)),
             zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
@@ -465,6 +490,14 @@ def Cpp_KJForces_vC_mod(zeta,gamma,zetaW,gammaW,zetaDot,nu,VMOPTS,gamma_tm1,f):
                  ct.byref(VMOPTS.NumCores),
                  gamma_tm1.ctypes.data_as(ct.POINTER(ct.c_double)),
                  f.ctypes.data_as(ct.POINTER(ct.c_double)) )
+    
+def Cpp_q_k(k,N,no):
+    """@details Get vertex index from panel number and corner number.
+    @param k Panel index (starts from zero).
+    @param N Spanwise panels.
+    @param no Corner number, 1-4.
+    """
+    return cpp_q_k(k,N,no)
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')

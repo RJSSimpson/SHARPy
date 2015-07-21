@@ -113,6 +113,14 @@ void AIC3noTE(const double* zetaSrc_,
 		  const bool wakeSrc,
 		  double* dX_);
 
+void AIC3s(const double* zetaSrc_,
+		  	const unsigned int mSrc,
+		  	const unsigned int nSrc,
+		  	const double* zetaTgt_,
+		  	const unsigned int mTgt,
+		  	const unsigned int nTgt,
+		  	double* dX_);
+
 void dA3gamma0_dZeta(const double* zetaSrc_,
 					 const unsigned int mSrc,
 					 const unsigned int nSrc,

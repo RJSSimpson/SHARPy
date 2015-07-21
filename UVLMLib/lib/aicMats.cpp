@@ -975,6 +975,84 @@ void AIC3(const double* zetaSrc_,
 	return;
 }
 
+void AIC3s(const double* zetaSrc_,
+		  	const unsigned int mSrc,
+		  	const unsigned int nSrc,
+		  	const double* zetaTgt_,
+		  	const unsigned int mTgt,
+		  	const unsigned int nTgt,
+		  	double* dX_) {
+	/**@brief Calculate AIC matrix (3 components of velocity) at the segment
+	 * midpoints.
+	 * @param zetaSrc Grid points of source lattice.
+	 * @param mSrc chordwise panels on source lattice.
+	 * @param nSrc spanwise panels on source lattice.
+	 * @param zetaTgt Grid points of target lattice.
+	 * @param mTgt chordwise panels on target lattice.
+	 * @param nTgt spanwise panels on target lattice.
+	 * @return dX 12*K_tgt x K_src matrix output.
+	 */
+
+	// Create Eigen maps to memory
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,12*mTgt*nTgt,mSrc*nSrc);
+	// Set dX to zero
+	dX.setZero();
+
+	// temps
+	unsigned int kSrc = mSrc*nSrc;
+	unsigned int kTgt = mTgt*nTgt;
+	unsigned int ll_s = 0; //segment counter
+	unsigned int llp1_s = 0; //segment counter
+	unsigned int ll_t = 0; //segment counter
+	unsigned int llp1_t = 0; //segment counter
+	unsigned int s = 0; // total segment index (at target midpoints)
+	Vector3d r0  = Vector3d::Zero(); //Biot-Savart kernel vectors
+	Vector3d r1 = Vector3d::Zero();
+	Vector3d r2 = Vector3d::Zero();
+	Vector3d v = Vector3d::Zero(); // velocity.
+
+	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
+		for (unsigned int lt = 1; lt < 5; lt++) {
+			if (lt < 4) {
+				ll_t = lt;
+				llp1_t = lt+1;
+			} else if (lt == 4) {
+				ll_t = lt;
+				llp1_t = 1;
+			}
+			for (unsigned int k2 = 0; k2 < kSrc; k2++) {
+				for (unsigned int ls = 1; ls < 5; ls++) {
+					if (ls < 4) {
+						ll_s = ls;
+						llp1_s = ls+1;
+					} else if (ls == 4) {
+						ll_s = ls;
+						llp1_s = 1;
+					}
+					// calc r0
+					r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1_s),0)
+						-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll_s),0);
+					// r1
+					r1 = 0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
+							  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
+						 -zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll_s),0);
+					// r1
+					r2 = 0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
+							  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
+						 -zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1_s),0);
+					// AIC entry (3 components)
+					fGeom3(r0.data(),r1.data(),r2.data(),v.data());
+					dX.block<3,1>(3*s,k2) += 1.0/(4.0*M_PI)*v;
+				}
+			}
+			s++;
+		}
+	}
+	return;
+}
+
 void AIC3noTE(const double* zetaSrc_,
 		  	  const unsigned int mSrc,
 		  	  const unsigned int nSrc,
