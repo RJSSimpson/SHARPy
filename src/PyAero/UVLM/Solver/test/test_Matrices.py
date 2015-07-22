@@ -18,6 +18,11 @@ from PyAero.UVLM.Utils.DerivedTypesAero import VMopts
 TestDir = (Settings.SharPyProjectDir + 'output/tests/PyAero/UVLM/' 
            + 'Matrices/')
 
+def unique_rows(a):
+    a = np.ascontiguousarray(a)
+    unique_a, ind = np.unique(a.view([('', a.dtype)]*a.shape[1]),return_index=True)
+    return unique_a.view(a.dtype).reshape((unique_a.shape[0], a.shape[1])), ind
+
 class Test_AIC(unittest.TestCase):
     """@brief Test AIC matrix elements.
        @notes The dAgamma0W_dZeta approximation seems to have more relative error
@@ -442,8 +447,9 @@ class Test_AIC3s(unittest.TestCase):
         # Init steady problem at 1 deg AoA
         aoa = 0.01*np.pi/180.0
         V = 100
-        m=3
-        n=6
+        factor=1
+        m=factor*2
+        n=factor*4
         mW=1
         delS=1.0
         chords = np.linspace(-1.0, 0.0, m+1, True)
@@ -503,31 +509,43 @@ class Test_AIC3s(unittest.TestCase):
         zetaC = self.getCollocs(zeta0,m,n)
         zetaM = self.getMidpoints(zeta0,m,n)
         
-        # interpolate onto fine grid
-        grid_x, grid_y = np.mgrid[min(chords):max(chords):100j,min(spans):max(spans):100j]
-        wGrid = griddata(np.transpose(np.array([zetaM[0::3],zetaM[1::3]])),
-                         midVel[2::3], (grid_x, grid_y), method='cubic')
+        # list midpoints and eliminate coincident ones
+        zetaMarr = np.reshape(zetaM,(4*m*n,3),'C')
+        zetaMarr, I = unique_rows(zetaMarr)
+        zetaMnr = np.reshape(zetaMarr,(3*len(zetaMarr)))
+        midVelnr = np.zeros_like(zetaMnr)
+        sNr=0;
+        for s in I:
+            midVelnr[3*sNr:3*sNr+3]=midVel[3*s:3*s+3]
+            sNr=sNr+1
+        # end for s
         
+        # interpolate onto fine grid
+        grid_x, grid_y = np.mgrid[min(chords)*np.cos(aoa):max(chords):100j,min(spans):max(spans):200j]
+        wGrid = griddata(np.transpose(np.array([zetaMnr[0::3],zetaMnr[1::3]])),
+                         midVelnr[2::3], (grid_x, grid_y), method='cubic')
+          
+          
         plt.subplot(211)
         plt.imshow(wGrid.T, extent=(-1,0,-2,2))
-        plt.plot(zetaM[0::3], zetaM[1::3], 'ks', ms = 4)
+        plt.plot(zetaMnr[0::3], zetaMnr[1::3], 'ks', ms = 4)
         plt.title('Midpoint velocity field [v_z]')
-        
+          
         # collocation vels
         wGridc = griddata(np.transpose(np.array([zetaC[0::3],zetaC[1::3]])),
                          colVel[2::3], (grid_x, grid_y), method='cubic')
-        
+          
         plt.subplot(212)
         plt.imshow(wGridc.T, extent=(-1,0,-2,2))
         plt.plot(zetaC[0::3], zetaC[1::3], 'ko', ms = 4)
         plt.title('Collocation velocity field [v_z]')
         plt.show()
-        
+          
         # save data to matlab
-        savemat('/home/rjs10/Desktop/AICinterp',
+        savemat('/home/rjs10/Desktop/AICinterpM'+str(m)+'N'+str(n),
                 {'m': m, 'n': n, 'zetaC': zetaC,
-                 'colVel': colVel, 'zetaM': zetaM,
-                 'midVel': midVel,
+                 'colVel': colVel, 'zetaM': zetaMnr,
+                 'midVel': midVelnr,
                  'wGridC': wGridc,
                  'wGridM': wGrid,
                  'gridX': grid_x,
