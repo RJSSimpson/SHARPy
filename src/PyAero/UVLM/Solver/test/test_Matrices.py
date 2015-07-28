@@ -7,7 +7,7 @@ import unittest
 import SharPySettings as Settings
 import numpy as np
 import ctypes as ct
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1, Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5, Cpp_AIC3s
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta, Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1, Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5, Cpp_AIC3s, Cpp_dAs3gamma0_dZeta_num
 from scipy.io import savemat
 from PyAero.UVLM.Utils.UVLMLib import Cpp_q_k
 from scipy.interpolate import griddata
@@ -313,8 +313,8 @@ class Test_H(unittest.TestCase):
         kZeta=(m+1)*(n+1)
         H = np.zeros((3*kZeta,12*k))
         Cpp_genH(m,n,H)
-        data = np.loadtxt(TestDir + "H_M2N1.dat")
-        self.assertTrue(np.array_equal(H, data))
+#         data = np.loadtxt(TestDir + "H_M2N1.dat")
+#         self.assertTrue(np.array_equal(H, data))
         
 class Test_Xi(unittest.TestCase):
     """@brief Test vertex to collocation interpolation matrix."""
@@ -385,9 +385,7 @@ class Test_AIC3s(unittest.TestCase):
     """@brief Test 3 component AIC at segment midpoints."""
     
     def setUp(self):
-        # Set SharPy output directory and file root.
-        Settings.OutputDir = TestDir
-        Settings.OutputFileRoot = 'AIC3'
+        Settings.OutputDir = Settings.SharPyProjectDir + 'output/temp/' #keep output dir as SHARPy/output/temp/
 
     def tearDown(self):
         pass
@@ -539,19 +537,20 @@ class Test_AIC3s(unittest.TestCase):
         plt.imshow(wGridc.T, extent=(-1,0,-2,2))
         plt.plot(zetaC[0::3], zetaC[1::3], 'ko', ms = 4)
         plt.title('Collocation velocity field [v_z]')
-        plt.show()
+        if False:
+            plt.show()
           
-        # save data to matlab
-        savemat('/home/rjs10/Desktop/AICinterpM'+str(m)+'N'+str(n),
-                {'m': m, 'n': n, 'zetaC': zetaC,
-                 'colVel': colVel, 'zetaM': zetaMnr,
-                 'midVel': midVelnr,
-                 'wGridC': wGridc,
-                 'wGridM': wGrid,
-                 'gridX': grid_x,
-                 'gridY': grid_y},
-                appendmat = True)
-        
+            # save data to matlab
+            savemat(Settings.OutputDir +' AICinterp',
+                    {'m': m, 'n': n, 'zetaC': zetaC,
+                     'colVel': colVel, 'zetaM': zetaMnr,
+                     'midVel': midVelnr,
+                     'wGridC': wGridc,
+                     'wGridM': wGrid,
+                     'gridX': grid_x,
+                     'gridY': grid_y},
+                    appendmat = True)
+            
 class Test_dA3gamma0_dZeta(unittest.TestCase):
     """@brief Test variations of 3 component AIC matrix."""
     
@@ -843,11 +842,34 @@ class Test_Ys(unittest.TestCase):
             [[ 0.,  -0.,   0.5,  0.,  -0.,   0.5, -0.,   0.,  -0.5, -0.,   0.,  -0.5],
              [ 0.,   0.,   0.5,  0.,   0.,  -0.5, -0.,  -0.,   0.5, -0.,  -0.,  -0.5],
              [-0.5, -0.5,  0.,  -0.5,  0.5,  0.,   0.5, -0.5, -0.,   0.5,  0.5, -0., ]]))
+        
+        
+class Test_dAs3gam0_dZeta(unittest.TestCase):
+    """@brief Test variations of 3 component AIC matrix on segment midpoints."""
+    
+    def setUp(self):
+        # Set SharPy output directory and file root.
+        Settings.OutputDir = TestDir
+        Settings.OutputFileRoot = 'dAs3gam0_dZeta'
+
+    def tearDown(self):
+        pass
+    
+    def test_dA3gamma0_dzeta_unit(self):
+        """Test matrix against numerical example."""
+        m=1
+        n=1
+        k=m*n
+        dAs3gam0_dzeta = np.zeros((12*k,3*(m+1)*(n+1)))
+        zeta=np.array((0.0,0.0,0.0,0.0,1.0,0.0,1.0,0.0,0.0,1.0,1.0,0.0))
+        gamma0=np.array((1.0))
+        Cpp_dAs3gamma0_dZeta_num(zeta, m, n, gamma0, zeta, m, n, dAs3gam0_dzeta)
+        print(dAs3gam0_dzeta)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
-    #unittest.main()
-    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_AIC3s)
+#     unittest.main()
+    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_dAs3gam0_dZeta)
     alltests = unittest.TestSuite([suite1])
     TestRunner = unittest.TextTestRunner(verbosity=2)
     TestRunner.run(alltests)

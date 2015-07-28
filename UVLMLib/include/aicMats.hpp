@@ -159,4 +159,13 @@ void Y5(const double* gammaPri_,
 		const unsigned int n,
 		double* Y5_);
 
+void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
+								const unsigned int mSrc,
+								const unsigned int nSrc,
+								const double* gamma0_,
+								const double* zetaTgt_,
+								const unsigned int mTgt,
+								const unsigned int nTgt,
+								double* dX_);
+
 #endif /* AICMATS_HPP_ */

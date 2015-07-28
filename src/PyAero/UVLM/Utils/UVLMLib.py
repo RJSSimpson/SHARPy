@@ -40,6 +40,7 @@ cpp_KJforces = UVLMLib.cpp_wrap_KJMethodForces
 cpp_KJforces_vC = UVLMLib.cpp_wrap_KJMethodForces_vC
 cpp_KJforces_vC_mod = UVLMLib.cpp_wrap_KJMethodForces_vC_mod
 cpp_q_k = UVLMLib.cpp_wrap_q_k
+cpp_dAs3gam0_dZeta_num = UVLMLib.cpp_wrap_dAs3gam0_dZeta_numerical
 
 """ctypes does not check whether the correct number OR type of input arguments
 are passed to each of these functions - great care must be taken to ensure the
@@ -72,6 +73,7 @@ cpp_KJforces.restype = None
 cpp_KJforces_vC.restype = None
 cpp_KJforces_vC_mod.restype = None
 cpp_q_k.restype = ct.c_uint
+cpp_dAs3gam0_dZeta_num.restype = None
 
 # arg types
 cpp_q_k.argtypes = [ct.c_uint, ct.c_uint, ct.c_uint]
@@ -181,8 +183,8 @@ def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC):
     @param mSrc Chordwise panels.
     @param nSrc Spanwise.
     @param zetaTgt Target grid points.
-    @param mSrc Chordwise panels.
-    @param nSrc Spanwise.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
     @return AIC influence coefficient matrix."""
     cpp_AIC(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mSrc)),
@@ -200,8 +202,8 @@ def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
     @param nSrc Spanwise.
     @param gamma0 Reference circulation distribution.
     @param zetaTgt Target grid points.
-    @param mSrc Chordwise panels.
-    @param nSrc Spanwise.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
     @return dAgam0 variation of influence coefficient matrix times gamma."""
     cpp_dAgamma0_dZeta(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
                        ct.byref(ct.c_uint(mSrc)),
@@ -264,8 +266,8 @@ def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
     @param mSrc Chordwise panels.
     @param nSrc Spanwise.
     @param zetaTgt Target grid points.
-    @param mSrc Chordwise panels.
-    @param nSrc Spanwise.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
     @return AIC3 3-component influence coefficient matrix."""
     cpp_AIC3(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mSrc)),
@@ -282,8 +284,8 @@ def Cpp_AIC3s(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
     @param mSrc Chordwise panels.
     @param nSrc Spanwise.
     @param zetaTgt Target grid points.
-    @param mSrc Chordwise panels.
-    @param nSrc Spanwise.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
     @return AIC3 3-component influence coefficient matrix at segment midpoints."""
     cpp_AIC3s(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mSrc)),
@@ -299,8 +301,8 @@ def Cpp_AIC3noTE(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,isWakeSrc,AIC3):
     @param mSrc Chordwise panels.
     @param nSrc Spanwise.
     @param zetaTgt Target grid points.
-    @param mSrc Chordwise panels.
-    @param nSrc Spanwise.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
     @param isWakeSrc.
     @return AIC3 3-component influence coefficient matrix."""
     cpp_AIC3noTE(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
@@ -319,8 +321,8 @@ def Cpp_dA3gamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dA3gam0):
     @param nSrc Spanwise.
     @param gamma0 Reference circulation distribution.
     @param zetaTgt Target grid points.
-    @param mSrc Chordwise panels.
-    @param nSrc Spanwise.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
     @return dAgam0 variation of influence coefficient matrix times gamma."""
     cpp_dA3gamma0_dZeta(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
                        ct.byref(ct.c_uint(mSrc)),
@@ -498,6 +500,26 @@ def Cpp_q_k(k,N,no):
     @param no Corner number, 1-4.
     """
     return cpp_q_k(k,N,no)
+
+def Cpp_dAs3gamma0_dZeta_num(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
+    """@details Wrapper for cpp_wrap_dAs3gam0_dZeta.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param gamma0 Reference circulation distribution.
+    @param zetaTgt Target grid points.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
+    @return dAgam0 variation of segment midpoint coefficient matrix times gamma."""
+    cpp_dAs3gam0_dZeta_num(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       ct.byref(ct.c_uint(mSrc)),
+                       ct.byref(ct.c_uint(nSrc)),
+                       gamma0.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+                       ct.byref(ct.c_uint(mTgt)),
+                       ct.byref(ct.c_uint(nTgt)),
+                       dAgam0.ctypes.data_as(ct.POINTER(ct.c_double)))
+    
 
 if __name__ == '__main__':
     xP = np.array([0.0,0.0,-1.0], ct.c_double, order='C')

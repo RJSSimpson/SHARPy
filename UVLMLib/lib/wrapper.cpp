@@ -411,6 +411,17 @@ unsigned int cpp_wrap_q_k(const unsigned int k_,
 	return(q_k(k_,N,no));
 }
 
+void cpp_wrap_dAs3gam0_dZeta_numerical(const double* zetaSrc_,
+									  const unsigned int& mSrc,
+									  const unsigned int& nSrc,
+									  const double* gamma0_,
+									  const double* zetaTgt_,
+									  const unsigned int& mTgt,
+									  const unsigned int& nTgt,
+									  double* dX_) {
+	dAs3gam0_dZeta_numerical(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,dX_);
+}
+
 } // END extern C
 
 

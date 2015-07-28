@@ -1486,3 +1486,68 @@ void Y5(const double* gammaPri_,
 		}
 	}
 }
+
+void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
+								const unsigned int mSrc,
+								const unsigned int nSrc,
+								const double* gamma0_,
+								const double* zetaTgt_,
+								const unsigned int mTgt,
+								const unsigned int nTgt,
+								double* dX_) {
+	/**@brief Numerically calculate tensor-free derivative of (A^s gamma_0) w.r.t zeta.
+	* @param zetaSrc Grid points of source lattice.
+	* @param mSrc chordwise panels on source lattice.
+	* @param nSrc spanwise panels on source lattice.
+	* @param gamma0 Reference circulation distribution on source lattice.
+	* @param zetaTgt Grid points of target lattice.
+	* @param mTgt chordwise panels on target lattice.
+	* @param nTgt spanwise panels on target lattice.
+	* @return dX 3K x 3K_{\zeta_{tgt}} matrix output.
+	* @warning If the zeta arguments are the same they must be the same object,
+	* therefore in the function call the arguments must be previously
+	* instantiated objects, e.g (zeta+delZeta, ..., zeta+delZeta, ...) is
+	* invalid because a two temps are instantiated.
+	*/
+
+	// eigen maps
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd gamma0(gamma0_,mSrc*nSrc);
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,12*mTgt*nTgt,3*(mTgt+1)*(nTgt+1));
+
+	// set to zero
+	dX.setZero();
+
+	// temps
+	const unsigned int S = 12*mTgt*nTgt;
+	const double del = 0.00001; // small perturbation
+	VectorXd delZeta = VectorXd::Zero(3*(mTgt+1)*(nTgt+1));
+	VectorXd zetaPdel = VectorXd::Zero(3*(mTgt+1)*(nTgt+1));
+	VectorXd u = VectorXd::Zero(S);
+	VectorXd dU = VectorXd::Zero(S);
+	EigDynMatrixRM aic3s = EigDynMatrixRM::Zero(S,mSrc*nSrc);
+	EigDynMatrixRM aic3sDel = EigDynMatrixRM::Zero(S,mSrc*nSrc);
+
+	// calculate reference velocities
+	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,aic3s.data());
+	u = aic3s*gamma0;
+
+	for (unsigned int qPri = 0; qPri < 3*(mTgt+1)*(nTgt+1); qPri++) {
+		// set zero and permutate delZeta
+		delZeta.setZero();
+		delZeta[qPri] = del;
+
+		// new aic
+		zetaPdel = zetaSrc + delZeta;
+		AIC3s(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+
+		// diff downwash
+		dU = aic3sDel*gamma0 - u;
+
+		// add to matrix
+		dX.block(0,qPri, S,1) = (1/del)*dU;
+	}
+
+	return;
+}
