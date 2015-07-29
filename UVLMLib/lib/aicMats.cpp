@@ -1265,13 +1265,13 @@ void genXi(const unsigned int m,
 	}
 }
 
-void Y1(const double* vC_,
+void Y1(const double* vM_,
 		const double* zeta_,
 		const unsigned int m,
 		const unsigned int n,
 		double* Y1_) {
 	/**@brief Calculate velocity-segment cross-product matrix for dGamma, Y1.
-	 * @param vC 3-component fluid-grid relative vel at the collocation points.
+	 * @param vM 3-component fluid-grid relative vel at the collocation points.
 	 * @param zeta Bound lattice vertices.
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
@@ -1280,7 +1280,7 @@ void Y1(const double* vC_,
 	 */
 
 	// map Eigen types
-	ConstMapVectXd vC(vC_,3*m*n);
+	ConstMapVectXd vM(vM_,12*m*n);
 	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
 	EigenMapMatrixXd Y1(Y1_,12*m*n,m*n);
 
@@ -1302,27 +1302,27 @@ void Y1(const double* vC_,
 		c3 = zeta.block<3,1>(3*q_k(kk,n,3),0);
 		c4 = zeta.block<3,1>(3*q_k(kk,n,4),0);
 		// kernel
-		yKern.block<3,1>(0,0) = vC.block<3,1>(3*kk,0).cross(c2-c1);
-		yKern.block<3,1>(3,0) = vC.block<3,1>(3*kk,0).cross(c3-c2);
+		yKern.block<3,1>(0,0) = vM.block<3,1>(12*kk,0).cross(c2-c1);
+		yKern.block<3,1>(3,0) = vM.block<3,1>(12*kk+3,0).cross(c3-c2);
 		if (mm < m-1) { // at TE
-			yKern.block<3,1>(6,0) = vC.block<3,1>(3*kk,0).cross(c4-c3);
+			yKern.block<3,1>(6,0) = vM.block<3,1>(12*kk+6,0).cross(c4-c3);
 		} else {
 			yKern.block<3,1>(6,0) = Vector3d::Zero();
 		}
-		yKern.block<3,1>(9,0) = vC.block<3,1>(3*kk,0).cross(c1-c4);
+		yKern.block<3,1>(9,0) = vM.block<3,1>(12*kk+9,0).cross(c1-c4);
 		// add to full matrix
 		Y1.block<12,1>(12*kk,kk)=yKern;
 	}
 }
 
 void Y2(const double* gamma_,
-		const double* vC_,
+		const double* vM_,
 		const unsigned int m,
 		const unsigned int n,
 		double* Y2_) {
 	/**@brief Calculate force due to segment length vector variation (dZeta), Y2.
 	 * @param gamma Panel circulation strengths.
-	 * @param vC 3-component fluid-grid relative vel at the collocation points.
+	 * @param vM 3-component fluid-grid relative vel at the collocation points.
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
 	 * @return Y2 output.
@@ -1330,7 +1330,7 @@ void Y2(const double* gamma_,
 
 	//map Eigen types
 	ConstMapVectXd gamma(gamma_,m*n);
-	ConstMapVectXd vC(vC_,3*m*n);
+	ConstMapVectXd vM(vM_,12*m*n);
 	EigenMapMatrixXd Y2(Y2_,12*m*n,3*(m+1)*(n+1));
 
 	//temps
@@ -1339,9 +1339,9 @@ void Y2(const double* gamma_,
 
 	// loop through panels
 	for (unsigned int kk = 0; kk < m*n; kk++) {
-		yKern = gamma(kk)*skew(vC.block<3,1>(3*kk,0));
 		// loop through segments
 		for (unsigned int ll = 1; ll < 5; ll++) {
+			yKern = gamma(kk)*skew(vM.block<3,1>(3*ss,0));
 			for (unsigned int qq = 0; qq < (m+1)*(n+1); qq++) {
 				if (ll < 4) {
 					if (qq == q_k(kk,n,ll)) {
@@ -1367,7 +1367,7 @@ void Y3(const double* gamma_,
 		const unsigned int m,
 		const unsigned int n,
 		double* Y3_) {
-	/**@brief Calculate gamma *skew(segment) matrix for dvC, Y3.
+	/**@brief Calculate gamma *skew(segment) matrix for dvM, Y3.
 	 * @param gamma Panel circulation strengths.
 	 * @param zeta Bound lattice vertices.
 	 * @param m Chordwise panels.
@@ -1379,7 +1379,7 @@ void Y3(const double* gamma_,
 	// map Eigen types
 	ConstMapVectXd gamma(gamma_,m*n);
 	ConstMapVectXd zeta(zeta_,3*(m+1)*(n+1));
-	EigenMapMatrixXd Y3(Y3_,12*m*n,3*m*n);
+	EigenMapMatrixXd Y3(Y3_,12*m*n,12*m*n);
 
 	// temps
 	unsigned int mm = 0;
@@ -1387,7 +1387,7 @@ void Y3(const double* gamma_,
 	Vector3d c2 = Vector3d::Zero();
 	Vector3d c3 = Vector3d::Zero();
 	Vector3d c4 = Vector3d::Zero();
-	MatrixXd yKern = MatrixXd::Zero(12,3);
+	MatrixXd yKern = MatrixXd::Zero(12,12);
 
 	// loop through panels
 	for (unsigned int kk = 0; kk < m*n; kk++) {
@@ -1400,15 +1400,15 @@ void Y3(const double* gamma_,
 		c4 = zeta.block<3,1>(3*q_k(kk,n,4),0);
 		// kernel
 		yKern.block<3,3>(0,0) = gamma(kk)*skew(c2-c1);
-		yKern.block<3,3>(3,0) = gamma(kk)*skew(c3-c2);
+		yKern.block<3,3>(3,3) = gamma(kk)*skew(c3-c2);
 		if (mm < m-1) { // at TE
-			yKern.block<3,3>(6,0) = gamma(kk)*skew(c4-c3);
+			yKern.block<3,3>(6,6) = gamma(kk)*skew(c4-c3);
 		} else {
-			yKern.block<3,3>(6,0) = Matrix3d::Zero();
+			yKern.block<3,3>(6,6) = Matrix3d::Zero();
 		}
-		yKern.block<3,3>(9,0) = gamma(kk)*skew(c1-c4);
+		yKern.block<3,3>(9,9) = gamma(kk)*skew(c1-c4);
 		// add to full matrix
-		Y3.block<12,3>(12*kk,3*kk)=yKern;
+		Y3.block<12,12>(12*kk,12*kk)=yKern;
 	}
 }
 

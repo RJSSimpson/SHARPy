@@ -101,10 +101,10 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     Cpp_dA3gamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAw3gamW_dZeta)
     
     # generate Y matrices
-    vC0 = np.zeros((3*m*n)) # collocation fluid-grid relative velocities
-    vC0[:] = np.dot(AIC3,gam) + np.dot(AIC3w,gamW) + np.dot(Xi,nu) - np.dot(Xi,zetaPri)
-    Cpp_Y1(vC0, zeta, m, n, Y1)
-    Cpp_Y2(gam, vC0, m, n, Y2)
+    vM0 = np.zeros((12*m*n)) # collocation fluid-grid relative velocities
+    vM0[:] = 'foo' #np.dot(AIC3,gam) + np.dot(AIC3w,gamW) + np.dot(Xi,nu) - np.dot(Xi,zetaPri)
+    Cpp_Y1(vM0, zeta, m, n, Y1)
+    Cpp_Y2(gam, vM0, m, n, Y2)
     Cpp_Y3(gam, zeta, m, n, Y3)
     Cpp_Y4(zeta, m, n, Y4)
     Cpp_Y5(gamPri, zeta, m, n, Y5)
@@ -112,7 +112,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     # Matrix C
     C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AIC3))
     print("\n H:\n",H)
-    print("\n vC:\n",vC0)
+    print("\n vM:\n",vM0)
     print("\n Y1:\n",Y1)
     print("\n Y3:\n",Y3)
     print("\n AIC3:\n",AIC3)

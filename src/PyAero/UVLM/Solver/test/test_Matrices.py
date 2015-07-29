@@ -721,7 +721,7 @@ class Test_Ys(unittest.TestCase):
     def test_Y1(self):
         """Test Y1 matrix generation."""
         # colloc velocities
-        vC = np.array((0.0,0.0,1.0, 0.0,0.0,1.0, 0.0,0.0,1.0, 0.0,0.0,1.0))
+        vM = np.array((0.0,0.0,1.0, 0.0,0.0,1.0, 0.0,0.0,1.0, 0.0,0.0,1.0))
         # zeta
         m=1
         n=1
@@ -736,7 +736,7 @@ class Test_Ys(unittest.TestCase):
                 kk=kk+1
         # init Y1
         Y1 = np.zeros((12*m*n,m*n))
-        Cpp_Y1(vC, zeta, m, n, Y1)
+        Cpp_Y1(vM, zeta, m, n, Y1)
         self.assertTrue(np.array_equal(np.squeeze(Y1), [-1.0, 0., 0.,
                                                         0., 1.0, 0.0,
                                                         0., 0., 0.,
@@ -747,13 +747,13 @@ class Test_Ys(unittest.TestCase):
         m=1
         n=1
         # colloc velocities
-        vC = np.zeros((3*m*n))
-        vC[2:3*m*n:3]=1.0 # z component
+        vM = np.zeros((12*m*n))
+        vM[2:12*m*n:3]=1.0 # z component
         # gamma
         gamma = np.ones((m*n))
         # init Y1
         Y2 = np.zeros((12*m*n,3*(m+1)*(n+1)))
-        Cpp_Y2(gamma, vC, m, n, Y2)
+        Cpp_Y2(gamma, vM, m, n, Y2)
         self.assertTrue(np.array_equal(Y2, 
             [[-0.,  1., -0.,  0., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,],
              [-1., -0.,  0.,  1.,  0., -0.,  0.,  0.,  0.,  0.,  0.,  0.,],
@@ -784,20 +784,20 @@ class Test_Ys(unittest.TestCase):
                 zeta[3*kk+1]=s
                 kk=kk+1
         # init Y1
-        Y3 = np.zeros((12*m*n,3*m*n))
+        Y3 = np.zeros((12*m*n,12*m*n))
         Cpp_Y3(gamma, zeta, m, n, Y3)
-        self.assertTrue(np.array_equal(Y3, [[ 0., -0.,  1.],
-                                            [ 0.,  0., -0.],
-                                            [-1.,  0.,  0.],
-                                            [ 0., -0.,  0.],
-                                            [ 0.,  0., -1.],
-                                            [-0.,  1.,  0.],
-                                            [ 0., -0., 0.],
-                                            [ 0.,  0., -0.],
-                                            [ 0.,  0.,  0.],
-                                            [ 0., -0.,  0.],
-                                            [ 0.,  0.,  1.],
-                                            [-0., -1.,  0.]] ))
+        self.assertTrue(np.array_equal(Y3, [[ 0., -0.,  1.,  0.,  0., 0., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0.,-0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                            [-1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0., 0., 0.,-0., 0., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0., 0., 0., 0.,-1., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0., 0.,-0., 1., 0., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                                            [ 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,-0., 0.],
+                                            [ 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+                                            [ 0., 0., 0., 0., 0., 0., 0., 0., 0.,-0.,-1., 0.]] ))
         
 
     def test_Y4(self):
@@ -864,12 +864,12 @@ class Test_dAs3gam0_dZeta(unittest.TestCase):
         zeta=np.array((0.0,0.0,0.0,0.0,1.0,0.0,1.0,0.0,0.0,1.0,1.0,0.0))
         gamma0=np.array((1.0))
         Cpp_dAs3gamma0_dZeta_num(zeta, m, n, gamma0, zeta, m, n, dAs3gam0_dzeta)
-        print(dAs3gam0_dzeta)
+        self.assertFalse(np.isnan(dAs3gam0_dzeta).any())
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
 #     unittest.main()
-    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_dAs3gam0_dZeta)
+    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_Ys)
     alltests = unittest.TestSuite([suite1])
     TestRunner = unittest.TextTestRunner(verbosity=2)
     TestRunner.run(alltests)

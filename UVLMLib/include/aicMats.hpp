@@ -130,14 +130,14 @@ void dA3gamma0_dZeta(const double* zetaSrc_,
 					 const unsigned int nTgt,
 					 double* dX_);
 
-void Y1(const double* vC_,
+void Y1(const double* vM_,
 		const double* zeta_,
 		const unsigned int m,
 		const unsigned int n,
 		double* Y1_);
 
 void Y2(const double* gamma_,
-		const double* vC_,
+		const double* vM_,
 		const unsigned int m,
 		const unsigned int n,
 		double* Y2_);

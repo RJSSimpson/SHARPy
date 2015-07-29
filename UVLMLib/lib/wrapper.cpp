@@ -356,20 +356,20 @@ void cpp_wrap_dA3gamma0_dZeta(const double* zetaSrc_,
 	dA3gamma0_dZeta(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,dA3gam0_);
 }
 
-void cpp_wrap_Y1(const double* vC_,
+void cpp_wrap_Y1(const double* vM_,
 				   const double* zeta_,
 				   const unsigned int& m,
 				   const unsigned int& n,
 				   double* Y1_) {
-	Y1(vC_,zeta_,m,n,Y1_);
+	Y1(vM_,zeta_,m,n,Y1_);
 }
 
 void cpp_wrap_Y2(const double* gamma_,
-				   const double* vC_,
+				   const double* vM_,
 				   const unsigned int& m,
 				   const unsigned int& n,
 				   double* Y2_) {
-	Y2(gamma_,vC_,m,n,Y2_);
+	Y2(gamma_,vM_,m,n,Y2_);
 }
 
 void cpp_wrap_Y3(const double* gamma_,
