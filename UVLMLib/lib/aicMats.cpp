@@ -1534,13 +1534,19 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 	u = aic3s*gamma0;
 
 	for (unsigned int qPri = 0; qPri < 3*(mTgt+1)*(nTgt+1); qPri++) {
+
 		// set zero and permutate delZeta
 		delZeta.setZero();
 		delZeta[qPri] = del;
 
 		// new aic
-		zetaPdel = zetaSrc + delZeta;
-		AIC3s(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+		if (zetaSrc.data() == zetaTgt.data()) {
+			zetaPdel = zetaSrc + delZeta; // src and target lattices are same body
+			AIC3s(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+		} else {
+			zetaPdel = zetaTgt + delZeta; // src lattice is wake
+			AIC3s(zetaSrc_,mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+		}
 
 		// diff downwash
 		dU = aic3sDel*gamma0 - u;

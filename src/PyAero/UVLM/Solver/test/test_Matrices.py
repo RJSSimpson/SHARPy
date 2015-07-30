@@ -855,8 +855,8 @@ class Test_dAs3gam0_dZeta(unittest.TestCase):
     def tearDown(self):
         pass
     
-    def test_dA3gamma0_dzeta_unit(self):
-        """Test matrix against numerical example."""
+    def test_dAs3gamma0_dzeta_unit(self):
+        """Generate matrix and check for nan / inf / all zero."""
         m=1
         n=1
         k=m*n
@@ -865,11 +865,27 @@ class Test_dAs3gam0_dZeta(unittest.TestCase):
         gamma0=np.array((1.0))
         Cpp_dAs3gamma0_dZeta_num(zeta, m, n, gamma0, zeta, m, n, dAs3gam0_dzeta)
         self.assertFalse(np.isnan(dAs3gam0_dzeta).any())
+        self.assertFalse(np.isinf(dAs3gam0_dzeta).any())
+        self.assertGreater(np.count_nonzero(dAs3gam0_dzeta), 0)
+        
+    def test_dAs3gamma0w_dzeta_unit(self):
+        """Generate matrix and check for nan / inf / all zero."""
+        m=1
+        n=1
+        k=m*n
+        dAs3wGam0_dzeta = np.zeros((12*k,3*(m+1)*(n+1)))
+        zeta=np.array((0.0,0.0,0.0,0.0,1.0,0.0,1.0,0.0,0.0,1.0,1.0,0.0))
+        zetaW=np.array((1.0,0.0,0.0, 1.0,1.0,0.0, 2.0,0.0,0.0, 2.0,1.0,0.0))
+        gamma0w=np.array((1.0))
+        Cpp_dAs3gamma0_dZeta_num(zetaW, m, n, gamma0w, zeta, m, n, dAs3wGam0_dzeta)
+        self.assertFalse(np.isnan(dAs3wGam0_dzeta).any())
+        self.assertFalse(np.isinf(dAs3wGam0_dzeta).any())
+        self.assertGreater(np.count_nonzero(dAs3wGam0_dzeta), 0)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
-#     unittest.main()
-    suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_Ys)
-    alltests = unittest.TestSuite([suite1])
-    TestRunner = unittest.TextTestRunner(verbosity=2)
-    TestRunner.run(alltests)
+    unittest.main()
+#     suite1 = unittest.TestLoader().loadTestsFromTestCase(Test_Ys)
+#     alltests = unittest.TestSuite([suite1])
+#     TestRunner = unittest.TextTestRunner(verbosity=2)
+#     TestRunner.run(alltests)

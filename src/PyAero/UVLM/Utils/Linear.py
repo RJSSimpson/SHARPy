@@ -9,9 +9,10 @@
 '''
 
 import numpy as np
-from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta
+from UVLMLib import Cpp_AIC, Cpp_dAgamma0_dZeta, Cpp_genW, Cpp_dWzetaPri0_dZeta,\
+    Cpp_dAs3gamma0_dZeta_num
 from UVLMLib import Cpp_genH, Cpp_genXi, Cpp_AIC3, Cpp_dA3gamma0_dZeta, Cpp_Y1
-from UVLMLib import Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5, Cpp_AIC3noTE
+from UVLMLib import Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5, Cpp_AIC3noTE, Cpp_AIC3s
 
 np.set_printoptions(precision = 4)
 
@@ -79,53 +80,42 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     H = np.zeros((3*(m+1)*(n+1),12*m*n))
     Y1 = np.zeros((12*m*n,m*n))
     Y2 = np.zeros((12*m*n,3*(m+1)*(n+1)))
-    Y3 = np.zeros((12*m*n,3*m*n))
+    Y3 = np.zeros((12*m*n,12*m*n))
     Y4 = np.zeros((3*m*n,m*n))
     Y5 = np.zeros((3*m*n,3*(m+1)*(n+1)))
-    AIC3 = np.zeros((3*m*n,m*n))
-    AIC3w = np.zeros((3*m*n,mW*n))
-    AIC3noLE = np.zeros((3*m*n,m*n))
-    AIC3noTE = np.zeros((3*m*n,m*n))
-    AIC3wNoTE = np.zeros((3*m*n,mW*n))
-    dA3gam_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
-    dAw3gamW_dZeta = np.zeros((3*m*n,3*(m+1)*(n+1)))
+    AICs3 = np.zeros((12*m*n,m*n))
+    AICs3w = np.zeros((12*m*n,mW*n))
+    dAs3gam_dZeta = np.zeros((12*m*n,3*(m+1)*(n+1)))
+    dAs3wGamW_dZeta = np.zeros((12*m*n,3*(m+1)*(n+1)))
     
+    # gen interpolation and AIC matrices
     Cpp_genXi(m, n, 0.5, 0.5, Xi)
     Cpp_genH(m, n, H)
-    Cpp_AIC3(zeta, m, n, zeta, m, n, AIC3)
-    Cpp_AIC3(zetaW, mW, n, zeta, m, n, AIC3w)
-    Cpp_AIC3noTE(zeta, m, n, zeta, m, n, True, AIC3noLE)
-    Cpp_AIC3noTE(zeta, m, n, zeta, m, n, False, AIC3noTE)
-    Cpp_AIC3noTE(zetaW, mW, n, zeta, m, n, True, AIC3wNoTE)
-    Cpp_dA3gamma0_dZeta(zeta, m, n, gam, zeta, m, n, dA3gam_dZeta)
-    Cpp_dA3gamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAw3gamW_dZeta)
-    
+    Cpp_AIC3s(zeta, m, n, zeta, m, n, AICs3)
+    Cpp_AIC3s(zetaW, mW, n, zeta, m, n, AICs3w)
+    Cpp_dAs3gamma0_dZeta_num(zeta, m, n, gam, zeta, m, n, dAs3gam_dZeta)
+    Cpp_dAs3gamma0_dZeta_num(zetaW, mW, n, gamW, zeta, m, n, dAs3wGamW_dZeta)
+     
     # generate Y matrices
     vM0 = np.zeros((12*m*n)) # collocation fluid-grid relative velocities
-    vM0[:] = 'foo' #np.dot(AIC3,gam) + np.dot(AIC3w,gamW) + np.dot(Xi,nu) - np.dot(Xi,zetaPri)
+    vM0[:] = np.dot(AICs3,gam) + np.dot(AICs3w,gamW) + np.dot(H.transpose(),nu) - np.dot(H.transpose(),zetaPri)
     Cpp_Y1(vM0, zeta, m, n, Y1)
     Cpp_Y2(gam, vM0, m, n, Y2)
     Cpp_Y3(gam, zeta, m, n, Y3)
     Cpp_Y4(zeta, m, n, Y4)
     Cpp_Y5(gamPri, zeta, m, n, Y5)
-    
+     
     # Matrix C
-    C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AIC3))
-    print("\n H:\n",H)
-    print("\n vM:\n",vM0)
-    print("\n Y1:\n",Y1)
-    print("\n Y3:\n",Y3)
-    print("\n AIC3:\n",AIC3)
-    print("\n H*Y1:\n",np.dot(H,Y1))
-    C[:,m*n:m*n+mW*n] = np.dot(H, np.dot(Y3,AIC3w))
+    C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AICs3))
+    C[:,m*n:m*n+mW*n] = -np.dot(H, np.dot(Y3,AICs3w))
     C[:,m*n+mW*n:] = np.dot(np.transpose(Xi),Y4)
-    
+     
     # Matrix D
-    D[:,0:3*(m+1)*(n+1)] = np.dot(H, np.dot(Y3, Xi))
+    D[:,0:3*(m+1)*(n+1)] = np.dot(H, np.dot(Y3, H.transpose()))
     D[:,3*(m+1)*(n+1):6*(m+1)*(n+1)] = ( np.dot(H,Y2) 
-        - np.dot(H, np.dot(Y3, dA3gam_dZeta + dAw3gamW_dZeta))
+        - np.dot(H, np.dot(Y3, dAs3gam_dZeta + dAs3wGamW_dZeta))
         + np.dot(np.transpose(Xi),Y5)                        )
-    D[:,6*(m+1)*(n+1):] = -np.dot(H, np.dot(Y3, Xi))
+    D[:,6*(m+1)*(n+1):] = -np.dot(H, np.dot(Y3, H.transpose()))
     
     return E,F,G,C,D
 
