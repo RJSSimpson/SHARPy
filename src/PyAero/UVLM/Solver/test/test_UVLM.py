@@ -146,8 +146,7 @@ class Test_v_AR8_inKatzAndPlotkin(unittest.TestCase):
         alpha = 0.0*np.pi/180.0
         theta = 5.0*np.pi/180.0
         NumChordLengths = 10.0
-        VMINPUT = VMinput(c, b, U_mag, alpha, theta, 0.0,
-                          NumChordLengths)
+        VMINPUT = VMinput(c, b, U_mag, alpha, theta, NumChordLengths)
         
         # Define unsteady solver parameters.
         WakeLength = 10.0
@@ -259,7 +258,6 @@ class Test_v_TheoGarrick(unittest.TestCase):
                           U_mag,
                           alpha,
                           theta,
-                          ZetaDotTest = 0.0,
                           WakeLength = NumChordLengths,
                           ctrlSurf = ctrlSurf)
         

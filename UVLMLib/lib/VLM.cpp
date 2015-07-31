@@ -97,7 +97,7 @@ void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 			BilinearInterpTriad(Forces[i][j],Forces[i][j+1],\
 								Forces[i+1][j+1],Forces[i+1][j],\
 								UnstForceTemp,\
-								0.0,0.5,true);
+								0.5,0.5,true);
 
 		} //END for j
 	}//END for i
@@ -354,7 +354,7 @@ void KJMethodForces_vC(const double* Zeta_Vec, const double* Gamma_Vec,\
 			BilinearInterpTriad(Forces[i][j],Forces[i][j+1],\
 								Forces[i+1][j+1],Forces[i+1][j],\
 								UnstForceTemp,\
-								0.0,0.5,true);
+								0.5,0.5,true);
 
 		} //END for j
 	}//END for i
@@ -573,7 +573,7 @@ void KJMethodForces_vC_mod(const double* Zeta_Vec, const double* Gamma_Vec,\
 			BilinearInterpTriad(Forces[i][j],Forces[i][j+1],\
 								Forces[i+1][j+1],Forces[i+1][j],\
 								UnstForceTemp,\
-								0.0,0.5,true);
+								0.5,0.5,true);
 
 		} //END for j
 	}//END for i

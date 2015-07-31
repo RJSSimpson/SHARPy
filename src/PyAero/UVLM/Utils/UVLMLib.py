@@ -29,6 +29,7 @@ cpp_genH = UVLMLib.cpp_wrap_genH
 cpp_genXi = UVLMLib.cpp_wrap_genXi
 cpp_AIC3 = UVLMLib.cpp_wrap_AIC3
 cpp_AIC3s = UVLMLib.cpp_wrap_AIC3s
+cpp_AIC3s_noTE = UVLMLib.cpp_wrap_AIC3s_noTE
 cpp_AIC3noTE = UVLMLib.cpp_wrap_AIC3noTE
 cpp_dA3gamma0_dZeta = UVLMLib.cpp_wrap_dA3gamma0_dZeta
 cpp_Y1 = UVLMLib.cpp_wrap_Y1
@@ -62,6 +63,7 @@ cpp_genH.restype = None
 cpp_genXi.restype = None
 cpp_AIC3.restype = None
 cpp_AIC3s.restype = None
+cpp_AIC3s_noTE.restype = None
 cpp_AIC3noTE.restype = None
 cpp_dA3gamma0_dZeta.restype = None
 cpp_Y1.restype = None
@@ -277,7 +279,6 @@ def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
             ct.byref(ct.c_uint(nTgt)),
             AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
 
- 
 def Cpp_AIC3s(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
     """@details Wrapper for cpp_wrap_AICnoTE.
     @param zetaSrc Source grid points.
@@ -293,6 +294,24 @@ def Cpp_AIC3s(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
             zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mTgt)),
             ct.byref(ct.c_uint(nTgt)),
+            AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
+ 
+def Cpp_AIC3s_noTE(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,wakeSrc,AIC3):
+    """@details Wrapper for cpp_wrap_AICnoTE.
+    @param zetaSrc Source grid points.
+    @param mSrc Chordwise panels.
+    @param nSrc Spanwise.
+    @param zetaTgt Target grid points.
+    @param mTgt Chordwise panels.
+    @param nTgt Spanwise.
+    @return AIC3 3-component influence coefficient matrix at segment midpoints."""
+    cpp_AIC3s_noTE(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mSrc)),
+            ct.byref(ct.c_uint(nSrc)),
+            zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
+            ct.byref(ct.c_uint(mTgt)),
+            ct.byref(ct.c_uint(nTgt)),
+            ct.byref(ct.c_bool(wakeSrc)),
             AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
        
 def Cpp_AIC3noTE(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,isWakeSrc,AIC3):

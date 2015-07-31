@@ -1053,6 +1053,91 @@ void AIC3s(const double* zetaSrc_,
 	return;
 }
 
+void AIC3s_noTE(const double* zetaSrc_,
+		  	const unsigned int mSrc,
+		  	const unsigned int nSrc,
+		  	const double* zetaTgt_,
+		  	const unsigned int mTgt,
+		  	const unsigned int nTgt,
+		  	const bool wakeSrc,
+		  	double* dX_) {
+	/**@brief Calculate AIC matrix (3 components of velocity) at the segment
+	 * midpoints.
+	 * @param zetaSrc Grid points of source lattice.
+	 * @param mSrc chordwise panels on source lattice.
+	 * @param nSrc spanwise panels on source lattice.
+	 * @param zetaTgt Grid points of target lattice.
+	 * @param mTgt chordwise panels on target lattice.
+	 * @param nTgt spanwise panels on target lattice.
+	 * @return dX 12*K_tgt x K_src matrix output.
+	 */
+
+	// Create Eigen maps to memory
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,12*mTgt*nTgt,mSrc*nSrc);
+	// Set dX to zero
+	dX.setZero();
+
+	// temps
+	unsigned int kSrc = mSrc*nSrc;
+	unsigned int kTgt = mTgt*nTgt;
+	unsigned int ll_s = 0; //segment counter
+	unsigned int llp1_s = 0; //segment counter
+	unsigned int ll_t = 0; //segment counter
+	unsigned int llp1_t = 0; //segment counter
+	unsigned int s = 0; // total segment index (at target midpoints)
+	unsigned int mmSrc = 0;
+	Vector3d r0  = Vector3d::Zero(); //Biot-Savart kernel vectors
+	Vector3d r1 = Vector3d::Zero();
+	Vector3d r2 = Vector3d::Zero();
+	Vector3d v = Vector3d::Zero(); // velocity.
+
+	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
+		for (unsigned int lt = 1; lt < 5; lt++) {
+			if (lt < 4) {
+				ll_t = lt;
+				llp1_t = lt+1;
+			} else if (lt == 4) {
+				ll_t = lt;
+				llp1_t = 1;
+			}
+			for (unsigned int k2 = 0; k2 < kSrc; k2++) {
+				mmSrc = k2/nSrc;
+				for (unsigned int ls = 1; ls < 5; ls++) {
+					if (   (mmSrc == mSrc-1 && ls == 3 && wakeSrc == false)
+						|| (mmSrc == 0      && ls == 1 && wakeSrc == true)  ){
+						continue; // if segment is at TE
+					}
+					if (ls < 4) {
+						ll_s = ls;
+						llp1_s = ls+1;
+					} else if (ls == 4) {
+						ll_s = ls;
+						llp1_s = 1;
+					}
+					// calc r0
+					r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1_s),0)
+						-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll_s),0);
+					// r1
+					r1 = 0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
+							  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
+						 -zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll_s),0);
+					// r1
+					r2 = 0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
+							  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
+						 -zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1_s),0);
+					// AIC entry (3 components)
+					fGeom3(r0.data(),r1.data(),r2.data(),v.data());
+					dX.block<3,1>(3*s,k2) += 1.0/(4.0*M_PI)*v;
+				}
+			}
+			s++;
+		}
+	}
+	return;
+}
+
 void AIC3noTE(const double* zetaSrc_,
 		  	  const unsigned int mSrc,
 		  	  const unsigned int nSrc,
@@ -1530,6 +1615,12 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 	EigDynMatrixRM aic3sDel = EigDynMatrixRM::Zero(S,mSrc*nSrc);
 
 	// calculate reference velocities
+//	if (zetaSrc.data() == zetaTgt.data()) {
+//		AIC3s_noTE(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,false,aic3s.data());
+//	} else {
+//		AIC3s_noTE(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,true,aic3s.data());
+//	}
+
 	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,aic3s.data());
 	u = aic3s*gamma0;
 
@@ -1543,9 +1634,11 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 		if (zetaSrc.data() == zetaTgt.data()) {
 			zetaPdel = zetaSrc + delZeta; // src and target lattices are same body
 			AIC3s(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+//			AIC3s_noTE(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,false,aic3sDel.data());
 		} else {
 			zetaPdel = zetaTgt + delZeta; // src lattice is wake
 			AIC3s(zetaSrc_,mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+//			AIC3s_noTE(zetaSrc_,mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,true,aic3sDel.data());
 		}
 
 		// diff downwash

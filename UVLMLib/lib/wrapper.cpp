@@ -405,6 +405,17 @@ void cpp_wrap_AIC3s(const double* zetaSrc_,
 	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,dX_);
 }
 
+void cpp_wrap_AIC3s_noTE(const double* zetaSrc_,
+		  const unsigned int& mSrc,
+		  const unsigned int& nSrc,
+		  const double* zetaTgt_,
+		  const unsigned int& mTgt,
+		  const unsigned int& nTgt,
+		  const bool& wakeSrc,
+		  double* dX_){
+	AIC3s_noTE(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,wakeSrc,dX_);
+}
+
 unsigned int cpp_wrap_q_k(const unsigned int k_,
 				   	         const unsigned int N,
 				   	         const unsigned int no) {
