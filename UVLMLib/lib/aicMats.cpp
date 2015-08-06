@@ -564,6 +564,10 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
 	EigenMapMatrixXd dX(dX_,mTgt*nTgt,3*(mTgt+1)*(nTgt+1));
 
+	if (gamma0.isZero() == true) {
+		return;
+	}
+
 	// Set dX to zero
 	dX.setZero();
 
@@ -604,6 +608,9 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 							cp.data(),
 							0.5,0.5,false);
 		for (unsigned int k2 = 0; k2 < kSrc; k2++) {
+			if (gamma0(k2) == 0.0) {
+				continue;
+			}
 			a = gamma0(k2)/(4*M_PI);
 			for (unsigned int q = 0; q < qTgt; q++) {
 				for (unsigned int l = 1; l < 5; l++) {
@@ -1418,21 +1425,30 @@ void Y2(const double* gamma_,
 	ConstMapVectXd vM(vM_,12*m*n);
 	EigenMapMatrixXd Y2(Y2_,12*m*n,3*(m+1)*(n+1));
 
+	// set to zero
+	Y2.setZero();
+
 	//temps
 	Matrix3d yKern = Matrix3d::Zero();
 	unsigned int ss = 0;
+	unsigned int mm = 0;
 
 	// loop through panels
 	for (unsigned int kk = 0; kk < m*n; kk++) {
 		// loop through segments
+		mm = kk/n;
 		for (unsigned int ll = 1; ll < 5; ll++) {
 			yKern = gamma(kk)*skew(vM.block<3,1>(3*ss,0));
 			for (unsigned int qq = 0; qq < (m+1)*(n+1); qq++) {
 				if (ll < 4) {
-					if (qq == q_k(kk,n,ll)) {
-						Y2.block<3,3>(3*ss,3*qq) = -yKern;
-					} else if (qq == q_k(kk,n,ll+1)) {
-						Y2.block<3,3>(3*ss,3*qq) = yKern;
+					if (mm == m-1 && ll == 3) {
+						continue; // at TE
+					} else {
+						if (qq == q_k(kk,n,ll)) {
+							Y2.block<3,3>(3*ss,3*qq) = -yKern;
+						} else if (qq == q_k(kk,n,ll+1)) {
+							Y2.block<3,3>(3*ss,3*qq) = yKern;
+						}
 					}
 				} else {
 					if (qq == q_k(kk,n,4)) {
@@ -1486,9 +1502,9 @@ void Y3(const double* gamma_,
 		// kernel
 		yKern.block<3,3>(0,0) = gamma(kk)*skew(c2-c1);
 		yKern.block<3,3>(3,3) = gamma(kk)*skew(c3-c2);
-		if (mm < m-1) { // at TE
+		if (mm < m-1) {
 			yKern.block<3,3>(6,6) = gamma(kk)*skew(c4-c3);
-		} else {
+		} else { // at TE
 			yKern.block<3,3>(6,6) = Matrix3d::Zero();
 		}
 		yKern.block<3,3>(9,9) = gamma(kk)*skew(c1-c4);
@@ -1600,6 +1616,12 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 	ConstMapVectXd gamma0(gamma0_,mSrc*nSrc);
 	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
 	EigenMapMatrixXd dX(dX_,12*mTgt*nTgt,3*(mTgt+1)*(nTgt+1));
+
+	// check if gamma0 is all zeros
+	if (gamma0.isZero() == true) {
+		return;
+	}
+
 
 	// set to zero
 	dX.setZero();
