@@ -61,6 +61,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     Cgam[0:n,m*n-n:m*n] = np.eye(n)
     CgamW = np.zeros((mW*n,mW*n))
     CgamW[n:,0:mW*n-n] = np.eye(n*(mW-1))
+    CgamW[-1:,-1]=1.0-0.99975
     F[m*n:m*n+mW*n,0:m*n] = Cgam
     F[m*n:m*n+mW*n,m*n:m*n+mW*n] = CgamW
     F[m*n+mW*n:,0:m*n] = -np.eye(m*n)
@@ -122,13 +123,13 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     
     return E,F,G,C,D
 
-def genLinearAerofoil(m,mW,e,f,writeToMat = False):
+def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     """@brief Generate linear model of aerofoil.
     @param m Chordwise panels.
     @param mW Chordwise panels in wake.
     @param delS Non-dim time step.
-    @param e location of pitch axis aft of LE [0,1].
-    @param f location of flap hinge aft of LE [0,1].
+    @param e location of pitch axis aft of LE [0,1], default 0.25.
+    @param f location of flap hinge aft of LE [0,1], default 0.75.
     @param writeToMat write to file in Settings.OutputDir.
     """
     
@@ -171,33 +172,42 @@ def genLinearAerofoil(m,mW,e,f,writeToMat = False):
     T = np.zeros((9*(m+1)*2,5))
     for i in range(m+1):
         # alpha, alphaPrime
-        T[3*(m+1)*2+6*i+2,0] = -(zeta[6*i]+0.25/m-e)
-        T[3*(m+1)*2+6*i+5,0] = -(zeta[6*i+3]+0.25/m-e)
-        T[6*i+2,1] = -(zeta[6*i]+0.25/m-e)*4.0
-        T[6*i+5,1] = -(zeta[6*i+3]+0.25/m-e)*4.0
+        T[3*(m+1)*2+6*i+2,0] = -(zeta[6*i]-e)
+        T[3*(m+1)*2+6*i+5,0] = -(zeta[6*i+3]-e)
+        T[6*i+2,1] = -(zeta[6*i]-e)*4.0
+        T[6*i+5,1] = -(zeta[6*i+3]-e)*4.0
         # plunge
         T[6*i+2,2] = -1
         T[6*i+5,2] = -1
         # beta, betaPrime
-        if (zeta[6*i] + 0.25/m) > f:
-            T[3*(m+1)*2+6*i+2,3] = -(zeta[6*i]+0.25/m-f)
-            T[3*(m+1)*2+6*i+5,3] = -(zeta[6*i+3]+0.25/m-f)
-            T[6*i+2,4] = -(zeta[6*i]+0.25/m-f)*4.0
-            T[6*i+5,4] = -(zeta[6*i+3]+0.25/m-f)*4.0
+        if zeta[6*i] > f:
+            T[3*(m+1)*2+6*i+2,3] = -(zeta[6*i]-f)
+            T[3*(m+1)*2+6*i+5,3] = -(zeta[6*i+3]-f)
+            T[6*i+2,4] = -(zeta[6*i]-f)*4.0
+            T[6*i+5,4] = -(zeta[6*i+3]-f)*4.0
     
     G_s = np.dot(G,T)
     D_s = np.dot(D,T)
     
     # get coefficients as output
-    T_coeff = np.zeros((2,3*(m+1)*2))
+    T_coeff = np.zeros((3,3*(m+1)*2))
     T_coeff[0,0::3] = 1.0 #drag
     T_coeff[1,2::3] = 1.0 #lift
+    for i in range(m+1):
+        # moment = r*L, +ve nose-up, at quarter chord
+        T_coeff[2,6*i+2] = -(zeta[6*i]+0.25/m-0.25)
+        T_coeff[2,6*i+5] = -(zeta[6*i]+0.25/m-0.25)
+    
     C_coeff = np.dot(T_coeff,C)
     D_coeff = np.dot(T_coeff,D)
     D_s_coeff = np.dot(T_coeff,D_s)
 
     if writeToMat == True:
         fileName = Settings.OutputDir + 'aerofoil_m' + str(m) + 'mW' + str(mW) + 'delS' + str(delS)
+        if e != 0.25:
+            fileName += 'e'+str(e)
+        if f != 0.75:
+            fileName += 'f'+str(f)
         savemat(fileName,
                 {'E':E, 'F':F, 'G':G, 'C':C, 'D':D, 'm':m, 'mW':mW, 'delS':delS,
                  'G_s':G_s, 'D_s':D_s,
@@ -209,8 +219,6 @@ def genLinearAerofoil(m,mW,e,f,writeToMat = False):
 
 if __name__ == '__main__':
     Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
-    m=10
-    e=0.25
-    f=0.75
-    for mW in (10*m,):
-        genLinearAerofoil(m,mW,e,f,writeToMat = True)
+    m=20
+    for mW in (30*m,):
+        genLinearAerofoil(m,mW,writeToMat = True)
