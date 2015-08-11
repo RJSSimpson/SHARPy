@@ -61,7 +61,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     Cgam[0:n,m*n-n:m*n] = np.eye(n)
     CgamW = np.zeros((mW*n,mW*n))
     CgamW[n:,0:mW*n-n] = np.eye(n*(mW-1))
-    CgamW[-1:,-1]=1.0-0.99975
+    CgamW[-1:,-1]=0.99975
     F[m*n:m*n+mW*n,0:m*n] = Cgam
     F[m*n:m*n+mW*n,m*n:m*n+mW*n] = CgamW
     F[m*n+mW*n:,0:m*n] = -np.eye(m*n)
@@ -112,13 +112,13 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     # Matrix C
     C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AICs3))
     C[:,m*n:m*n+mW*n] = -np.dot(H, np.dot(Y3,AICs3w))
-    C[:,m*n+mW*n:] = np.dot(np.transpose(Xi),Y4)
+    C[:,m*n+mW*n:] = 2.0*np.dot(np.transpose(Xi),Y4)
      
     # Matrix D
     D[:,0:3*(m+1)*(n+1)] = np.dot(H, np.dot(Y3, H.transpose()))
     D[:,3*(m+1)*(n+1):6*(m+1)*(n+1)] = ( np.dot(H,Y2) 
         - np.dot(H, np.dot(Y3, dAs3gam_dZeta + dAs3wGamW_dZeta))
-        + np.dot(np.transpose(Xi),Y5)                        )
+        + 2.0*np.dot(np.transpose(Xi),Y5)                        )
     D[:,6*(m+1)*(n+1):] = -np.dot(H, np.dot(Y3, H.transpose()))
     
     return E,F,G,C,D
@@ -133,16 +133,18 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     @param writeToMat write to file in Settings.OutputDir.
     """
     
+    n=1
+    
     # infer delS from body discretization
     delS = 2.0/m
     
     # initialise states and inputs
-    gam=np.zeros((m))
-    gamW=np.zeros((mW))
-    gamPri=np.zeros((m))
+    gam=np.zeros((m*n))
+    gamW=np.zeros((mW*n))
+    gamPri=np.zeros((m*n))
     chords = np.linspace(0.0, 1.0, m+1, True)
     chordsW = np.linspace(1.0, 1.0+mW*delS/2.0, mW+1, True)
-    spans = np.linspace(-1000.0, 1000.0, 2, True)
+    spans = np.linspace(-1000.0, 1000.0, n+1, True)
     zeta=np.zeros(3*len(chords)*len(spans))
     zetaW=np.zeros(3*len(chordsW)*len(spans))
     zetaPri = np.zeros((3*len(chords)*len(spans)))
@@ -166,37 +168,36 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     # end for c
     
     # generate model
-    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, 1, mW, delS)
+    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, n, mW, delS)
     
     # convert inputs from general kinematics to aerofil DoFs
-    T = np.zeros((9*(m+1)*2,5))
+    T = np.zeros((9*(m+1)*(n+1),5))
     for i in range(m+1):
-        # alpha, alphaPrime
-        T[3*(m+1)*2+6*i+2,0] = -(zeta[6*i]-e)
-        T[3*(m+1)*2+6*i+5,0] = -(zeta[6*i+3]-e)
-        T[6*i+2,1] = -(zeta[6*i]-e)*4.0
-        T[6*i+5,1] = -(zeta[6*i+3]-e)*4.0
-        # plunge
-        T[6*i+2,2] = -1
-        T[6*i+5,2] = -1
-        # beta, betaPrime
-        if zeta[6*i] > f:
-            T[3*(m+1)*2+6*i+2,3] = -(zeta[6*i]-f)
-            T[3*(m+1)*2+6*i+5,3] = -(zeta[6*i+3]-f)
-            T[6*i+2,4] = -(zeta[6*i]-f)*4.0
-            T[6*i+5,4] = -(zeta[6*i+3]-f)*4.0
-    
+        for j in range(n+1):
+            q=i*(n+1)+j
+            # alpha, alphaPrime
+            T[3*(m+1)*(n+1)+3*q+2,0] = -(zeta[3*q]+0.25/m-e)
+            T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)*2.0
+            # plunge
+            T[3*q+2,2] = -1
+            # beta, betaPrime
+            if zeta[3*q]+0.25/m > f:
+                T[3*(m+1)*(n+1)+3*q+2,3] = -(zeta[3*q]+0.25/m-f)
+                T[3*q+2,4] = -(zeta[3*q]+0.25/m-f)*2.0
+                
+                
     G_s = np.dot(G,T)
     D_s = np.dot(D,T)
     
     # get coefficients as output
-    T_coeff = np.zeros((3,3*(m+1)*2))
+    T_coeff = np.zeros((3,3*(m+1)*(n+1)))
     T_coeff[0,0::3] = 1.0 #drag
     T_coeff[1,2::3] = 1.0 #lift
     for i in range(m+1):
-        # moment = r*L, +ve nose-up, at quarter chord
-        T_coeff[2,6*i+2] = -(zeta[6*i]+0.25/m-0.25)
-        T_coeff[2,6*i+5] = -(zeta[6*i]+0.25/m-0.25)
+        for j in range(n+1):
+            q=i*(n+1)+j
+            # moment = r*L, +ve nose-up, at quarter chord
+            T_coeff[2,3*q+2] = -(zeta[3*q]+0.25/m-0.25)
     
     C_coeff = np.dot(T_coeff,C)
     D_coeff = np.dot(T_coeff,D)
@@ -217,8 +218,104 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     
     return E,F,G,C,D
 
+def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
+    """@brief Generate linear model of rectangular wing.
+    @param AR Aspect ration
+    @param m Chordwise panels.
+    @param mW Chordwise panels in wake.
+    @param n Spanwise panels.
+    @param delS Non-dim time step.
+    @param e location of pitch axis aft of LE [0,1], default 0.25.
+    @param f location of flap hinge aft of LE [0,1], default 0.75.
+    @param writeToMat write to file in Settings.OutputDir.
+    """
+    
+    # infer delS from body discretization
+    delS = 2.0/m
+    
+    # initialise states and inputs
+    gam=np.zeros((m*n))
+    gamW=np.zeros((mW*n))
+    gamPri=np.zeros((m*n))
+    chords = np.linspace(0.0, 1.0, m+1, True)
+    chordsW = np.linspace(1.0, 1.0+mW*delS/2.0, mW+1, True)
+    spans = np.linspace(-AR/2.0, AR/2.0, n+1, True)
+    zeta=np.zeros(3*len(chords)*len(spans))
+    zetaW=np.zeros(3*len(chordsW)*len(spans))
+    zetaPri = np.zeros((3*len(chords)*len(spans)))
+    zetaPri[0::3] = -1.0;
+    nu = np.zeros_like(zetaPri)
+    kk=0
+    for c in chords:
+        for s in spans:
+            zeta[3*kk]=c
+            zeta[3*kk+1]=s
+            kk=kk+1
+        # end for s
+    # end for c
+    kk=0
+    for c in chordsW:
+        for s in spans:
+            zetaW[3*kk]=c
+            zetaW[3*kk+1]=s
+            kk=kk+1
+        # end for s
+    # end for c
+    
+    # generate model
+    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, n, mW, delS)
+    
+    # convert inputs from general kinematics to aerofil DoFs
+    T = np.zeros((9*(m+1)*(n+1),5))
+    for i in range(m+1):
+        for j in range(n+1):
+            q=i*(n+1)+j
+            # alpha, alphaPrime
+            T[3*(m+1)*(n+1)+3*q+2,0] = -(zeta[3*q]+0.25/m-e)
+            T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)*2.0
+            # plunge
+            T[3*q+2,2] = -1
+            # beta, betaPrime
+            if zeta[3*q]+0.25/m > f:
+                T[3*(m+1)*(n+1)+3*q+2,3] = -(zeta[3*q]+0.25/m-f)
+                T[3*q+2,4] = -(zeta[3*q]+0.25/m-f)*2.0
+                
+                
+    G_s = np.dot(G,T)
+    D_s = np.dot(D,T)
+    
+    # get coefficients as output
+    T_coeff = np.zeros((3,3*(m+1)*(n+1)))
+    T_coeff[0,0::3] = 1.0 #drag
+    T_coeff[1,2::3] = 1.0 #lift
+    for i in range(m+1):
+        for j in range(n+1):
+            q=i*(n+1)+j
+            # moment = r*L, +ve nose-up, at quarter chord
+            T_coeff[2,3*q+2] = -(zeta[3*q]+0.25/m-0.25)
+    
+    C_coeff = np.dot(T_coeff,C)
+    D_coeff = np.dot(T_coeff,D)
+    D_s_coeff = np.dot(T_coeff,D_s)
+
+    if writeToMat == True:
+        fileName = Settings.OutputDir + 'rectWingAR' + str(AR) + '_m' + str(m) + 'mW' + str(mW) + 'delS' + str(delS)
+        if e != 0.25:
+            fileName += 'e'+str(e)
+        if f != 0.75:
+            fileName += 'f'+str(f)
+        savemat(fileName,
+                {'E':E, 'F':F, 'G':G, 'C':C, 'D':D, 'm':m, 'mW':mW, 'delS':delS,
+                 'G_s':G_s, 'D_s':D_s,
+                 'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff},
+                True)
+    # end if
+    
+    return E,F,G,C,D
+
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
-    m=20
-    for mW in (30*m,):
-        genLinearAerofoil(m,mW,writeToMat = True)
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/rectWing/'
+    AR=2
+    for m in (20,):
+        for mW in (10*m,):
+            genLinearRectWing(AR,m,mW,m*AR,writeToMat = True)
