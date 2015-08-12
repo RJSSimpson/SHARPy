@@ -7,7 +7,7 @@
 					<externalSetting>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/UVLMLib"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/UVLMLib/Debug"/>
-						<entry flags="RESOLVED" kind="libraryFile" name="UVLMLib"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="UVLMLib" srcPrefixMapping="" srcRootPath=""/>
 					</externalSetting>
 				</externalSettings>
 				<extensions>
@@ -27,7 +27,7 @@
 							<builder buildPath="${workspace_loc:/UVLMLib/Debug}" id="cdt.managedbuild.target.gnu.builder.so.debug.1871398264" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.so.debug"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1240527773" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.so.debug.1428186178" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.so.debug">
-								<option id="gnu.cpp.compiler.so.debug.option.optimization.level.576461098" name="Optimization Level" superClass="gnu.cpp.compiler.so.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.so.debug.option.optimization.level.576461098" name="Optimization Level" superClass="gnu.cpp.compiler.so.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.so.debug.option.debugging.level.1661214483" name="Debug Level" superClass="gnu.cpp.compiler.so.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.435369449" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
@@ -79,7 +79,7 @@
 					<externalSetting>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/UVLMLib"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/UVLMLib/Release"/>
-						<entry flags="RESOLVED" kind="libraryFile" name="UVLMLib"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="UVLMLib" srcPrefixMapping="" srcRootPath=""/>
 					</externalSetting>
 				</externalSettings>
 				<extensions>
@@ -139,7 +139,7 @@
 					<externalSetting>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/UVLMLib"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/UVLMLib/Debug"/>
-						<entry flags="RESOLVED" kind="libraryFile" name="UVLMLib"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="UVLMLib" srcPrefixMapping="" srcRootPath=""/>
 					</externalSetting>
 				</externalSettings>
 				<extensions>
@@ -208,8 +208,16 @@
 		<project id="UVLMLib.cdt.managedbuild.target.gnu.so.240454653" name="Shared Library" projectType="cdt.managedbuild.target.gnu.so"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope" versionNumber="1">
-		<resource resourceType="PROJECT" workspacePath="/UVLMLib"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/UVLMLib"/>
+		</configuration>
+		<configuration configurationName="Exec">
+			<resource resourceType="PROJECT" workspacePath="/UVLMLib"/>
+		</configuration>
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/UVLMLib"/>
+		</configuration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings">
 		<doc-comment-owner id="org.eclipse.cdt.internal.ui.text.doctools.NullDocCommentOwner">
@@ -225,17 +233,17 @@
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.so.debug.1379132940;cdt.managedbuild.config.gnu.so.debug.1379132940.;cdt.managedbuild.tool.gnu.cpp.compiler.so.debug.1428186178;cdt.managedbuild.tool.gnu.cpp.compiler.input.326718070">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.so.debug.1379132940.1114282621;cdt.managedbuild.config.gnu.so.debug.1379132940.1114282621.;cdt.managedbuild.tool.gnu.cpp.compiler.so.debug.758401255;cdt.managedbuild.tool.gnu.cpp.compiler.input.885263338">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.so.debug.1379132940.1114282621;cdt.managedbuild.config.gnu.so.debug.1379132940.1114282621.;cdt.managedbuild.tool.gnu.c.compiler.so.debug.1245149057;cdt.managedbuild.tool.gnu.c.compiler.input.839298117">
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerFileProfile"/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.so.debug.1379132940;cdt.managedbuild.config.gnu.so.debug.1379132940.;cdt.managedbuild.tool.gnu.c.compiler.so.debug.986297809;cdt.managedbuild.tool.gnu.c.compiler.input.1799062">
-			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerFileProfile"/>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.so.debug.1379132940.1114282621;cdt.managedbuild.config.gnu.so.debug.1379132940.1114282621.;cdt.managedbuild.tool.gnu.cpp.compiler.so.debug.758401255;cdt.managedbuild.tool.gnu.cpp.compiler.input.885263338">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.so.debug.1379132940.1189799580;cdt.managedbuild.config.gnu.so.debug.1379132940.1189799580.;cdt.managedbuild.tool.gnu.cpp.compiler.so.debug.291510677;cdt.managedbuild.tool.gnu.cpp.compiler.input.1504228197">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.so.debug.1379132940;cdt.managedbuild.config.gnu.so.debug.1379132940.;cdt.managedbuild.tool.gnu.c.compiler.so.debug.986297809;cdt.managedbuild.tool.gnu.c.compiler.input.1799062">
+			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerFileProfile"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

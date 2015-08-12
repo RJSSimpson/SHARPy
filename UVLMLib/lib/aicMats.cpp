@@ -191,9 +191,9 @@ void genAstar(const VectorXd& zetaSrc,
 				AddTriad(sumVel,vel,sumVel);
 			}
 			// save to aStar
-			Astar.block<3,1>(3*q,k)=Vector3d(sumVel[1],
-													sumVel[2],
-													sumVel[3]);
+			Astar.block<3,1>(3*q,k)=Vector3d(sumVel[0],
+													sumVel[1],
+													sumVel[2]);
 		}
 	}
 	return;

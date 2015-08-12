@@ -315,7 +315,7 @@ def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
 
 if __name__ == '__main__':
     Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/rectWing/'
-    AR=2
-    for m in (20,):
+    AR=2000
+    for m in (10,):
         for mW in (10*m,):
-            genLinearRectWing(AR,m,mW,m*AR,writeToMat = True)
+            genLinearRectWing(AR,m,mW,1,writeToMat = True)
