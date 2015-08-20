@@ -212,7 +212,8 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
         savemat(fileName,
                 {'E':E, 'F':F, 'G':G, 'C':C, 'D':D, 'm':m, 'mW':mW, 'delS':delS,
                  'G_s':G_s, 'D_s':D_s,
-                 'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff},
+                 'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff,
+                 'T_coeff':T_coeff},
                 True)
     # end if
     
@@ -307,15 +308,17 @@ def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
         savemat(fileName,
                 {'E':E, 'F':F, 'G':G, 'C':C, 'D':D, 'm':m, 'mW':mW, 'delS':delS,
                  'G_s':G_s, 'D_s':D_s,
-                 'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff},
+                 'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff,
+                 'T_coeff':T_coeff},
                 True)
     # end if
     
     return E,F,G,C,D
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/rectWing/'
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
     AR=2000
     for m in (10,):
         for mW in (10*m,):
-            genLinearRectWing(AR,m,mW,1,writeToMat = True)
+            #genLinearRectWing(AR,m,mW,1,writeToMat = True)
+            genLinearAerofoil(m,mW,writeToMat = True)
