@@ -87,6 +87,41 @@ class Test_AIC(unittest.TestCase):
             # end for j
         # end for i
         
+    def test_AIC_image(self):
+        """Compare image solution to full solution."""
+        m=1
+        n=10
+        k=m*n
+        AIC = np.zeros((k,k))
+        gam = np.ones((k))
+        AIChalf = np.zeros((int(k/2),int(k/2)))
+        gamHalf = np.ones((int(k/2)))
+        chords = np.linspace(0.0, 1.0, m+1, True)
+        spans = np.linspace(-5,5,n+1, True)
+        spansHalf = np.linspace(0,5,int(n/2)+1,True)
+        zeta=np.zeros(3*len(chords)*len(spans))
+        zetaHalf=np.zeros(3*len(chords)*(int(len(spans)/2)+1))
+        kk=0
+        for c in chords:
+            for s in spans:
+                zeta[3*kk]=c
+                zeta[3*kk+1]=s
+                kk=kk+1
+        kk=0
+        for c in chords:
+            for s in spansHalf:
+                zetaHalf[3*kk]=c
+                zetaHalf[3*kk+1]=s
+                kk=kk+1        
+        # call AIC matrix function
+        Cpp_AIC(zeta, m, n, zeta, m, n, AIC)
+        Cpp_AIC(zetaHalf, m, int(n/2), zetaHalf, m, int(n/2), AIChalf, True)
+        
+        # downwash
+        w=np.dot(AIC,gam)
+        wHalf=np.dot(AIChalf,gamHalf)
+        self.assertTrue( np.all( np.abs(w[int(n/2):] - wHalf) < np.finfo(float).eps ))
+        
 class Test_dAgamma0_dzeta(unittest.TestCase):
     """@brief Test non-zero reference gamma matrix, dAgamma0_dzeta."""
     

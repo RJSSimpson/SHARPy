@@ -698,6 +698,7 @@ void AIC(const double* zetaSrc_,
 		  const double* zetaTgt_,
 		  const unsigned int mTgt,
 		  const unsigned int nTgt,
+		  const bool imageMeth,
 		  double* dX_) {
 	/**@brief Calculate AIC matrix.
 	 * @param zetaSrc Grid points of source lattice.
@@ -706,6 +707,7 @@ void AIC(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
+	 * @param imageMethod Include influence of vorticity across y-plane.
 	 * @return dX K_tgt x K_src matrix output.
 	 */
 
@@ -713,6 +715,7 @@ void AIC(const double* zetaSrc_,
 	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
 	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
 	EigenMapMatrixXd dX(dX_,mTgt*nTgt,mSrc*nSrc);
+
 	// Set dX to zero
 	dX.setZero();
 
@@ -732,6 +735,8 @@ void AIC(const double* zetaSrc_,
 	Vector3d r0 = Vector3d::Zero(); // Biot-Savart kernel vectors
 	Vector3d r1 = Vector3d::Zero();
 	Vector3d r2 = Vector3d::Zero();
+	Vector3d x1 = Vector3d::Zero(); // Segment start/end
+	Vector3d x2 = Vector3d::Zero();
 
 	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
 		// calc n, colloc point only once for each target panel
@@ -762,18 +767,33 @@ void AIC(const double* zetaSrc_,
 					llp1= 1;
 				}
 
+				// segment points
+				x1 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+				x2 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
+
 				// calc r0
-				r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0)
-					-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+				r0 = x2 - x1;
 				// r1
-				r1 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+				r1 = cp - x1;
 				// r2
-				r2 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
+				r2 = cp - x2;
 				// AIC entry
 				dX(k1,k2)+=1.0/(4.0*M_PI)*fGeom(r0.data(),
 										    r1.data(),
 										    r2.data(),
 										    n.data());
+
+				if (imageMeth == true) {
+					r0(1)=-r0(1);
+					x1(1)=-x1(1);
+					x2(1)=-x2(1);
+					r1=cp-x1;
+					r2=cp-x2;
+					dX(k1,k2)+=-1.0/(4.0*M_PI)*fGeom(r0.data(),
+													r1.data(),
+													r2.data(),
+													n.data());
+				}
 			}
 		}
 	}

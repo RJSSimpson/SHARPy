@@ -78,6 +78,7 @@ void AIC(const double* zetaSrc_,
 		  const double* zetaTgt_,
 		  const unsigned int mTgt,
 		  const unsigned int nTgt,
+		  const bool imageMeth,
 		  double* dX_);
 
 void dWzetaPri0_dZeta(const double* zeta_,

@@ -19,7 +19,7 @@ import getpass
 
 np.set_printoptions(precision = 4)
 
-def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
+def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False):
     """@details generate state-space matrices for linear UVLM.
     @param gam Reference circulation distribution on body.
     @param gamW Reference circulation distribution in the wake.
@@ -31,6 +31,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     @param n Spanwise.
     @param mW Chordwise panels in wake.
     @param delS Nondimensional timestep.
+    @param imageMeth Use image method across xz-plane.
     @return E LHS state transfer matrix.
     @return F RHS state transfer matrix.
     @return G RHS Input matrix.
@@ -47,9 +48,9 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS):
     
     # populate E
     AIC = np.zeros((m*n,m*n))
-    Cpp_AIC(zeta, m, n, zeta, m, n, AIC)
+    Cpp_AIC(zeta, m, n, zeta, m, n, AIC, imageMeth)
     AICw= np.zeros((m*n,mW*n))
-    Cpp_AIC(zetaW, mW, n, zeta, m, n, AICw)
+    Cpp_AIC(zetaW, mW, n, zeta, m, n, AICw, imageMeth)
     E[0:m*n,0:m*n] = AIC
     E[0:m*n,m*n:m*n+mW*n] = AICw
     E[m*n:m*n+mW*n,m*n:m*n+mW*n] = np.eye(mW*n)
@@ -219,7 +220,7 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     
     return E,F,G,C,D
 
-def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
+def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = False):
     """@brief Generate linear model of rectangular wing.
     @param AR Aspect ration
     @param m Chordwise panels.
@@ -229,6 +230,7 @@ def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
     @param e location of pitch axis aft of LE [0,1], default 0.25.
     @param f location of flap hinge aft of LE [0,1], default 0.75.
     @param writeToMat write to file in Settings.OutputDir.
+    @param imageMeth Use image method across xz-plane.
     """
     
     # infer delS from body discretization
@@ -240,7 +242,11 @@ def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
     gamPri=np.zeros((m*n))
     chords = np.linspace(0.0, 1.0, m+1, True)
     chordsW = np.linspace(1.0, 1.0+mW*delS/2.0, mW+1, True)
-    spans = np.linspace(-AR/2.0, AR/2.0, n+1, True)
+    if imageMeth:
+        spans = np.linspace(0.0, AR/2.0, n+1, True)
+    else:
+        spans = np.linspace(-AR/2.0, AR/2.0, n+1, True)
+    # end if
     zeta=np.zeros(3*len(chords)*len(spans))
     zetaW=np.zeros(3*len(chordsW)*len(spans))
     zetaPri = np.zeros((3*len(chords)*len(spans)))
@@ -264,7 +270,7 @@ def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
     # end for c
     
     # generate model
-    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, n, mW, delS)
+    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, n, mW, delS, imageMeth)
     
     # convert inputs from general kinematics to aerofil DoFs
     T = np.zeros((9*(m+1)*(n+1),5))
@@ -300,11 +306,13 @@ def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
     D_s_coeff = np.dot(T_coeff,D_s)
 
     if writeToMat == True:
-        fileName = Settings.OutputDir + 'rectWingAR' + str(AR) + '_m' + str(m) + 'mW' + str(mW) + 'delS' + str(delS)
+        fileName = Settings.OutputDir + 'rectWingAR' + str(AR) + '_m' + str(m) + 'mW' + str(mW) + 'n' + str(n) + 'delS' + str(delS)
         if e != 0.25:
             fileName += 'e'+str(e)
         if f != 0.75:
             fileName += 'f'+str(f)
+        if imageMeth != False:
+            fileName += 'half'
         savemat(fileName,
                 {'E':E, 'F':F, 'G':G, 'C':C, 'D':D, 'm':m, 'mW':mW, 'delS':delS,
                  'G_s':G_s, 'D_s':D_s,
@@ -316,9 +324,9 @@ def genLinearRectWing(AR,m,mW,n,writeToMat = False,e=0.25,f=0.75):
     return E,F,G,C,D
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/rectWing/'
     AR=2000
     for m in (10,):
         for mW in (10*m,):
-            #genLinearRectWing(AR,m,mW,1,writeToMat = True)
-            genLinearAerofoil(m,mW,writeToMat = True)
+            genLinearRectWing(AR,m,mW,1,writeToMat = True, imageMeth = True)
+            #genLinearAerofoil(m,mW,writeToMat = True)

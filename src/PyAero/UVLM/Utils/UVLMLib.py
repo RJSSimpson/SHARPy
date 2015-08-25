@@ -179,7 +179,7 @@ def Colloc(zeta_G_panel):
                      zeta_G_panel[1,1,:] +
                      zeta_G_panel[1,0,:]  ) )
     
-def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC):
+def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC,imageMeth=False):
     """@details Wrapper for cpp_wrap_AIC.
     @param zetaSrc Source grid points.
     @param mSrc Chordwise panels.
@@ -187,13 +187,22 @@ def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC):
     @param zetaTgt Target grid points.
     @param mTgt Chordwise panels.
     @param nTgt Spanwise.
-    @return AIC influence coefficient matrix."""
+    @param imageMeth Flag, default False. Image across xy-plane. 
+    @return AIC Influence coefficient matrix."""
+    
+    # make sure y>=0 for all zetas
+    if imageMeth:
+        assert(np.all(zetaSrc[1::3] >= 0.0), "source grid defintion in negative y")
+        assert(np.all(zetaTgt[1::3] >= 0.0), "target grid defintion in negative y")
+    # end if
+    
     cpp_AIC(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mSrc)),
             ct.byref(ct.c_uint(nSrc)),
             zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mTgt)),
             ct.byref(ct.c_uint(nTgt)),
+            ct.byref(ct.c_bool(imageMeth)),
             AIC.ctypes.data_as(ct.POINTER(ct.c_double)))
     
 

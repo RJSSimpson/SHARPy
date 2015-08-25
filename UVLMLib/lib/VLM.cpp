@@ -1284,7 +1284,7 @@ void cpp_solver_vlm(const double* Zeta_Vec, const double* ZetaDot_Vec, \
 	}
 
 	if (false) {// I'm testing the new AIC routine
-		AIC(Zeta_Vec,VMOPTS.M,VMOPTS.N,Zeta_Vec,VMOPTS.M,VMOPTS.N,AIC_Vec);
+		AIC(Zeta_Vec,VMOPTS.M,VMOPTS.N,Zeta_Vec,VMOPTS.M,VMOPTS.N,false,AIC_Vec);
 		// must add wake effect in steady calcs!
 	}
 

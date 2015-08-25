@@ -212,7 +212,7 @@ class Test_linearForces(unittest.TestCase):
         dX[:]=0.0
         for i in range(m*n+mW*n,2*m*n+mW*n):
             dX[i] = 0.002/(m*n)*(i+1)
-        gam_tm1pDx = gam0-delS*dX[m*n+mW*n:]
+        gam_tm1pDx = gam0-2.0*delS*dX[m*n+mW*n:]
         VMOPTS.Steady = ct.c_bool(False)
         Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1pDx, f)
         f_dGamPri = f - f0
@@ -345,7 +345,7 @@ class Test_linearForces(unittest.TestCase):
         f0[:]=0.0
         VMOPTS.Steady = ct.c_bool(False)
         gamPri0=0.01*np.ones_like(gamPri0)
-        gam_tm1=gam0-delS*gamPri0
+        gam_tm1=gam0-2.0*delS*gamPri0
         Cpp_KJForces(zeta0, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f0)
         
         # generate linear output eqs at x0, u0
@@ -364,7 +364,7 @@ class Test_linearForces(unittest.TestCase):
             else:
                 dU[i] = -0.1/(m*3*(m+1)*(n+1)*(i+1))
         zetaPdX = zeta0 + dU[3*(m+1)*(n+1):6*(m+1)*(n+1)]
-        gam_tm1=gam0-delS*gamPri0
+        gam_tm1=gam0-2.0*delS*gamPri0
         Cpp_KJForces(zetaPdX, gam0, zetaW0, gamW0, zetaPri0, nu, VMOPTS, gam_tm1, f)
         
         # calculate diffs

@@ -270,15 +270,16 @@ void cpp_wrap_KJMethodForces_vC_mod(const double* Zeta_Vec,
 
 }
 
-void cpp_wrap_AIC(double* zetaSrc_,
-					unsigned int& mSrc,
-					unsigned int& nSrc,
-					double* zetaTgt_,
-					unsigned int& mTgt,
-					unsigned int& nTgt,
-					double* Aic_) {
+void cpp_wrap_AIC(const double* zetaSrc_,
+				  const unsigned int& mSrc,
+				  const unsigned int& nSrc,
+				  const double* zetaTgt_,
+				  const unsigned int& mTgt,
+				  const unsigned int& nTgt,
+				  const bool& imageMeth,
+				  double* Aic_) {
 	//call AIC generator
-	AIC(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,Aic_);
+	AIC(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,imageMeth,Aic_);
 }
 
 void cpp_wrap_dAgamma0_dZeta(const double* zetaSrc_,
