@@ -192,8 +192,8 @@ def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC,imageMeth=False):
     
     # make sure y>=0 for all zetas
     if imageMeth:
-        assert(np.all(zetaSrc[1::3] >= 0.0), "source grid defintion in negative y")
-        assert(np.all(zetaTgt[1::3] >= 0.0), "target grid defintion in negative y")
+        assert np.all( zetaSrc[1::3] >= 0.0 ), "source grid defintion in negative y"
+        assert np.all( zetaTgt[1::3] >= 0.0 ), "target grid defintion in negative y"
     # end if
     
     cpp_AIC(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),

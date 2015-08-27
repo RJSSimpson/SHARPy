@@ -16,6 +16,7 @@ from UVLMLib import Cpp_Y2, Cpp_Y3, Cpp_Y4, Cpp_Y5, Cpp_AIC3noTE, Cpp_AIC3s
 from scipy.io.matlab.mio import savemat
 import SharPySettings as Settings
 import getpass
+from XbeamLib import Skew
 
 np.set_printoptions(precision = 4)
 
@@ -62,7 +63,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     Cgam[0:n,m*n-n:m*n] = np.eye(n)
     CgamW = np.zeros((mW*n,mW*n))
     CgamW[n:,0:mW*n-n] = np.eye(n*(mW-1))
-    CgamW[-1:,-1]=0.99975
+    CgamW[-1:,-1]=0.0#0.99975
     F[m*n:m*n+mW*n,0:m*n] = Cgam
     F[m*n:m*n+mW*n,m*n:m*n+mW*n] = CgamW
     F[m*n+mW*n:,0:m*n] = -np.eye(m*n)
@@ -310,6 +311,13 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
     for jj in range(n+1):
         T_span[jj,3*jj+2::3*(n+1)] = 1.0
         
+    # beam 2 grid matrices
+    xiZeta = np.zeros((3*(m+1)*(n+1),6*(n+1)))
+    for ii in range(m+1):
+        for jj in range(n+1):
+            q=(n+1)*ii+jj
+            xiZeta[3*q:3*q+3,6*jj:6*jj+3]=np.eye(3)
+            xiZeta[3*q:3*q+3,6*jj+3:6*jj+6]=-Skew(np.array([-(e-(i-1)/m), 0, 0]))
 
     if writeToMat == True:
         fileName = Settings.OutputDir + 'rectWingAR' + str(AR) + '_m' + str(m) + 'mW' + str(mW) + 'n' + str(n) + 'delS' + str(delS)
@@ -323,16 +331,17 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
                 {'E':E, 'F':F, 'G':G, 'C':C, 'D':D, 'm':m, 'mW':mW, 'delS':delS,
                  'G_s':G_s, 'D_s':D_s,
                  'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff,
-                 'T_coeff':T_coeff, 'T_span':T_span},
+                 'T_coeff':T_coeff, 'T_span':T_span,
+                 'AR':AR, 'm':m, 'mW':mW, 'n':n, 'zeta':zeta,'xiZeta':xiZeta},
                 True)
     # end if
     
     return E,F,G,C,D
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/rectWing/'
-    AR=100
-    for m in (10,):
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/goland/'
+    AR=6.66
+    for m in (1,):
         for mW in (10*m,):
-            genLinearRectWing(AR,m,mW,5,e=0.5,writeToMat = True,imageMeth = True)
+            genLinearRectWing(AR,m,mW,10,e=0.33,writeToMat = True,imageMeth = True)
             #genLinearAerofoil(m,mW,writeToMat = True)
