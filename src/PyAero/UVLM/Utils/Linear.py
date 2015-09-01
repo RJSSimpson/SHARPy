@@ -317,7 +317,7 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
         for jj in range(n+1):
             q=(n+1)*ii+jj
             xiZeta[3*q:3*q+3,6*jj:6*jj+3]=np.eye(3)
-            xiZeta[3*q:3*q+3,6*jj+3:6*jj+6]=-Skew(np.array([-(e-(i-1)/m), 0, 0]))
+            xiZeta[3*q:3*q+3,6*jj+3:6*jj+6]=-Skew(np.array([0, (e-ii/m), 0]))
 
     if writeToMat == True:
         fileName = Settings.OutputDir + 'rectWingAR' + str(AR) + '_m' + str(m) + 'mW' + str(mW) + 'n' + str(n) + 'delS' + str(delS)
@@ -341,7 +341,7 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
 if __name__ == '__main__':
     Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/goland/'
     AR=6.66
-    for m in (1,):
+    for m in (10,):
         for mW in (10*m,):
-            genLinearRectWing(AR,m,mW,10,e=0.33,writeToMat = True,imageMeth = True)
+            genLinearRectWing(AR,m,mW,40,e=0.33,writeToMat = True,imageMeth = True)
             #genLinearAerofoil(m,mW,writeToMat = True)
