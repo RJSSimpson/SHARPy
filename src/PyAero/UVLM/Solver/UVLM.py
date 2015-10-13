@@ -192,7 +192,7 @@ if __name__ == '__main__':
     alpha = 0.0*np.pi/180.0
     theta = 10.0*np.pi/180.0
     
-    VMINPUT = VMinput(c, b, U_mag, alpha, theta, 0.0, 15.0,  ctrlSurf)
+    VMINPUT = VMinput(c, b, U_mag, alpha, theta, 15.0,  ctrlSurf)
     
     # Define unsteady solver parameters.
     WakeLength = 10.0
