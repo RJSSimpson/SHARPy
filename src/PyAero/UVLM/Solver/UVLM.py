@@ -22,6 +22,7 @@ import BeamInit
 from PyFSI.Beam2UVLM import InitSection, CoincidentGrid
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 from PyAero.UVLM.Utils.DerivedTypesAero import VMUnsteadyInput
+from scipy.io import savemat
 
 def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     """@brief UVLM solver with prescribed inputs."""
@@ -141,8 +142,16 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
         
         
         # Calculate forces on aerodynamic grid.
+        if iTimeStep == 0:
+            sav = VMOPTS.NewAIC
+            VMOPTS.NewAIC = ct.c_bool(1)
+        
         UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS,
-                               Forces, Gamma, GammaStar, AIC, BIC)
+                                   Forces, Gamma, GammaStar, AIC, BIC)
+        
+        if iTimeStep == 0:
+            VMOPTS.NewAIC = sav
+            del sav
          
         #print(PostProcess.GetCoeffs(VMOPTS, Forces, VMINPUT, VMUNST.VelA_G))
         
@@ -170,33 +179,45 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     # Close tecplot file object.
     PostProcess.CloseAeroTecFile(FileObject)
     
+    # write geometry and circ dist. to file for matlab
+    if iTimeStep == len(Time)-1 and True:
+        savemat('/home/rjs10/Desktop/uvlmOut.mat',
+                {'zeta':Zeta.flatten('C'),
+                 'zetaW':ZetaStar.flatten('C'),
+                 'gamma':Gamma.flatten('C'),
+                 'gammaW':GammaStar.flatten('C')},
+                False,
+                oned_as='column'
+               )
+    
     return CoeffHistory
         
 
 if __name__ == '__main__':
     # Define options for aero solver.
     M = 4
-    N = 10
+    N = 20
     Mstar = 80
-    VMOPTS = VMopts(M,N,True,Mstar,False,False,True,0.0,True,4)
-    
-    # Define wing geometry parameters.
-    c = 1
-    b = 4 #semi-span
-    
-    # Define Control Surface
-    ctrlSurf = ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
-    
-    # Define free stream conditions.
     U_mag = 1.0
     alpha = 0.0*np.pi/180.0
-    theta = 10.0*np.pi/180.0
+    theta = 15.0*np.pi/180.0
+    
+    # Define wing geometry parameters.
+    c = 1.0
+    b = 2.0 #semi-span
+    
+    VMOPTS = VMopts(M,N,False,Mstar,False,False,False,c/(M*U_mag),True,4)
+    
+    # Define Control Surface
+    ctrlSurf = None #ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
+    
+    # Define free stream conditions.
     
     VMINPUT = VMinput(c, b, U_mag, alpha, theta, 15.0,  ctrlSurf)
     
     # Define unsteady solver parameters.
-    WakeLength = 10.0
-    DeltaS = 1.0/4.0
+    WakeLength = 5.0
+    DeltaS = 0.25
     NumChordLengths = 10.0
     VelA_A = np.array([0, 0, 0])
     OmegaA_A = np.array([0, 0, 0])

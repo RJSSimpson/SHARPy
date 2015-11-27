@@ -310,14 +310,6 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
     T_span=np.zeros((n+1,3*(m+1)*(n+1)))
     for jj in range(n+1):
         T_span[jj,3*jj+2::3*(n+1)] = 1.0
-        
-    # beam 2 grid matrices
-    xiZeta = np.zeros((3*(m+1)*(n+1),6*(n+1)))
-    for ii in range(m+1):
-        for jj in range(n+1):
-            q=(n+1)*ii+jj
-            xiZeta[3*q:3*q+3,6*jj:6*jj+3]=np.eye(3)
-            xiZeta[3*q:3*q+3,6*jj+3:6*jj+6]=-Skew(np.array([0, (e-ii/m), 0]))
 
     if writeToMat == True:
         fileName = Settings.OutputDir + 'rectWingAR' + str(AR) + '_m' + str(m) + 'mW' + str(mW) + 'n' + str(n) + 'delS' + str(delS)
@@ -332,7 +324,7 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
                  'G_s':G_s, 'D_s':D_s,
                  'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff,
                  'T_coeff':T_coeff, 'T_span':T_span,
-                 'AR':AR, 'm':m, 'mW':mW, 'n':n, 'zeta':zeta,'xiZeta':xiZeta},
+                 'AR':AR, 'm':m, 'mW':mW, 'n':n, 'zeta':zeta},
                 True)
     # end if
     
@@ -341,7 +333,7 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
 if __name__ == '__main__':
     Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/goland/'
     AR=6.66
-    for m in (10,):
+    for m in (15,):
         for mW in (10*m,):
-            genLinearRectWing(AR,m,mW,40,e=0.33,writeToMat = True,imageMeth = True)
+            genLinearRectWing(AR,m,mW,30,e=0.33,writeToMat = True,imageMeth = True)
             #genLinearAerofoil(m,mW,writeToMat = True)
