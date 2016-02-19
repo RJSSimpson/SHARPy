@@ -28,6 +28,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     @param zeta Lattice vertices.
     @param zetaW Wake lattice vertices.
     @param zetaPri Vertex velocities.
+    @param nu Atmospheric velocities.
     @param m Chordwise panels.
     @param n Spanwise.
     @param mW Chordwise panels in wake.
