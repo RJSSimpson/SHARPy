@@ -644,7 +644,7 @@ if __name__ == '__main__':
                                  NewmarkDamp = ct.c_double(5e-3))
     # beam inputs.
     XBINPUT = DerivedTypes.Xbinput(3,10)
-    XBINPUT.BeamLength = 5*6.096
+    XBINPUT.BeamLength = 6.096
 #     XBINPUT.BeamLength = 16.0
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -674,8 +674,8 @@ if __name__ == '__main__':
     # Off diagonal terms (in Theodorsen sectional coordinates)
     ElasticAxis = -0.34
 #     ElasticAxis = -0.5
-#     InertialAxis = -7.0/50.0
-    InertialAxis =  -0.54
+    InertialAxis = -7.0/50.0
+#     InertialAxis =  -0.54
 #     InertialAxis = -0.5
     x_alpha = InertialAxis - ElasticAxis
     # pitch-plunge coupling term (b-frame coordinates)
@@ -690,7 +690,7 @@ if __name__ == '__main__':
     #XBINPUT.g = 9.81
     
     # Get suggested panelling.
-    Umag = 28.0
+    Umag = 140.0
     M = 8
 #     M, delTime = panellingFromFreq(70,c,Umag)
     delTime = c/(Umag*M)
@@ -698,7 +698,7 @@ if __name__ == '__main__':
     # Unsteady parameters.
     XBINPUT.dt = delTime
     XBINPUT.t0 = 0.0
-    XBINPUT.tfin = 5.0
+    XBINPUT.tfin = 1.0
     
     # Set motion of wing.
     alpha = 0.0*np.pi/180.0
@@ -762,22 +762,25 @@ if __name__ == '__main__':
                               Tight = False,
                               ImpStart = True)
     
-    mpcCont = MPC.MPC('modifiedGolandControlOutput','/home/rjs10/git/SHARPy/src/PyMPC/systems/', LQR = True)
-#     mpcCont = None
-    
-    # Live output options.
-    writeDict = OrderedDict()
-    writeDict['R_z_tip'] = 0
-    writeDict['kappa_x_root'] = 0
-    writeDict['kappa_y_root'] = 0
-    writeDict['kappa_z_root'] = 0
-    writeDict['u_opt_1'] = 0
-    writeDict['du_opt_1'] = 0
-    writeDict['contTime'] = 0
-    
-    Settings.OutputDir = Settings.SharPyProjectDir + "output/MPC/ModifiedGoland/testMPC/"
-    Settings.OutputFileRoot = "Q28_M8N20_CS80_L20_W1707_Nmod8_LQR"
-    
-    # Solve nonlinear dynamic simulation.
-    Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, AELAOPTS,
-             writeDict =  writeDict, mpcCont = mpcCont)
+    for H in (1,):#(5,10,20,30,50,75,100,150,200,300):
+#         mpcCont = MPC.MPC('golandControlOutput_'+str(H),'/home/rjs10/git/SHARPy/src/PyMPC/systems/', LQR = False)
+        mpcCont = MPC.MPC('golandControlOutput','/home/rjs10/git/SHARPy/src/PyMPC/systems/', LQR = True)
+    #     mpcCont = None
+        
+        # Live output options.
+        writeDict = OrderedDict()
+        writeDict['R_z_tip'] = 0
+        writeDict['kappa_x_root'] = 0
+        writeDict['kappa_y_root'] = 0
+        writeDict['kappa_z_root'] = 0
+        writeDict['u_opt_1'] = 0
+        writeDict['du_opt_1'] = 0
+        writeDict['contTime'] = 0
+        
+        Settings.OutputDir = Settings.SharPyProjectDir + "output/MPC/Goland/testMPC_2/"
+#         Settings.OutputFileRoot = 'Q140_M8N20_CS80_L20_W1707_L20_Nmod8_wUnitBend_H'+str(H)+'_R01_noDist'
+        Settings.OutputFileRoot = 'Q140_M8N20_CS80_L20_W1707_L20_Nmod8_wUnitBend_LQR_R01_noDist'
+        
+        # Solve nonlinear dynamic simulation.
+        Solve_Py(XBINPUT, XBOPTS, VMOPTS, VMINPUT, AELAOPTS,
+                 writeDict =  writeDict, mpcCont = mpcCont)

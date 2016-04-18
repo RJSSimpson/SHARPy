@@ -9,7 +9,7 @@ import ctypes as ct
 
 # load reduced system from matlab
 
-matPath = '/home/rjs10/git/SHARP/output/Goland/TorsionBending_M8N20_CS80/Q140_N8_Py'
+matPath = '/home/rjs10/git/SHARP/output/cantileverMPC/Goland/TorsionBending_M8N20_CS80/Q140_N8_Py'
 disSys = ssdiscrete.StateSpace(matPath)
 
 n = disSys.nX # Number of states.
@@ -25,7 +25,7 @@ T[:n,:] = disSys.T.copy('C')
 
 # Define for muaompc.
 
-N = 100
+N = 300
 mu = 100
 
 Ad = np.zeros((n+nAux,n+nAux)) # MPC model state transition matrix.

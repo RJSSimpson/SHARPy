@@ -123,6 +123,10 @@ class ControlSurf:
                 self.beta = self.betaBar * np.cos(self.omega*time)
                 self.betaDot = - self.omega*self.betaBar*np.sin(self.omega*time)
                 self.time = time # For homogeneous function of update routine
+            elif (self.typeMotion == 'asInput'):
+                self.beta = 0.0
+                self.betaDot = 0.0
+                self.time = time
             else:
                 raise Exception ('beta unspecified and typeMotion not ' + 
                                  'recognised')

@@ -148,8 +148,11 @@ def WriteToOutFile(writeDict,
             else:
                 raise IOError("du_opt output format not recognised")
             
-        elif re.search(r'^contTime',myStr) and mpcCont != None:
-            fp.write("{:<14,e}".format(mpcCont.contTime))
+        elif re.search(r'^contTime',myStr):
+            if mpcCont != None:
+                fp.write("{:<14,e}".format(mpcCont.contTime))
+            else:
+                fp.write("{:<14,e}".format(0.0))                 
             
         else:
             ErrorMsg = "writeDict key not recognised. (" + myStr + ")"

@@ -51,7 +51,7 @@ class MPC:
             # get gain matrix
             with Timer() as t:
                 matDir = self.matPath.rsplit('/',1)
-                kPath = matDir[0] + "/Q28_N8_omega1pi_lqrOutCont_lqrKforPy"#"/Q140_FullSystem_GustInputs_L10_lqrCont_lqrKforPy"
+                kPath = matDir[0] + "/Q140_N8_genBendR01_lqrOutCont_lqrKforPy.mat"#"/Q140_FullSystem_GustInputs_L20_lqrOutCont_lqrKforPy"#/Q140_FullSystem_GustInputs_L10_lqrCont_lqrKforPy"#"#"/Q28_N8_omega1pi_lqrOutCont_lqrKforPy"#
                 Dict = loadmat(kPath,variable_names = ['K'])
                 K = np.zeros((self.mpcU,self.Ad.shape[0]))
                 if self.nAux > 0:
@@ -129,7 +129,7 @@ class MPC:
             u_2darray[0,0] = u_opt[0]
             return(u_2darray)
         else:
-            xDist = xRed - self.x_opt_kp1 # Calculate disturbance based on previous estimate.
+            xDist = 0.0#xRed - self.x_opt_kp1 # Calculate disturbance based on previous estimate.
             
             #Apply disturbance along prediction horizon.
             for i in range(self.mpc.N):

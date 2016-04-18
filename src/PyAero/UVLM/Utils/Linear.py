@@ -41,6 +41,8 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     @return D Feedthrough matrix.
     @note All of the above should be nondimensional."""
     
+    midPoint = True # use midpoint approximation for derivative of gamma 
+    
     # init matrices
     E = np.zeros((2*m*n+mW*n,2*m*n+mW*n))
     F = np.zeros((2*m*n+mW*n,2*m*n+mW*n))
@@ -56,18 +58,26 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     E[0:m*n,0:m*n] = AIC
     E[0:m*n,m*n:m*n+mW*n] = AICw
     E[m*n:m*n+mW*n,m*n:m*n+mW*n] = np.eye(mW*n)
-    E[m*n+mW*n:,0:m*n] = -np.eye(m*n)
-    E[m*n+mW*n:,m*n+mW*n:] = delS*np.eye(m*n)
+    if midPoint == True:
+        E[m*n+mW*n:,0:m*n] = np.eye(m*n)
+        E[m*n+mW*n:,m*n+mW*n:] = -0.5*delS*np.eye(m*n)
+    else:
+        E[m*n+mW*n:,0:m*n] = -np.eye(m*n)
+        E[m*n+mW*n:,m*n+mW*n:] = delS*np.eye(m*n)
     
     # populate F
     Cgam = np.zeros((mW*n,m*n))
     Cgam[0:n,m*n-n:m*n] = np.eye(n)
     CgamW = np.zeros((mW*n,mW*n))
     CgamW[n:,0:mW*n-n] = np.eye(n*(mW-1))
-    CgamW[-1:,-1]=0.0#0.99975
+    CgamW[-1:,-1]=0.99975 #0.0
     F[m*n:m*n+mW*n,0:m*n] = Cgam
     F[m*n:m*n+mW*n,m*n:m*n+mW*n] = CgamW
-    F[m*n+mW*n:,0:m*n] = -np.eye(m*n)
+    if midPoint == True:
+        F[m*n+mW*n:,0:m*n] = np.eye(m*n)
+        F[m*n+mW*n:,m*n+mW*n:] = 0.5*delS*np.eye(m*n)
+    else:
+        F[m*n+mW*n:,0:m*n] = -np.eye(m*n)
     
     # populate G
     W = np.zeros((m*n,3*(m+1)*(n+1)))
@@ -136,10 +146,15 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     @param writeToMat write to file in Settings.OutputDir.
     """
     
-    n=1
+    n=1 # number of spanwise panels
     
     # infer delS from body discretization
     delS = 2.0/m
+    
+    # hack
+#     factor = 4 
+#     mW=factor*mW
+#     delS = delS/float(factor)
     
     # initialise states and inputs
     gam=np.zeros((m*n))
@@ -332,9 +347,9 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
     return E,F,G,C,D
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/goland/'
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/d2c/aerofoil/'
     AR=6.66
-    for m in (15,):
-        for mW in (10*m,):
-            genLinearRectWing(AR,m,mW,30,e=0.33,writeToMat = True,imageMeth = True)
-            #genLinearAerofoil(m,mW,writeToMat = True)
+    for m in (10,):
+        for mW in (100*m,):
+            #genLinearRectWing(AR,m,mW,30,e=0.33,writeToMat = True,imageMeth = True)
+            genLinearAerofoil(m,mW,writeToMat = True)

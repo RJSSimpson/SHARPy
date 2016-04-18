@@ -9,7 +9,7 @@ import ctypes as ct
 
 # load reduced system from matlab
 
-matPath = '/home/rjs10/git/SHARP/output/Goland/TorsionBending_M8N20_CS80/Q140_N8_Py'
+matPath = '/home/rjs10/git/SHARP/output/cantileverMPC/Goland/TorsionBending_M8N20_CS80/Q140_N8_Py'
 disSys = ssdiscrete.StateSpace(matPath)
 
 n = disSys.nX # Number of states.
@@ -25,7 +25,7 @@ T[:n,:] = disSys.T.copy('C')
 
 # Define for muaompc.
 
-N = 100
+N = 5
 mu = 100
 
 Ad = np.zeros((n+nAux,n+nAux)) # MPC model state transition matrix.
@@ -46,7 +46,7 @@ if nAux > 0:
     
 # Define desired output weighting
 Q_out = np.eye(p+nAux)
-#Q_out[0,0] = 0.0 # bending only
+Q_out[0,0] = 0.0 # bending only
 Q_out[-nAux:,-nAux:] = np.zeros((nAux,nAux))
 R_out = np.eye(m)
     
@@ -54,7 +54,7 @@ R_out = np.eye(m)
 Q = np.dot(Cd.T,np.dot(Q_out,Cd))
 R = np.dot(Dd.T,np.dot(Q_out,Dd)) + R_out
 Q = Q/np.linalg.norm(Q) # normalize to give scale as with state weights
-R = R/np.linalg.norm(R)
+R = 0.1*R/np.linalg.norm(R)
 P = 1.0*Q[:,:] # Terminal constraint
 
 # Input constraints
