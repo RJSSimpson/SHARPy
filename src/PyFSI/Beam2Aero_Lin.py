@@ -155,6 +155,7 @@ def printBlocks(mat,iBlock,jBlock):
     i=0
     j=0
     while i < nI:
+        j=0
         while j < nJ:
             print('block [%d:%d,%d:%d]:'%(i,i+iBlock,j,j+jBlock))
             print(mat[i:i+iBlock,j:j+jBlock],'\n')
