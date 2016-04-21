@@ -82,13 +82,9 @@ class Test_CantHALE_v_Murua2012_Smith2001(unittest.TestCase):
         AELAOPTS = AeroelasticOps(0.0,0.0,0.08891)
         
         # Run solver.
-        PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep = \
-                            Solver.Solve_Py(XBINPUT,XBOPTS,
+        PosDefor = Solver.Solve_Py(XBINPUT,XBOPTS,
                                              VMOPTS,VMINPUT,
-                                             AELAOPTS)
-                            
-        # Delete currently unused objects.
-        del PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep
+                                             AELAOPTS)[0]
         
         self.assertAlmostEqual(PosDefor[-1,2], 5.3856278, None,
                                'Tip deflection wrong.', 0.02)
