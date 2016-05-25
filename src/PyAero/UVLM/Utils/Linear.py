@@ -41,7 +41,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     @return D Feedthrough matrix.
     @note All of the above should be nondimensional."""
     
-    midPoint = True # use midpoint approximation for derivative of gamma 
+    midPoint = False# use midpoint approximation for derivative of gamma 
     
     # init matrices
     E = np.zeros((2*m*n+mW*n,2*m*n+mW*n))
@@ -70,7 +70,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     Cgam[0:n,m*n-n:m*n] = np.eye(n)
     CgamW = np.zeros((mW*n,mW*n))
     CgamW[n:,0:mW*n-n] = np.eye(n*(mW-1))
-    CgamW[-1:,-1]=0.99975 #0.0
+    #CgamW[-1:,-1]=0.99975
     F[m*n:m*n+mW*n,0:m*n] = Cgam
     F[m*n:m*n+mW*n,m*n:m*n+mW*n] = CgamW
     if midPoint == True:
@@ -126,7 +126,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AICs3))
     C[:,m*n:m*n+mW*n] = -np.dot(H, np.dot(Y3,AICs3w))
     C[:,m*n+mW*n:] = 2.0*np.dot(np.transpose(Xi),Y4)
-     
+    
     # Matrix D
     D[:,0:3*(m+1)*(n+1)] = np.dot(H, np.dot(Y3, H.transpose()))
     D[:,3*(m+1)*(n+1):6*(m+1)*(n+1)] = ( np.dot(H,Y2) 
@@ -267,7 +267,7 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
     zeta=np.zeros(3*len(chords)*len(spans))
     zetaW=np.zeros(3*len(chordsW)*len(spans))
     zetaPri = np.zeros((3*len(chords)*len(spans)))
-    zetaPri[0::3] = -1.0;
+    zetaPri[0::3] = -1.0
     nu = np.zeros_like(zetaPri)
     kk=0
     for c in chords:
@@ -347,9 +347,9 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
     return E,F,G,C,D
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/d2c/aerofoil/'
-    AR=6.66
-    for m in (10,):
-        for mW in (100*m,):
-            #genLinearRectWing(AR,m,mW,30,e=0.33,writeToMat = True,imageMeth = True)
-            genLinearAerofoil(m,mW,writeToMat = True)
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nlnFlutter/'
+    AR=32
+    for m in (20,):
+        for mW in (10*m,):
+            genLinearRectWing(AR,m,mW,40,e=0.5,writeToMat = True,imageMeth = True)
+            #genLinearAerofoil(m,mW,writeToMat = True)

@@ -25,10 +25,12 @@ from PyAero.UVLM.Utils import PostProcess
 from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels
 from PyAero.UVLM.Solver.VLM import InitSteadyWake
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
-from PyBeam.Utils.XbeamLib import AddGravityLoads
+from PyBeam.Utils.XbeamLib import AddGravityLoads, Skew, Psi2TransMat, Tangential
 from DerivedTypesAero import ControlSurf
 from PyBeam.Utils.Linear import genSSbeam
 from scipy.io.matlab.mio import savemat
+from PyAero.UVLM.Utils.Linear import genSSuvlm
+from Misc import iNode2iElem
 
 def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
     """Nonlinear static solver using Python to solve aeroelastic
@@ -312,12 +314,12 @@ if __name__ == '__main__':
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
                                  MaxIterations = ct.c_int(50),
                                  PrintInfo = ct.c_bool(True),
-                                 NumLoadSteps = ct.c_int(25),
+                                 NumLoadSteps = ct.c_int(1),
                                  Solution = ct.c_int(112),
                                  MinDelta = ct.c_double(1e-4))
      
     # beam inputs.
-    XBINPUT = DerivedTypes.Xbinput(3,20)
+    XBINPUT = DerivedTypes.Xbinput(3,5)
     XBINPUT.BeamLength = 16.0
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -325,9 +327,9 @@ if __name__ == '__main__':
     XBINPUT.BeamStiffness[3,3] = 1.0e+04
     XBINPUT.BeamStiffness[4,4] = 2.0e+04
     XBINPUT.BeamStiffness[5,5] = 5.0e+06
-     
+      
     XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
-     
+      
     XBINPUT.BeamMass[0,0] = 0.75
     XBINPUT.BeamMass[1,1] = 0.75
     XBINPUT.BeamMass[2,2] = 0.75
@@ -335,11 +337,41 @@ if __name__ == '__main__':
     XBINPUT.BeamMass[4,4] = 0.001
     XBINPUT.BeamMass[5,5] = 0.001
     
+    # Goland
+#     XBINPUT = DerivedTypes.Xbinput(3,10)
+#     XBINPUT.BeamLength = 6.096
+#     XBINPUT.BeamStiffness[0,0] = 1.0e+09
+#     XBINPUT.BeamStiffness[1,1] = 1.0e+09
+#     XBINPUT.BeamStiffness[2,2] = 1.0e+09
+#     XBINPUT.BeamStiffness[3,3] = 0.99e+06
+#     XBINPUT.BeamStiffness[4,4] = 9.77e+06
+#     XBINPUT.BeamStiffness[5,5] = 1.0e+09
+#     XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
+#     XBINPUT.BeamMass[0,0] = 35.71
+#     XBINPUT.BeamMass[1,1] = 35.71
+#     XBINPUT.BeamMass[2,2] = 35.71
+#     XBINPUT.BeamMass[3,3] = 8.64
+#     XBINPUT.BeamMass[4,4] = 0.001
+#     XBINPUT.BeamMass[5,5] = 0.001
+#     # Off diagonal terms (in Theodorsen sectional coordinates)
+#     ElasticAxis = -0.34
+#     InertialAxis = -7.0/50.0
+#     x_alpha = InertialAxis - ElasticAxis
+#     # pitch-plunge coupling term (b-frame coordinates)
+#     c = 1.8288
+#     cgLoc = 0.5*c*np.array([0.0, x_alpha, 0.0])
+#     cgSkew = Skew(cgLoc)
+#     XBINPUT.BeamMass[:3,3:] = XBINPUT.BeamMass[0,0] * cgSkew
+#     XBINPUT.BeamMass[3:,:3] = XBINPUT.BeamMass[:3,3:].T
+#     XBINPUT.BeamMass[4,4] = 0.001 + XBINPUT.BeamMass[0,0]*pow(cgLoc[2],2.0)
+#     XBINPUT.BeamMass[5,5] = 0.001 + XBINPUT.BeamMass[0,0]*pow(cgLoc[1],2.0)
+    
+    
     # Gravity
     XBINPUT.g = 0.0 
      
     # aero options. 
-    M = 20
+    M = 4
     N = XBINPUT.NumNodesTot - 1
     VMOPTS = DerivedTypesAero.VMopts(M = M,
                                      N = N,
@@ -348,11 +380,14 @@ if __name__ == '__main__':
                                      KJMeth = True)
      
     # aero inputs.
-    ctrlSurf = None
     U_mag = 25
-    alphaVec = range(11); #deg
+    ctrlSurf = None
+#     U_mag=170
+    chord = 1.0 #m
+#     chord = c
+    alphaVec = (2,)#range(1); #deg
     for alpha in alphaVec:
-        VMINPUT = DerivedTypesAero.VMinput(c = 1.0,
+        VMINPUT = DerivedTypesAero.VMinput(c = chord,
                                            b = XBINPUT.BeamLength,
                                            U_mag = U_mag*1.0,
                                            alpha = alpha*np.pi/180.0,
@@ -361,27 +396,108 @@ if __name__ == '__main__':
          
         # aeroelastic opts.
         # Density due to US standard atmosphere at 20km.
-        AELAOPTS = AeroelasticOps(0.0,0.0,0.08891)
+        EApos = 0.0 # Elastic axis position in Theodorsens' coords
+        IApos = 0.0
+#         EApos=ElasticAxis
+#         IApos=InertialAxis
+#         rho=1.02
+        AELAOPTS = AeroelasticOps(EApos,IApos,0.08891)
+#         AELAOPTS = AeroelasticOps(EApos,IApos,rho)
         
-        Settings.OutputDir='/home/rjs10/Documents/MATLAB/Patil_HALE/structuralDynamics/'
+        Settings.OutputDir='/home/rjs10/Documents/MATLAB/Patil_HALE/nlnFlutter/'
         Settings.OutputFileRoot='M'+str(M)+'N'+str(N)+'_V'+str(U_mag)+'_alpha'+str(alpha)
-         
+        
+        # solve linear static problem
         PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni = Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
         
-        A,B,C = genSSbeam(XBINPUT,
-                          NumNodes_tot,
-                          NumDof,
-                          XBELEM,
-                          XBNODE,
-                          PosIni,
-                          PsiIni,
-                          PosDefor,
-                          PsiDefor,
-                          XBOPTS)
+        ### linearized beam model
+        A,B,C,kMat,phiSort = genSSbeam(XBINPUT,
+                             NumNodes_tot,
+                             NumDof,
+                             XBELEM,
+                             XBNODE,
+                             PosIni,
+                             PsiIni,
+                             PosDefor,
+                             PsiDefor,
+                             XBOPTS,
+                             chord,
+                             U_mag,
+                             modal=10)
+        
+        ### linearized aerodynamics
+        # Unsteady aero parameters
+        mW=10*M #10 chord-lengths
+        delS=2.0/M
+        
+        # circulation dist
+        gam = Gamma.flatten()
+        gamW = np.zeros(mW*N)
+        for i in range(mW):
+            gamW[i*N:(i+1)*N]=GammaStar
+            
+        # geometry
+        zeta=np.zeros((M+1,N+1,3))
+        beam2aero = np.zeros((3,3))
+        beam2aero[0,1]=-1.0
+        beam2aero[1,0]=1.0
+        beam2aero[2,2]=1.0
+        for i in range(M+1):
+            for j in range(N+1):
+                zeta[i,j,:]=np.dot(beam2aero,Zeta[i,j,:])
+        zeta = zeta.flatten()
+        # wake geom
+        zetaW = np.zeros((mW+1,N+1,3))
+        # get wake direction from root TE and far wake point
+        delW=(ZetaStar[1,0,:]-ZetaStar[0,0,:])/np.linalg.norm(ZetaStar[1,0,:]-ZetaStar[0,0,:])*chord/M
+        for i in range(mW+1):
+            for j in range(N+1):
+                zetaW[i,j,:]=Zeta[M,j,:]+i*delW
+                zetaW[i,j,:]=np.dot(beam2aero,zetaW[i,j,:])
+        zetaW = zetaW.flatten()
+        
+        # init uninit for SS uvlm description (zero reference conditions)
+        gamPri = (np.zeros_like(Gamma)).flatten() #check these they might have to be flat
+        nu = (np.zeros_like(Zeta)).flatten()
+        
+        # set relative velocity
+        zetaPri = (np.zeros_like(Zeta)).flatten()
+        zetaPri[0::3] = -1.0 #nondim with U_mag
+        
+        Ea,Fa,Ga,Ca,Da = genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,M,N,mW,delS,imageMeth=True)
+        
+        ### linearized interface
+        xiZeta = np.zeros((3*(M+1)*(N+1),6*(N+1)))
+        #transformation from beam axes to aero axes
+        e=EApos/2.0+0.5 # EA position
+        for ii in range(M+1):
+            for jj in range(N+1):
+                q=(N+1)*ii+jj;
+                jElem,jjElem=iNode2iElem(jj, N+1, XBINPUT.NumNodesElem)
+                Cj=Psi2TransMat(PsiDefor[jElem,jjElem,:])
+                Tang=Tangential(PsiDefor[jElem,jjElem,:])
+                xiZeta[3*q:3*q+3,6*jj:6*jj+3]=beam2aero
+                xiZeta[3*q:3*q+3,6*jj+3:6*jj+6]=-np.dot(beam2aero,
+                                                 np.dot(Cj,
+                                                 np.dot(Skew([0, chord*(e-float(ii)/float(M)), 0]),
+                                                        Tang)))
+        # structural DoFs to aero inputs
+        xiUa = np.zeros((9*(M+1)*(N+1),12*(N+1)));
+        xiUa[:3*(M+1)*(N+1),:6*(N+1)] = 2*xiZeta/chord;
+        xiUa[3*(M+1)*(N+1):6*(M+1)*(N+1),6*(N+1):12*(N+1)] = xiZeta/chord;
         
         if True:
-            fileName=Settings.OutputDir+Settings.OutputFileRoot+'_SS'
+            fileName=Settings.OutputDir+Settings.OutputFileRoot+'_SSbeam'
             savemat(fileName,
-                    {'A':A,'B':B,'C':C},
+                    {'A':A,'B':B,'C':C,'kMat':kMat,'phiSort':phiSort},
+                    True)
+            fileName=Settings.OutputDir+Settings.OutputFileRoot+'_SSaero'
+            savemat(fileName,
+                    {'Ea':Ea,'Fa':Fa,'Ga':Ga,'Ca':Ca,'Da':Da,'delS':delS,
+                     'm':M, 'mW':mW, 'n':N, 'zeta':Zeta},
+                    True)
+            fileName=Settings.OutputDir+Settings.OutputFileRoot+'_SScoupl'
+            savemat(fileName,
+                    {'xiZeta':xiZeta,'xiUa':xiUa},
                     True)
             

@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 np.set_printoptions(precision = 4,linewidth = 100)
 
-def genSSbeam(XBINPUT,
+def  genSSbeam(XBINPUT,
                NumNodes_tot,
                NumDof,
                XBELEM,
@@ -30,7 +30,10 @@ def genSSbeam(XBINPUT,
                PsiIni,
                PosDefor,
                PsiDefor,
-               XBOPTS):
+               XBOPTS,
+               cRef,
+               vRef,
+               modal = 0):
     """@details Generate state-space matrices for linear beam dynamics.
     @param XBINPUT Beam inputs.
     @param NumNodes_tot Total number of nodes in the model.
@@ -42,9 +45,14 @@ def genSSbeam(XBINPUT,
     @param PosDefor Deformed beam displacements.
     @param PsiDefor Deformed beam FE rotations.
     @param XBOPTS Beam options.
+    @param cRef Reference chord for writing eqs in reduced time.
+    @param vRef Reference velocity for writing eqs in reduced time.
+    @param modal Generate a modal model, number of modes in model.
     @return A State transfer matrix.
-    @return B Input matrix (assumed to be nodal forces and moments).
-    @return C Output matrix (nodal velocities and displacements/rotations).
+    @return B Input matrix (assumed to be nodal forces and moments/modal forces).
+    @return C Output matrix (nodal velocities and displacements/rotations, model vels,amplitudes).
+    @return kMat matrix with diagonal up to modal-th reduced frequencies.
+    @return phiSort Eigenvectors of all modes in ascending order of frequnecy.
     """
     
     # Init zero-valued vectors
@@ -119,32 +127,64 @@ def genSSbeam(XBINPUT,
                     KglobalFull[i,j] = 0.0
                     print('stiffness matrix')
     
-    # state transfer matrix
-    A = np.zeros((2*NumDof.value,2*NumDof.value))
-    A[:NumDof.value,NumDof.value:] = -np.dot(scipy.linalg.inv(MglobalFull),KglobalFull)
-    A[NumDof.value:,:NumDof.value] = np.eye(NumDof.value)
-    # input matrix
-    B = np.zeros((2*NumDof.value,NumDof.value))
-    for i in range(NumDof.value):
-        B[i,i]=1.0
+    if modal == 0:
+        # continuous time FE state-space model
+        mInv = scipy.linalg.inv(MglobalFull)
+        # state transfer matrix
+        A = np.zeros((2*NumDof.value,2*NumDof.value))
+        A[:NumDof.value,NumDof.value:] = -pow(cRef,2.0)/4.0/pow(vRef,2.0)*np.dot(mInv,KglobalFull)
+        A[NumDof.value:,:NumDof.value] = np.eye(NumDof.value)
+        # input matrix (add columns of zeros corresponding to root node)
+        B = np.zeros((2*NumDof.value,NumDof.value+6))
+        B[:NumDof.value,6:NumDof.value+6] = pow(cRef,2.0)/4.0/pow(vRef,2)*mInv
+        #output matrix (add rows of zeros for root node)
+        C = np.zeros((2*(6+NumDof.value),2*NumDof.value))       
+        C[6:NumDof.value+6,:NumDof.value] = np.eye(NumDof.value,NumDof.value)
+        C[NumDof.value+12:,NumDof.value:] = np.eye(NumDof.value,NumDof.value)
+        # dummy
+        kMat = False
+        phiSort = False
+        # checking and plotting if desired
+        if False:
+            # general eigensolution
+            lam = scipy.linalg.eig(KglobalFull,MglobalFull)[0]
+            indices = np.argsort(lam)
+            print(np.sqrt(lam[indices])/2.0/np.pi)
+            # plot eigenvalues of system
+            lam = scipy.linalg.eig(A)[0]
+            indices = np.argsort(np.imag(lam))
+            print(np.imag(lam[indices[len(indices)/2:]]/2.0/np.pi))
+            plt.plot(np.real(lam)/2.0/np.pi,np.imag(lam)/2.0/np.pi,'ro')
+            plt.show()
     
-    #output matrix        
-    C = np.eye(2*NumDof.value,2*NumDof.value)
-    
-    # checking and plotting if desired
-    if False:
-        # general eigensolution
-        lam = scipy.linalg.eig(KglobalFull,MglobalFull)[0]
+    elif modal > 0:
+        # continuous time modal state-space model
+        lam,Phi = scipy.linalg.eig(KglobalFull,MglobalFull)
         indices = np.argsort(lam)
-        print(np.sqrt(lam[indices])/2.0/np.pi)
-        # plot eigenvalues of system
-        lam = scipy.linalg.eig(A)[0]
-        indices = np.argsort(np.imag(lam))
-        print(np.imag(lam[indices[len(indices)/2:]]/2.0/np.pi))
-        plt.plot(np.real(lam)/2.0/np.pi,np.imag(lam)/2.0/np.pi,'ro')
-        plt.show()
-        
-    return A, B, C
+        omega=np.sqrt(lam[indices])
+        phiSort=Phi[:,indices]
+        # mass orthonormalize phiSort
+        for mode in range(np.shape(MglobalFull)[0]):
+            factor = np.dot(phiSort[:,mode].T,np.dot(MglobalFull,phiSort[:,mode]))
+            phiSort[:,mode]=phiSort[:,mode]/np.sqrt(factor)
+        # matrix of reduced frequcies
+        kMat=cRef/2.0/vRef*np.diag(omega[0:modal])
+        kMat=np.power(kMat,2.0) # this is elementwise
+        # state transfer matrix
+        A = np.zeros((2*modal,2*modal))
+        A[:modal,modal:]=-kMat
+        A[modal:,:modal]=np.eye(modal)
+        # input matrix
+        B=np.zeros((2*modal,modal))
+        B[:modal,:]=pow(cRef/2.0/vRef,2.0)*np.eye(modal)
+        # output matrix
+        C=np.eye(2*modal)
+    else:
+        raise ValueError("modal must be zero or positive.")
+    
+    return A,B,C,kMat,phiSort
+
+
 
 if __name__ == '__main__':
     # Define Patil's wing FE model
@@ -192,4 +232,7 @@ if __name__ == '__main__':
               PsiIni,
               PosDefor,
               PsiDefor,
-              XBOPTS)
+              XBOPTS,
+              1,
+              25,
+              modal=10)
