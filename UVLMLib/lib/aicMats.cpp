@@ -829,6 +829,10 @@ void dA3gamma0_dZeta(const double* zetaSrc_,
 	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
 	EigenMapMatrixXd dX(dX_,3*mTgt*nTgt,3*(mTgt+1)*(nTgt+1));
 
+	if (gamma0.isZero() == true) {
+		return;
+	}
+
 	// Set dX to zero
 	dX.setZero();
 
@@ -852,7 +856,7 @@ void dA3gamma0_dZeta(const double* zetaSrc_,
 	Matrix3d Xi = Matrix3d::Zero(); // interpolating matrix
 	double a = 0.0; // prefactor (\gamma_0(k2)/(4 \pi)).
 
-	// loop through DoFs to make (1x3) submatrices
+	// loop through DoFs to make (3x3) submatrices
 	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
 		// calc n, dn_dd, dn_de, colloc point only once for each target panel
 		c1 = zetaTgt.block<3,1>(3*q_k(k1,nTgt,1),0);

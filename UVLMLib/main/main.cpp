@@ -34,7 +34,7 @@ int main() {
 
 	// grid vars
 	const int M=1;
-	const int N=1;
+	const int N=2;
 	const int K=M*N;
 	const int K_zeta = (M+1)*(N+1);
 
@@ -44,17 +44,17 @@ int main() {
 	Eigen::VectorXd gam(K); gam.setOnes(); // init gamma as 1
 	Eigen::MatrixXd dAgam0_dzeta(K,3*K_zeta); dAgam0_dzeta.setZero();
 
-//	zeta << 0.0, 0.0, 0.0,
-//			0.0, 1.0, 0.0,
-//			0.0, 2.0, 0.0,
-//			1.0, 0.0, 0.0,
-//			1.0, 1.0, 0.0,
-//			1.0, 2.0, 0.0;
+	zeta << 0.0, 0.0, 0.0,
+			0.0, 1.0, 0.0,
+			0.0, 2.0, 0.0,
+			1.0, 0.0, 0.0,
+			1.0, 1.0, 0.0,
+			1.0, 2.0, 0.0;
 
-	zeta << 0.0,    -1000.0, 0.0,
-			0.0,     1000.0, 0.0,
-			0.1,    -1000.0, 0.0,
-			0.1,     1000.0, 0.0;
+//	zeta << 0.0,    -1000.0, 0.0,
+//			0.0,     1000.0, 0.0,
+//			0.1,    -1000.0, 0.0,
+//			0.1,     1000.0, 0.0;
 
 	const double* zetaPtr = zeta.data();
 
@@ -144,10 +144,11 @@ int main() {
 		 << endl;
 	double nTest[3];
 	AddTriad(n,dn,nTest);
-	double fGeomExactN = fGeom(r0,r1,r2,nTest);
-	double fGeomAppDn = fGeom(r0,r1,r2,n);
+	double fGeomPdelN = fGeom(r0,r1,r2,nTest);
+	double fGeomN = fGeom(r0,r1,r2,n);
 	double fLinDeltaN = f_n.transpose()*Vector3d(dn[0],dn[1],dn[2]);
-	cout << "error:" << endl << fGeomExactN - (fGeomAppDn + fLinDeltaN)
+	cout << "fGeomPdelN:" << endl << fGeomPdelN << endl << "fGeomN:" << endl << fGeomN << endl;
+	cout << "ref + lin:" << endl << fGeomN + fLinDeltaN
 		 << endl;
 
 	// test variations of the normal vector
