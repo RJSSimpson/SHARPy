@@ -70,7 +70,18 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 					 const double* zetaTgt_,
 					 const unsigned int mTgt,
 					 const unsigned int nTgt,
+					 const bool imageMeth,
 					 double* dX_);
+
+void dAgamma0_dZeta_num(const double* zetaSrc_,
+					 	   const unsigned int mSrc,
+					 	   const unsigned int nSrc,
+					 	   const double* gamma0_,
+					 	   const double* zetaTgt_,
+					 	   const unsigned int mTgt,
+					 	   const unsigned int nTgt,
+					 	   const bool imageMeth,
+					 	   double* dX_);
 
 void AIC(const double* zetaSrc_,
 		  const unsigned int mSrc,

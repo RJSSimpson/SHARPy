@@ -542,6 +542,7 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 					 const double* zetaTgt_,
 					 const unsigned int mTgt,
 					 const unsigned int nTgt,
+					 const bool imageMeth,
 					 double* dX_) {
 	/**@brief Calculate tensor-free derivative of (A gamma_0) w.r.t zeta.
 	 * @param zetaSrc Grid points of source lattice.
@@ -551,6 +552,7 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
+	 * @param imageMethod Include influence of vorticity across x-plane.
 	 * @return dX K x 3K_{\zeta_{tgt}} matrix output.
 	 * @warning If the zeta arguments are the same they must be the same object,
 	 * therefore in the function call the arguments must be previously
@@ -577,13 +579,27 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 	unsigned int qTgt = (mTgt+1)*(nTgt+1);
 	unsigned int ll = 0; //segment counter
 	unsigned int llp1 = 0; //segment counter
-	Vector3d c1, c2, c3, c4, cp; // panel corner points, collocation point
-	Vector3d d, e, n; // panel diagonal and normal vectors
-	Matrix3d n_d, n_e;
-	Vector3d r0, r1, r2; // Biot-Savart kernel vectors
-	Vector3d f_r0, f_r1, f_r2, f_n; //dvtvs required for target/source variation
-	Matrix3d Xi; // interpolating matrix
+	Vector3d c1 = Vector3d::Zero();
+	Vector3d c2 = Vector3d::Zero();
+	Vector3d c3 = Vector3d::Zero();
+	Vector3d c4 = Vector3d::Zero();
+	Vector3d cp = Vector3d::Zero(); // panel corner points, collocation point
+	Vector3d d  = Vector3d::Zero();
+	Vector3d e = Vector3d::Zero();
+	Vector3d n = Vector3d::Zero(); // panel diagonal and normal vectors
+	Matrix3d n_d = Matrix3d::Zero();
+	Matrix3d n_e = Matrix3d::Zero();
+	Vector3d r0 = Vector3d::Zero();
+	Vector3d r1 = Vector3d::Zero();
+	Vector3d r2 = Vector3d::Zero(); // Biot-Savart kernel vectors
+	Vector3d f_r0 = Vector3d::Zero();
+	Vector3d f_r1 = Vector3d::Zero();
+	Vector3d f_r2 = Vector3d::Zero();
+	Vector3d f_n  = Vector3d::Zero(); //dvtvs required for target/source variation
+	Matrix3d Xi = Matrix3d::Zero(); // interpolating matrix
 	double a; // prefactor (\gamma_0(k2)/(4 \pi)).
+	Vector3d x1 = Vector3d::Zero(); // Segment start/end
+	Vector3d x2 = Vector3d::Zero();
 
 	// loop through DoFs to make (1x3) submatrices
 	for (unsigned int k1 = 0; k1 < kTgt; k1++) {
@@ -628,13 +644,15 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 						q_k(k2,nSrc,ll) == q || q_k(k2,nSrc,llp1) == q) {
 
 						// contributions at targets
+						// segment endpoints
+						x1 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+						x2 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
 						// calc r0, r1, r2
-						r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0)
-							-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+						r0 = x2 - x1;
 						// r1
-						r1 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll),0);
+						r1 = cp - x1;
 						// r2
-						r2 = cp - zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1),0);
+						r2 = cp - x2;
 
 						// calc f_r0, f_r1, f_r2, f_n
 						df_dgeom(r0.data(),
@@ -682,6 +700,53 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 							} // end if k2,q (sources)
 						} // end if Src == Tgt
 
+						if (imageMeth == true) {
+							r0(1)=-r0(1);
+							x1(1)=-x1(1);
+							x2(1)=-x2(1);
+							r1=cp-x1;
+							r2=cp-x2;
+							df_dgeom(r0.data(),
+									 r1.data(),
+									 r2.data(),
+									 n.data(),
+									 f_r0,
+									 f_r1,
+									 f_r2,
+									 f_n);
+							if (q_k(k1,nTgt,1) == q) {
+								// add Xi, and Kronecker delta terms, c1
+								dX.block<1,3>(k1,3*q) += a*(
+									(f_r1 + f_r2).transpose()*Xi
+								   - f_n.transpose()*n_d);
+							} else if (q_k(k1,nTgt,2) == q) {
+								// add Xi, and Kronecker delta terms, c2
+								dX.block<1,3>(k1,3*q) += a*(
+									(f_r1 + f_r2).transpose()*Xi
+								   + f_n.transpose()*n_e);
+							} else if (q_k(k1,nTgt,3) == q) {
+								// add Xi, and Kronecker delta terms, c3
+								dX.block<1,3>(k1,3*q) += a*(
+									(f_r1 + f_r2).transpose()*Xi
+								   + f_n.transpose()*n_d);
+							} else if (q_k(k1,nTgt,4) == q) {
+								// add Xi, and Kronecker delta terms, c4
+								dX.block<1,3>(k1,3*q) += a*(
+									(f_r1 + f_r2).transpose()*Xi
+								   - f_n.transpose()*n_e);
+							} // end if k1,q (targets)
+							// contributions from sources
+							if (zetaSrc.data() == zetaTgt.data()) {
+								if (q_k(k2,nSrc,ll) == q) {
+									// add Kronecker delta term, segment start
+									dX.block<1,3>(k1,3*q) += -a*(f_r0+f_r1).transpose();
+								} else if (q_k(k2,nSrc,llp1) == q) {
+									// add Kronecker delta term, segment end
+									dX.block<1,3>(k1,3*q) += a*(f_r0-f_r2).transpose();
+								} // end if k2,q (sources)
+							} // end if Src == Tgt
+						} // end if imageMeth
+
 					} else {
 						continue;
 					} // end if k,q
@@ -689,6 +754,75 @@ void dAgamma0_dZeta(const double* zetaSrc_,
 			} // for q
 		} // for k2
 	} // for k1
+	return;
+}
+
+void dAgamma0_dZeta_num(const double* zetaSrc_,
+					 	   const unsigned int mSrc,
+					 	   const unsigned int nSrc,
+					 	   const double* gamma0_,
+					 	   const double* zetaTgt_,
+					 	   const unsigned int mTgt,
+					 	   const unsigned int nTgt,
+					 	   const bool imageMeth,
+					 	   double* dX_) {
+	/**@brief Calculate tensor-free derivative of (A gamma_0) w.r.t zeta numerically.
+	 * @param zetaSrc Grid points of source lattice.
+	 * @param mSrc chordwise panels on source lattice.
+	 * @param nSrc spanwise panels on source lattice.
+	 * @param gamma0 Reference circulation distribution on source lattice.
+	 * @param zetaTgt Grid points of target lattice.
+	 * @param mTgt chordwise panels on target lattice.
+	 * @param nTgt spanwise panels on target lattice.
+	 * @param imageMethod Include influence of vorticity across x-plane.
+	 * @return dX K x 3K_{\zeta_{tgt}} matrix output.
+	 * @warning If the zeta arguments are the same they must be the same object,
+	 * therefore in the function call the arguments must be previously
+	 * instantiated objects, e.g (zeta+delZeta, ..., zeta+delZeta, ...) is
+	 * invalid because a two temps are instantiated.
+	 */
+
+	// eigen map output matrix
+	ConstMapVectXd zetaSrc(zetaSrc_,3*(mSrc+1)*(nSrc+1));
+	ConstMapVectXd gamma0(gamma0_,mSrc*nSrc);
+	ConstMapVectXd zetaTgt(zetaTgt_,3*(mTgt+1)*(nTgt+1));
+	EigenMapMatrixXd dX(dX_,mTgt*nTgt,3*(mTgt+1)*(nTgt+1));
+
+	if (gamma0.isZero() == true) {
+		return;
+	}
+
+	// Set dX to zero
+	dX.setZero();
+
+	// temps
+	const unsigned int qTgt = 3*(mTgt+1)*(nTgt+1);
+	const double del = 0.00001;
+	VectorXd delZeta(3*(mTgt+1)*(nTgt+1)); delZeta.setZero();
+	VectorXd zetaPdel(3*(mTgt+1)*(nTgt+1)); zetaPdel.setZero();
+
+	// unperturbed downwash
+	MatrixXd AIC0(mTgt*nTgt,mSrc*nSrc); AIC0.setZero();
+	AIC(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,imageMeth,AIC0.data());
+	VectorXd wRef(mTgt*nTgt); wRef.setZero();
+	wRef=AIC0*gamma0;
+
+	// pertubed entities
+	VectorXd wDel(mTgt*nTgt); wDel.setZero();
+	MatrixXd AIC_del(mTgt*nTgt,mSrc*nSrc); AIC_del.setZero();
+
+	for (unsigned int q = 0; q < qTgt; q++) {
+		delZeta.setZero();
+		delZeta(q)=del;
+		zetaPdel=zetaTgt+delZeta;
+		if (zetaTgt_ == zetaSrc_) {
+			AIC(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,imageMeth,AIC_del.data());
+		} else {
+			AIC(zetaSrc_,mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,imageMeth,AIC_del.data());
+		}
+		wDel = (AIC_del*gamma0)-wRef;
+		dX.col(q)=wDel/del;
+	}
 	return;
 }
 
@@ -707,7 +841,7 @@ void AIC(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
-	 * @param imageMethod Include influence of vorticity across y-plane.
+	 * @param imageMethod Include influence of vorticity across x-plane.
 	 * @return dX K_tgt x K_src matrix output.
 	 */
 

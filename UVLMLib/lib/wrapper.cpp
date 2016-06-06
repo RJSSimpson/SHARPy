@@ -289,9 +289,10 @@ void cpp_wrap_dAgamma0_dZeta(const double* zetaSrc_,
 								const double* zetaTgt_,
 								const unsigned int& mTgt,
 								const unsigned int& nTgt,
+								const bool& imageMeth,
 								double* dAgam0_) {
 	// call function
-	dAgamma0_dZeta(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,dAgam0_);
+	dAgamma0_dZeta(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,imageMeth,dAgam0_);
 }
 
 void cpp_wrap_dWzetaPri0_dZeta(const double* zeta_,
