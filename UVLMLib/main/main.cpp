@@ -291,4 +291,26 @@ int main() {
 //	cout << "dw (approx):" << endl << dwApprox << endl;
 //	cout << "dw (exact):" << endl << dwExact << endl;
 //	cout << "dw (normed diff):" << endl << (dwApprox - dwExact).array()/(aic3*gam).norm() << endl;
+
+	// test dAs3gam0_dZeta_numerical
+	EigDynMatrixRM aic3s(12*K,K);
+	EigDynMatrixRM aic3sPdel(12*K,K);
+	EigDynMatrixRM dA3sGam0_dZeta(12*K,3*K_zeta); dA3sGam0_dZeta.setZero();
+	VectorXd v(12*K);
+	VectorXd vPdel(12*K);
+	VectorXd delVexact(12*K);
+	VectorXd delVapprox(12*K);
+	AIC3s(zetaPtr,M,N,zetaPtr,M,N,aic3s.data());
+	AIC3s(zetaPdelPtr,M,N,zetaPdelPtr,M,N,aic3sPdel.data());
+	v=aic3s*gam;
+	vPdel=aic3sPdel*gam;
+	delVexact=vPdel-v;
+	dAs3gam0_dZeta_numerical(zetaPtr,M,N,gam.data(),zetaPtr,M,N,dA3sGam0_dZeta.data());
+	delVapprox=dA3sGam0_dZeta*dZeta;
+
+	cout << endl << "AIC3s --------------------" << endl << aic3s << endl;
+	cout << endl << "AIC3sPdel --------------------" << endl << aic3sPdel << endl;
+	cout << endl << "delVexact --------------------" << endl << delVexact << endl;
+	cout << endl << "delVapprox --------------------" << endl << delVapprox << endl;
+	cout << endl << "diff: --------------------" << endl << (delVapprox - delVexact).array()/delVexact.array() << endl;
 }

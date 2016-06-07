@@ -220,7 +220,7 @@ double fGeom(const double* r0,
 
 	// get u
 	CrossTriad(r1,r2,u);
-	if (NormTriad(u) <= 1.0e-5) {
+	if (NormTriad(u) <= 1.0e-8) {
 		return 0.0;
 	} else {
 		// get x
@@ -262,7 +262,7 @@ void fGeom3(const double* r0,
 
 	// get u
 	CrossTriad(r1,r2,u);
-	if (NormTriad(u) <= 1.0e-5) {
+	if (NormTriad(u) <= 1.0e-8) {
 		return;
 	} else {
 		// get x
@@ -1786,7 +1786,7 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 
 	// temps
 	const unsigned int S = 12*mTgt*nTgt;
-	const double del = 0.00001; // small perturbation
+	const double del = 0.001; // small perturbation
 	VectorXd delZeta = VectorXd::Zero(3*(mTgt+1)*(nTgt+1));
 	VectorXd zetaPdel = VectorXd::Zero(3*(mTgt+1)*(nTgt+1));
 	VectorXd u = VectorXd::Zero(S);
@@ -1825,7 +1825,7 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 		dU = aic3sDel*gamma0 - u;
 
 		// add to matrix
-		dX.block(0,qPri, S,1) = (1/del)*dU;
+		dX.block(0,qPri,S,1) = (1/del)*dU;
 	}
 
 	return;
