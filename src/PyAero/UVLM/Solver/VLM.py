@@ -221,37 +221,31 @@ def Run_Cpp_Solver_VLM(VMOPTS, VMINPUT, VMUNST = None, AELOPTS = None):
         np.savetxt(debugFile, Gamma.flatten('C'))
     
     # post process to get coefficients
-    return PostProcess.GetCoeffs(VMOPTS, Forces, VMINPUT, VMUNST.VelA_G)
+    Coeffs = PostProcess.GetCoeffs(VMOPTS, Forces, VMINPUT, VMUNST.VelA_G)
+    return Coeffs, Zeta, ZetaStar, Gamma, GammaStar, Forces
 
 
 if __name__ == '__main__':
-    # Create inputs
-    from Goland import *
-    
-    # Re-define control Surface
-    ctrlSurf = DerivedTypesAero.ControlSurf(iMin = M - M/4,
-                                            iMax = M,
-                                            jMin = N - N/4,
-                                            jMax = N,
-                                            typeMotion = 'cos',
-                                            betaBar = 1.0*np.pi/180.0,
-                                            omega = 0.0)
     # Inputs.
-    WakeLength = 100.0
-    VMINPUT = DerivedTypesAero.VMinput(c = c,
-                                   b = XBINPUT.BeamLength,
+    Umag=1.0
+    WakeLength = 10000.0
+    VMINPUT = DerivedTypesAero.VMinput(c = 1.0,
+                                   b = 1.0e10,
                                    U_mag = Umag,
-                                   alpha = 0.0*np.pi/180.0,
+                                   alpha = 1.0*np.pi/180.0,
                                    theta = 0.0,
                                    WakeLength = WakeLength,
-                                   ctrlSurf = ctrlSurf)
+                                   ctrlSurf = None)
     
-    # Redefine VMOPTS
-    VMOPTS.Mstar = ct.c_int(1)
-    VMOPTS.Steady = ct.c_bool(True)
-    VMOPTS.ImageMethod = ct.c_bool(True)
+    
+    VMOPTS = VMopts(M = 50,
+                    N = 1,
+                    ImageMethod = True,
+                    Mstar = 1,
+                    Steady = True,
+                    KJMeth = True)
     # run solver
-    Coeffs = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)
+    Zeta, ZetaStar, Gamma, GammaStar = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)[1:5]
     
-    print(Coeffs)
+    print(Zeta)
     

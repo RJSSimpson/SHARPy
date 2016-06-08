@@ -300,12 +300,12 @@ int main() {
 	VectorXd vPdel(12*K);
 	VectorXd delVexact(12*K);
 	VectorXd delVapprox(12*K);
-	AIC3s(zetaPtr,M,N,zetaPtr,M,N,aic3s.data());
-	AIC3s(zetaPdelPtr,M,N,zetaPdelPtr,M,N,aic3sPdel.data());
+	AIC3s(zetaPtr,M,N,zetaPtr,M,N,true,aic3s.data());
+	AIC3s(zetaPdelPtr,M,N,zetaPdelPtr,M,N,true,aic3sPdel.data());
 	v=aic3s*gam;
 	vPdel=aic3sPdel*gam;
 	delVexact=vPdel-v;
-	dAs3gam0_dZeta_numerical(zetaPtr,M,N,gam.data(),zetaPtr,M,N,dA3sGam0_dZeta.data());
+	dAs3gam0_dZeta_numerical(zetaPtr,M,N,gam.data(),zetaPtr,M,N,true,dA3sGam0_dZeta.data());
 	delVapprox=dA3sGam0_dZeta*dZeta;
 
 	cout << endl << "AIC3s --------------------" << endl << aic3s << endl;

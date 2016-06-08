@@ -131,6 +131,7 @@ void AIC3s(const double* zetaSrc_,
 		  	const double* zetaTgt_,
 		  	const unsigned int mTgt,
 		  	const unsigned int nTgt,
+		  	const bool imageMeth,
 		  	double* dX_);
 
 void AIC3s_noTE(const double* zetaSrc_,
@@ -187,6 +188,7 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 								const double* zetaTgt_,
 								const unsigned int mTgt,
 								const unsigned int nTgt,
+								const bool imageMeth,
 								double* dX_);
 
 #endif /* AICMATS_HPP_ */

@@ -83,9 +83,9 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     W = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_genW(zeta, m, n, W)
     dAgam_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
-    Cpp_dAgamma0_dZeta(zeta, m, n, gam, zeta, m, n, dAgam_dZeta)
+    Cpp_dAgamma0_dZeta(zeta, m, n, gam, zeta, m, n, dAgam_dZeta, imageMeth)
     dAwGamW_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
-    Cpp_dAgamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAwGamW_dZeta)
+    Cpp_dAgamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAwGamW_dZeta, imageMeth)
     dWzetaPri_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_dWzetaPri0_dZeta(zeta, m, n, zetaPri, dWzetaPri_dZeta)
     G[0:m*n,0:3*(m+1)*(n+1)] = W
@@ -108,10 +108,10 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     # gen interpolation and AIC matrices
     Cpp_genXi(m, n, 0.5, 0.5, Xi)
     Cpp_genH(m, n, H)
-    Cpp_AIC3s(zeta, m, n, zeta, m, n, AICs3)
-    Cpp_AIC3s(zetaW, mW, n, zeta, m, n, AICs3w)
-    Cpp_dAs3gamma0_dZeta_num(zeta, m, n, gam, zeta, m, n, dAs3gam_dZeta)
-    Cpp_dAs3gamma0_dZeta_num(zetaW, mW, n, gamW, zeta, m, n, dAs3wGamW_dZeta)
+    Cpp_AIC3s(zeta, m, n, zeta, m, n, AICs3, imageMeth)
+    Cpp_AIC3s(zetaW, mW, n, zeta, m, n, AICs3w, imageMeth)
+    Cpp_dAs3gamma0_dZeta_num(zeta, m, n, gam, zeta, m, n, dAs3gam_dZeta, imageMeth)
+    Cpp_dAs3gamma0_dZeta_num(zetaW, mW, n, gamW, zeta, m, n, dAs3wGamW_dZeta, imageMeth)
      
     # generate Y matrices
     vM0 = np.zeros((12*m*n)) # collocation fluid-grid relative velocities

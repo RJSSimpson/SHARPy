@@ -403,8 +403,9 @@ void cpp_wrap_AIC3s(const double* zetaSrc_,
 		  const double* zetaTgt_,
 		  const unsigned int& mTgt,
 		  const unsigned int& nTgt,
+		  const bool& imageMeth,
 		  double* dX_){
-	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,dX_);
+	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,imageMeth,dX_);
 }
 
 void cpp_wrap_AIC3s_noTE(const double* zetaSrc_,
@@ -431,8 +432,9 @@ void cpp_wrap_dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 									  const double* zetaTgt_,
 									  const unsigned int& mTgt,
 									  const unsigned int& nTgt,
+									  const bool& imageMeth,
 									  double* dX_) {
-	dAs3gam0_dZeta_numerical(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,dX_);
+	dAs3gam0_dZeta_numerical(zetaSrc_,mSrc,nSrc,gamma0_,zetaTgt_,mTgt,nTgt,imageMeth,dX_);
 }
 
 } // END extern C

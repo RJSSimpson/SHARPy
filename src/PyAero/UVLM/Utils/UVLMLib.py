@@ -206,7 +206,7 @@ def Cpp_AIC(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC,imageMeth=False):
             AIC.ctypes.data_as(ct.POINTER(ct.c_double)))
     
 
-def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
+def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0,imageMeth=False):
     """@details Wrapper for cpp_wrap_dAgamma0_dZeta.
     @param zetaSrc Source grid points.
     @param mSrc Chordwise panels.
@@ -216,6 +216,13 @@ def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
     @param mTgt Chordwise panels.
     @param nTgt Spanwise.
     @return dAgam0 variation of influence coefficient matrix times gamma."""
+    
+    # make sure y>=0 for all zetas
+    if imageMeth:
+        assert np.all( zetaSrc[1::3] >= 0.0 ), "source grid defintion in negative y"
+        assert np.all( zetaTgt[1::3] >= 0.0 ), "target grid defintion in negative y"
+    # end if
+    
     cpp_dAgamma0_dZeta(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
                        ct.byref(ct.c_uint(mSrc)),
                        ct.byref(ct.c_uint(nSrc)),
@@ -288,7 +295,7 @@ def Cpp_AIC3(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
             ct.byref(ct.c_uint(nTgt)),
             AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
 
-def Cpp_AIC3s(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
+def Cpp_AIC3s(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3,imageMeth=False):
     """@details Wrapper for cpp_wrap_AICnoTE.
     @param zetaSrc Source grid points.
     @param mSrc Chordwise panels.
@@ -296,13 +303,22 @@ def Cpp_AIC3s(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,AIC3):
     @param zetaTgt Target grid points.
     @param mTgt Chordwise panels.
     @param nTgt Spanwise.
+    @param imageMeth Image method across x-z plane.
     @return AIC3 3-component influence coefficient matrix at segment midpoints."""
+    
+    # make sure y>=0 for all zetas
+    if imageMeth:
+        assert np.all( zetaSrc[1::3] >= 0.0 ), "source grid defintion in negative y"
+        assert np.all( zetaTgt[1::3] >= 0.0 ), "target grid defintion in negative y"
+    # end if
+    
     cpp_AIC3s(zetaSrc.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mSrc)),
             ct.byref(ct.c_uint(nSrc)),
             zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
             ct.byref(ct.c_uint(mTgt)),
             ct.byref(ct.c_uint(nTgt)),
+            ct.byref(ct.c_bool(imageMeth)),
             AIC3.ctypes.data_as(ct.POINTER(ct.c_double)))
  
 def Cpp_AIC3s_noTE(zetaSrc,mSrc,nSrc,zetaTgt,mTgt,nTgt,wakeSrc,AIC3):
@@ -529,7 +545,7 @@ def Cpp_q_k(k,N,no):
     """
     return cpp_q_k(k,N,no)
 
-def Cpp_dAs3gamma0_dZeta_num(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
+def Cpp_dAs3gamma0_dZeta_num(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0,imageMeth=False):
     """@details Wrapper for cpp_wrap_dAs3gam0_dZeta.
     @param zetaSrc Source grid points.
     @param mSrc Chordwise panels.
@@ -546,6 +562,7 @@ def Cpp_dAs3gamma0_dZeta_num(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0):
                        zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
                        ct.byref(ct.c_uint(mTgt)),
                        ct.byref(ct.c_uint(nTgt)),
+                       ct.byref(ct.c_bool(imageMeth)),
                        dAgam0.ctypes.data_as(ct.POINTER(ct.c_double)))
     
 

@@ -1146,6 +1146,7 @@ void AIC3s(const double* zetaSrc_,
 		  	const double* zetaTgt_,
 		  	const unsigned int mTgt,
 		  	const unsigned int nTgt,
+		  	const bool imageMeth,
 		  	double* dX_) {
 	/**@brief Calculate AIC matrix (3 components of velocity) at the segment
 	 * midpoints.
@@ -1155,6 +1156,7 @@ void AIC3s(const double* zetaSrc_,
 	 * @param zetaTgt Grid points of target lattice.
 	 * @param mTgt chordwise panels on target lattice.
 	 * @param nTgt spanwise panels on target lattice.
+	 * @param imageMeth use image method accross x-z plane.
 	 * @return dX 12*K_tgt x K_src matrix output.
 	 */
 
@@ -1173,6 +1175,8 @@ void AIC3s(const double* zetaSrc_,
 	unsigned int ll_t = 0; //segment counter
 	unsigned int llp1_t = 0; //segment counter
 	unsigned int s = 0; // total segment index (at target midpoints)
+	Vector3d x1 = Vector3d::Zero();
+	Vector3d x2 = Vector3d::Zero();
 	Vector3d r0  = Vector3d::Zero(); //Biot-Savart kernel vectors
 	Vector3d r1 = Vector3d::Zero();
 	Vector3d r2 = Vector3d::Zero();
@@ -1196,20 +1200,39 @@ void AIC3s(const double* zetaSrc_,
 						ll_s = ls;
 						llp1_s = 1;
 					}
+					// segment endpoints
+					x1 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll_s),0);
+					x2 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1_s),0);
 					// calc r0
-					r0 = zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1_s),0)
-						-zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll_s),0);
+					r0 = x2 - x1;
 					// r1
 					r1 = 0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
 							  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
-						 -zetaSrc.block<3,1>(3*q_k(k2,nSrc,ll_s),0);
+						 -x1;
 					// r1
 					r2 = 0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
 							  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
-						 -zetaSrc.block<3,1>(3*q_k(k2,nSrc,llp1_s),0);
+						 -x2;
 					// AIC entry (3 components)
 					fGeom3(r0.data(),r1.data(),r2.data(),v.data());
 					dX.block<3,1>(3*s,k2) += 1.0/(4.0*M_PI)*v;
+
+					if (imageMeth == true) {
+						r0(1)=-r0(1);
+						x1(1)=-x1(1);
+						x2(1)=-x2(1);
+						r1=0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
+								  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
+							 -x1;
+						r2=0.5*(  zetaTgt.block<3,1>(3*q_k(k1,nTgt,llp1_t),0)
+								  + zetaTgt.block<3,1>(3*q_k(k1,nTgt,ll_t),0)  )
+							 -x2;
+						fGeom3(r0.data(),
+							   r1.data(),
+							   r2.data(),
+							   v.data());
+						dX.block<3,1>(3*s,k2) += -1.0/(4.0*M_PI)*v;
+					}
 				}
 			}
 			s++;
@@ -1753,6 +1776,7 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 								const double* zetaTgt_,
 								const unsigned int mTgt,
 								const unsigned int nTgt,
+								const bool imageMeth,
 								double* dX_) {
 	/**@brief Numerically calculate tensor-free derivative of (A^s gamma_0) w.r.t zeta.
 	* @param zetaSrc Grid points of source lattice.
@@ -1762,6 +1786,7 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 	* @param zetaTgt Grid points of target lattice.
 	* @param mTgt chordwise panels on target lattice.
 	* @param nTgt spanwise panels on target lattice.
+	* @param imageMeth image method across x-z plane.
 	* @return dX 3K x 3K_{\zeta_{tgt}} matrix output.
 	* @warning If the zeta arguments are the same they must be the same object,
 	* therefore in the function call the arguments must be previously
@@ -1801,7 +1826,7 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 //		AIC3s_noTE(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,true,aic3s.data());
 //	}
 
-	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,aic3s.data());
+	AIC3s(zetaSrc_,mSrc,nSrc,zetaTgt_,mTgt,nTgt,imageMeth,aic3s.data());
 	u = aic3s*gamma0;
 
 	for (unsigned int qPri = 0; qPri < 3*(mTgt+1)*(nTgt+1); qPri++) {
@@ -1813,11 +1838,11 @@ void dAs3gam0_dZeta_numerical(const double* zetaSrc_,
 		// new aic
 		if (zetaSrc.data() == zetaTgt.data()) {
 			zetaPdel = zetaSrc + delZeta; // src and target lattices are same body
-			AIC3s(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+			AIC3s(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,imageMeth,aic3sDel.data());
 //			AIC3s_noTE(zetaPdel.data(),mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,false,aic3sDel.data());
 		} else {
 			zetaPdel = zetaTgt + delZeta; // src lattice is wake
-			AIC3s(zetaSrc_,mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,aic3sDel.data());
+			AIC3s(zetaSrc_,mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,imageMeth,aic3sDel.data());
 //			AIC3s_noTE(zetaSrc_,mSrc,nSrc,zetaPdel.data(),mTgt,nTgt,true,aic3sDel.data());
 		}
 
