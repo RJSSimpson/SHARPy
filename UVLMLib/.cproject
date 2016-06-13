@@ -31,8 +31,8 @@
 								<option id="gnu.cpp.compiler.so.debug.option.debugging.level.1661214483" name="Debug Level" superClass="gnu.cpp.compiler.so.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.435369449" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/rjs10/Downloads/Eigen"/>
-									<listOptionValue builtIn="false" value="/home/rjs10/Downloads/boost_1_50_0"/>
+									<listOptionValue builtIn="false" value="/home/rob/Software/Downloads/eigen-3.2.5"/>
+									<listOptionValue builtIn="false" value="/home/rob/Software/Downloads/boost_1_58_0"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.other.pic.1427609692" name="Position Independent Code (-fPIC)" superClass="gnu.cpp.compiler.option.other.pic" value="true" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.other.other.802296393" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>
@@ -164,8 +164,8 @@
 								<option id="gnu.cpp.compiler.option.include.paths.1098671786" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/main}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/rjs10/Downloads/Eigen"/>
-									<listOptionValue builtIn="false" value="/home/rjs10/Downloads/boost_1_50_0"/>
+									<listOptionValue builtIn="false" value="/home/rob/Software/Downloads/eigen-3.2.5"/>
+									<listOptionValue builtIn="false" value="/home/rob/Software/Downloads/boost_1_58_0"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.other.pic.1094880128" name="Position Independent Code (-fPIC)" superClass="gnu.cpp.compiler.option.other.pic" value="true" valueType="boolean"/>
 								<option id="gnu.cpp.compiler.option.other.other.788461421" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -fopenmp" valueType="string"/>

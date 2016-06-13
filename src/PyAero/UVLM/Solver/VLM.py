@@ -20,6 +20,7 @@ from PyBeam.Utils import BeamInit
 from PyFSI.Beam2UVLM import CoincidentGrid
 from PyFSI.Beam2UVLM import InitSection
 import PyAero.UVLM.Utils.DerivedTypesAero as DerivedTypesAero
+from PyAero.UVLM.Utils.Linear import genSSuvlm, nln2linStates
 
 def InitSteadyGrid(VMOPTS,VMINPUT):
     """@brief Initialise steady grid and zero grid velocities."""
@@ -222,14 +223,18 @@ def Run_Cpp_Solver_VLM(VMOPTS, VMINPUT, VMUNST = None, AELOPTS = None):
     
     # post process to get coefficients
     Coeffs = PostProcess.GetCoeffs(VMOPTS, Forces, VMINPUT, VMUNST.VelA_G)
-    return Coeffs, Zeta, ZetaStar, Gamma, GammaStar, Forces
+    return Coeffs, Zeta, ZetaStar, Gamma, GammaStar, Forces, Uext
 
 
 if __name__ == '__main__':
     # Inputs.
-    Umag=1.0
+    M=1
+    N=1
+    Umag = 1.0
+    chord = 1.0
     WakeLength = 10000.0
-    VMINPUT = DerivedTypesAero.VMinput(c = 1.0,
+    imageMeth = True
+    VMINPUT = DerivedTypesAero.VMinput(chord ,
                                    b = 1.0e10,
                                    U_mag = Umag,
                                    alpha = 1.0*np.pi/180.0,
@@ -238,14 +243,25 @@ if __name__ == '__main__':
                                    ctrlSurf = None)
     
     
-    VMOPTS = VMopts(M = 50,
-                    N = 1,
-                    ImageMethod = True,
+    VMOPTS = VMopts(M,
+                    N,
+                    imageMeth,
                     Mstar = 1,
                     Steady = True,
                     KJMeth = True)
     # run solver
-    Zeta, ZetaStar, Gamma, GammaStar = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)[1:5]
+    Zeta, ZetaStar, Gamma, GammaStar, foo, Uext = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)[1:7]
+    del foo
     
-    print(Zeta)
+    # unsteady params
+    mW=100*M
+    delS=2/M
+    
+    # transform states/inputs 
+    gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero = nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord)
+    
+    # generate linear model
+    E,F,G,C,D = genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,M,N,mW,delS,imageMeth)
+    
+    print(E.shape)
     

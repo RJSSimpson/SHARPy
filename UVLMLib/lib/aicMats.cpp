@@ -934,6 +934,8 @@ void AIC(const double* zetaSrc_,
 	return;
 }
 
+//TODO: Image method in functions below, plus testing.
+
 void dA3gamma0_dZeta(const double* zetaSrc_,
 					 const unsigned int mSrc,
 					 const unsigned int nSrc,

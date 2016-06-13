@@ -19,11 +19,11 @@ import ctypes as ct
 from PyFSI.Beam2UVLM import InitSection
 from PyFSI.Beam2UVLM import CoincidentGrid
 from PyAero.UVLM.Utils import UVLMLib
+from PyAero.UVLM.Utils.Linear import nln2linStates
 from PyFSI.Beam2UVLM import CoincidentGridForce
 from PyAero.UVLM.Utils import DerivedTypesAero
 from PyAero.UVLM.Utils import PostProcess
-from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels
-from PyAero.UVLM.Solver.VLM import InitSteadyWake
+from PyAero.UVLM.Solver.VLM import InitSteadyExternalVels, InitSteadyWake
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 from PyBeam.Utils.XbeamLib import AddGravityLoads, Skew, Psi2TransMat, Tangential
 from DerivedTypesAero import ControlSurf
@@ -404,7 +404,7 @@ if __name__ == '__main__':
         AELAOPTS = AeroelasticOps(EApos,IApos,0.08891)
 #         AELAOPTS = AeroelasticOps(EApos,IApos,rho)
         
-        Settings.OutputDir='/home/rjs10/Documents/MATLAB/Patil_HALE/nlnFlutter/'
+        Settings.OutputDir='/home/rob/Documents/MATLAB/Patil_HALE_laptop/nlnFlutter/'
         Settings.OutputFileRoot='M'+str(M)+'N'+str(N)+'_V'+str(U_mag)+'_alpha'+str(alpha)
         
         # solve linear static problem
@@ -430,40 +430,10 @@ if __name__ == '__main__':
         mW=10*M #10 chord-lengths
         delS=2.0/M
         
-        # circulation dist
-        gam = Gamma.flatten()
-        gamW = np.zeros(mW*N)
-        for i in range(mW):
-            gamW[i*N:(i+1)*N]=GammaStar
-            
-        # geometry
-        zeta=np.zeros((M+1,N+1,3))
-        beam2aero = np.zeros((3,3))
-        beam2aero[0,1]=-1.0
-        beam2aero[1,0]=1.0
-        beam2aero[2,2]=1.0
-        for i in range(M+1):
-            for j in range(N+1):
-                zeta[i,j,:]=np.dot(beam2aero,Zeta[i,j,:])
-        zeta = zeta.flatten()
-        # wake geom
-        zetaW = np.zeros((mW+1,N+1,3))
-        # get wake direction from root TE and far wake point
-        delW=(ZetaStar[1,0,:]-ZetaStar[0,0,:])/np.linalg.norm(ZetaStar[1,0,:]-ZetaStar[0,0,:])*chord/M
-        for i in range(mW+1):
-            for j in range(N+1):
-                zetaW[i,j,:]=Zeta[M,j,:]+i*delW
-                zetaW[i,j,:]=np.dot(beam2aero,zetaW[i,j,:])
-        zetaW = zetaW.flatten()
+        # transform states/inputs 
+        gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero = nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, M, N, mW, chord)
         
-        # init uninit for SS uvlm description (zero reference conditions)
-        gamPri = (np.zeros_like(Gamma)).flatten() #check these they might have to be flat
-        nu = (np.zeros_like(Zeta)).flatten()
-        
-        # set relative velocity
-        zetaPri = (np.zeros_like(Zeta)).flatten()
-        zetaPri[0::3] = -1.0 #nondim with U_mag
-        
+        # generate model
         Ea,Fa,Ga,Ca,Da = genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,M,N,mW,delS,imageMeth=True)
         
         ### linearized interface
@@ -486,7 +456,7 @@ if __name__ == '__main__':
         xiUa[:3*(M+1)*(N+1),:6*(N+1)] = 2*xiZeta/chord;
         xiUa[3*(M+1)*(N+1):6*(M+1)*(N+1),6*(N+1):12*(N+1)] = xiZeta/chord;
         
-        if True:
+        if False:
             fileName=Settings.OutputDir+Settings.OutputFileRoot+'_SSbeam'
             savemat(fileName,
                     {'A':A,'B':B,'C':C,'kMat':kMat,'phiSort':phiSort},

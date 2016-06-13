@@ -87,9 +87,11 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     dAwGamW_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_dAgamma0_dZeta(zetaW, mW, n, gamW, zeta, m, n, dAwGamW_dZeta, imageMeth)
     dWzetaPri_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
+    dWnuPri_dZeta = np.zeros((m*n,3*(m+1)*(n+1)))
     Cpp_dWzetaPri0_dZeta(zeta, m, n, zetaPri, dWzetaPri_dZeta)
+    Cpp_dWzetaPri0_dZeta(zeta, m, n, nu, dWnuPri_dZeta)
     G[0:m*n,0:3*(m+1)*(n+1)] = W
-    G[0:m*n,3*(m+1)*(n+1):6*(m+1)*(n+1)] = - dAgam_dZeta - dAwGamW_dZeta + dWzetaPri_dZeta
+    G[0:m*n,3*(m+1)*(n+1):6*(m+1)*(n+1)] = - dAgam_dZeta - dAwGamW_dZeta + dWzetaPri_dZeta - dWnuPri_dZeta
     G[0:m*n,6*(m+1)*(n+1):] = -W
     
     # populate output matrices C and D
@@ -162,12 +164,13 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     gamPri=np.zeros((m*n))
     chords = np.linspace(0.0, 1.0, m+1, True)
     chordsW = np.linspace(1.0, 1.0+mW*delS/2.0, mW+1, True)
-    spans = np.linspace(-1000.0, 1000.0, n+1, True)
+    spans = np.linspace(0.0, 2000.0, n+1, True)
     zeta=np.zeros(3*len(chords)*len(spans))
     zetaW=np.zeros(3*len(chordsW)*len(spans))
     zetaPri = np.zeros((3*len(chords)*len(spans)))
-    zetaPri[0::3] = -1.0;
+    #zetaPri[0::3] = -1.0
     nu = np.zeros_like(zetaPri)
+    nu[0::3] = 1.0
     kk=0
     for c in chords:
         for s in spans:
@@ -186,7 +189,7 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     # end for c
     
     # generate model
-    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, n, mW, delS)
+    E,F,G,C,D = genSSuvlm(gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, m, n, mW, delS, True)
     
     # convert inputs from general kinematics to aerofil DoFs
     T = np.zeros((9*(m+1)*(n+1),5))
@@ -222,7 +225,7 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
     D_s_coeff = np.dot(T_coeff,D_s)
 
     if writeToMat == True:
-        fileName = Settings.OutputDir + 'aerofoil_m' + str(m) + 'mW' + str(mW) + 'delS' + str(delS)
+        fileName = Settings.OutputDir + 'TESTaerofoil_m' + str(m) + 'mW' + str(mW) + 'delS' + str(delS)
         if e != 0.25:
             fileName += 'e'+str(e)
         if f != 0.75:
@@ -346,10 +349,63 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
     
     return E,F,G,C,D
 
+def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord):
+    """@details generate state-space matrices for linear UVLM.
+    @param Zeta UVLM surface coordinates in a-frame (dimensional).
+    @param ZetaStar UVLM wake coordinates in a-frame (dimensional).
+    @param Gamma UVLM surface circulation (dimensional).
+    @param GammaStar UVLM wake circulation (dimensional).
+    @param mW number of wake panels.
+    @return gam
+    @return gamW
+    @return gamPri
+    @return zeta
+    @return zetaW
+    @return zetaPri
+    @return nu
+    @note All of the return values are nondimensional and in the coordinate system for the linearized aerodynamics."""
+
+    # circulation dist
+    gam = Gamma.flatten()
+    gamW = np.zeros(mW*N)
+    for i in range(mW):
+        gamW[i*N:(i+1)*N]=GammaStar
+        
+    # geometry/external vels
+    zeta=np.zeros((M+1,N+1,3))
+    nu=np.zeros((M+1,N+1,3))
+    beam2aero = np.zeros((3,3))
+    beam2aero[0,1]=-1.0
+    beam2aero[1,0]=1.0
+    beam2aero[2,2]=1.0
+    for i in range(M+1):
+        for j in range(N+1):
+            zeta[i,j,:]=np.dot(beam2aero,Zeta[i,j,:])
+            nu[i,j,:]=np.dot(beam2aero,Uext[i,j,:])
+    zeta = zeta.flatten()
+    nu=nu.flatten()
+    # wake geom
+    zetaW = np.zeros((mW+1,N+1,3))
+    # get wake direction from root TE and far wake point
+    delW=(ZetaStar[1,0,:]-ZetaStar[0,0,:])/np.linalg.norm(ZetaStar[1,0,:]-ZetaStar[0,0,:])*chord/M
+    for i in range(mW+1):
+        for j in range(N+1):
+            zetaW[i,j,:]=Zeta[M,j,:]+i*delW
+            zetaW[i,j,:]=np.dot(beam2aero,zetaW[i,j,:])
+    zetaW = zetaW.flatten()
+    
+    # init uninit for SS uvlm description (zero reference conditions)
+    gamPri = (np.zeros_like(Gamma)).flatten() #check these they might have to be flat
+    
+    # set relative velocity
+    zetaPri = (np.zeros_like(Zeta)).flatten()
+    
+    return gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero
+
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nlnFlutter/'
-    AR=32
-    for m in (20,):
-        for mW in (10*m,):
-            genLinearRectWing(AR,m,mW,40,e=0.5,writeToMat = True,imageMeth = True)
-            #genLinearAerofoil(m,mW,writeToMat = True)
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
+    AR=1e10
+    for m in (10,):
+        for mW in (30*m,):
+            #genLinearRectWing(AR,m,mW,40,e=0.33,writeToMat = True,imageMeth = True)
+            genLinearAerofoil(m,mW,writeToMat = True)

@@ -230,6 +230,7 @@ def Cpp_dAgamma0_dZeta(zetaSrc,mSrc,nSrc,gamma0,zetaTgt,mTgt,nTgt,dAgam0,imageMe
                        zetaTgt.ctypes.data_as(ct.POINTER(ct.c_double)),
                        ct.byref(ct.c_uint(mTgt)),
                        ct.byref(ct.c_uint(nTgt)),
+                       ct.byref(ct.c_bool(imageMeth)),
                        dAgam0.ctypes.data_as(ct.POINTER(ct.c_double)))
     
 def Cpp_dWzetaPri0_dZeta(zeta,m,n,zetaPri,dWzetaPri):
