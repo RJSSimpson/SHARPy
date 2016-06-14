@@ -2,17 +2,17 @@ set stop-on-solib-events 0
 set listsize 21
 
 # file to load debug symbols
-# /home/rob/Software/git/SHARPy/BeamLib/bin/
+# /home/rjs10/git/SHARPy/BeamLib/bin/
 # add-symbol-file BeamLib.so [.. hex mem address ..] -readnow
 
 # put python's source in gdb's source directories
-# dir /home/rob/Software/python3.2-3.2/Python
+dir /home/rjs10/python3.2-3.2/Python
 
 # put beamlib source in gdb source dir
-dir /home/rob/Software/git/SHARPy/BeamLib/src/fortran/install/src
-dir /home/rob/Software/git/SHARPy/BeamLib/src/fortran/main
-dir /home/rob/Software/git/SHARPy/BeamLib/src/lib/src
-dir /home/rob/Software/git/SHARPy/BeamLib/src/wrapper
+dir /home/rjs10/git/SHARPy/BeamLib/src/fortran/install/src
+dir /home/rjs10/git/SHARPy/BeamLib/src/fortran/main
+dir /home/rjs10/git/SHARPy/BeamLib/src/lib/src
+dir /home/rjs10/git/SHARPy/BeamLib/src/wrapper
 
 show directories
 

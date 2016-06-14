@@ -21,6 +21,8 @@ from PyFSI.Beam2UVLM import CoincidentGrid
 from PyFSI.Beam2UVLM import InitSection
 import PyAero.UVLM.Utils.DerivedTypesAero as DerivedTypesAero
 from PyAero.UVLM.Utils.Linear import genSSuvlm, nln2linStates
+import getpass
+from scipy.io.matlab.mio import savemat
 
 def InitSteadyGrid(VMOPTS,VMINPUT):
     """@brief Initialise steady grid and zero grid velocities."""
@@ -227,24 +229,29 @@ def Run_Cpp_Solver_VLM(VMOPTS, VMINPUT, VMUNST = None, AELOPTS = None):
 
 
 if __name__ == '__main__':
+    
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/nonZeroAerofoil/'
+    writeToMat = True
+    
     # Inputs.
-    M=1
-    N=1
+    m=10
+    n=1
     Umag = 1.0
     chord = 1.0
+    span=1.e3
     WakeLength = 10000.0
     imageMeth = True
     VMINPUT = DerivedTypesAero.VMinput(chord ,
-                                   b = 1.0e10,
+                                   b = span,
                                    U_mag = Umag,
-                                   alpha = 1.0*np.pi/180.0,
+                                   alpha = 0.0*np.pi/180.0,
                                    theta = 0.0,
                                    WakeLength = WakeLength,
                                    ctrlSurf = None)
     
     
-    VMOPTS = VMopts(M,
-                    N,
+    VMOPTS = VMopts(m,
+                    n,
                     imageMeth,
                     Mstar = 1,
                     Steady = True,
@@ -254,14 +261,71 @@ if __name__ == '__main__':
     del foo
     
     # unsteady params
-    mW=100*M
-    delS=2/M
+    mW=100*m
+    delS=2/m
     
     # transform states/inputs 
-    gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero = nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord)
+    gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero = nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, m, n, mW, chord)
     
     # generate linear model
-    E,F,G,C,D = genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,M,N,mW,delS,imageMeth)
+    E,F,G,C,D = genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth)
     
-    print(E.shape)
+    # matrices for aerofoil DoFs
+    e=0.25+zeta[0]-0.25/m
+    f=0.75+zeta[0]-0.25/m
+    
+    # convert inputs from general kinematics to aerofil DoFs
+    T = np.zeros((9*(m+1)*(n+1),5))
+    for i in range(m+1):
+        for j in range(n+1):
+            q=i*(n+1)+j
+            # alpha, alphaPrime
+            T[3*(m+1)*(n+1)+3*q+2,0] = -(zeta[3*q]+0.25/m-e)
+            T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)*2.0
+            # plunge
+            T[3*q+2,2] = -1
+            # beta, betaPrime
+            if zeta[3*q]+0.25/m > f:
+                T[3*(m+1)*(n+1)+3*q+2,3] = -(zeta[3*q]+0.25/m-f)
+                T[3*q+2,4] = -(zeta[3*q]+0.25/m-f)*2.0
+                
+                
+    G_s = np.dot(G,T)
+    D_s = np.dot(D,T)
+    
+    # get coefficients as output
+    T_coeff = np.zeros((3,3*(m+1)*(n+1)))
+    T_coeff[0,0::3] = 1.0 #drag
+    T_coeff[1,2::3] = 1.0 #lift
+    for i in range(m+1):
+        for j in range(n+1):
+            q=i*(n+1)+j
+            # moment = r*L, +ve nose-up, at quarter chord
+            T_coeff[2,3*q+2] = -(zeta[3*q]+0.25/m-e)
+    
+    C_coeff = np.dot(T_coeff,C)
+    D_coeff = np.dot(T_coeff,D)
+    D_s_coeff = np.dot(T_coeff,D_s)
+    
+    # spanwise lift distribution as output
+    T_span=np.zeros((n+1,3*(m+1)*(n+1)))
+    for jj in range(n+1):
+        T_span[jj,3*jj+2::3*(n+1)] = 1.0
+
+    if writeToMat == True:
+        fileName = Settings.OutputDir + 'rectWingAR' + str(span/chord) + '_m' + str(m) + 'mW' + str(mW) + 'n' + str(n) + 'delS' + str(delS)
+        if e != 0.25:
+            fileName += 'e'+str(e)
+        if f != 0.75:
+            fileName += 'f'+str(f)
+        if imageMeth != False:
+            fileName += 'half'
+        savemat(fileName,
+                {'E':E, 'F':F, 'G':G, 'C':C, 'D':D, 'm':m, 'mW':mW, 'delS':delS,
+                 'G_s':G_s, 'D_s':D_s,
+                 'C_coeff':C_coeff, 'D_coeff':D_coeff, 'D_s_coeff':D_s_coeff,
+                 'T_coeff':T_coeff, 'T_span':T_span,
+                 'AR':span/chord, 'm':m, 'mW':mW, 'n':n, 'zeta':zeta},
+                True)
+    # end if
     
