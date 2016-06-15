@@ -237,6 +237,7 @@ if __name__ == '__main__':
     m=10
     n=1
     Umag = 1.0
+    alpha = 1.0*np.pi/180.0
     chord = 1.0
     span=1.e3
     WakeLength = 10000.0
@@ -244,7 +245,7 @@ if __name__ == '__main__':
     VMINPUT = DerivedTypesAero.VMinput(chord ,
                                    b = span,
                                    U_mag = Umag,
-                                   alpha = 0.0*np.pi/180.0,
+                                   alpha = alpha,
                                    theta = 0.0,
                                    WakeLength = WakeLength,
                                    ctrlSurf = None)
@@ -261,7 +262,7 @@ if __name__ == '__main__':
     del foo
     
     # unsteady params
-    mW=100*m
+    mW=10*m
     delS=2/m
     
     # transform states/inputs 
@@ -274,8 +275,8 @@ if __name__ == '__main__':
     e=0.25+zeta[0]-0.25/m
     f=0.75+zeta[0]-0.25/m
     
-    # convert inputs from general kinematics to aerofil DoFs
-    T = np.zeros((9*(m+1)*(n+1),5))
+    # convert inputs from general kinematics to aerofil DoFs with heave
+    T = np.zeros((9*(m+1)*(n+1),6))
     for i in range(m+1):
         for j in range(n+1):
             q=i*(n+1)+j
@@ -283,7 +284,9 @@ if __name__ == '__main__':
             T[3*(m+1)*(n+1)+3*q+2,0] = -(zeta[3*q]+0.25/m-e)
             T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)*2.0
             # plunge
-            T[3*q+2,2] = -1
+            T[3*q+2,2] = -2.0
+            # heave
+            T[3*q,5] = -2.0
             # beta, betaPrime
             if zeta[3*q]+0.25/m > f:
                 T[3*(m+1)*(n+1)+3*q+2,3] = -(zeta[3*q]+0.25/m-f)
@@ -313,7 +316,7 @@ if __name__ == '__main__':
         T_span[jj,3*jj+2::3*(n+1)] = 1.0
 
     if writeToMat == True:
-        fileName = Settings.OutputDir + 'rectWingAR' + str(span/chord) + '_m' + str(m) + 'mW' + str(mW) + 'n' + str(n) + 'delS' + str(delS)
+        fileName = Settings.OutputDir + 'rectWingAR' + str(span/chord) + '_m' + str(m) + 'mW' + str(mW) + 'n' + str(n) + 'delS' + str(delS) + '_alpha' + str(alpha)
         if e != 0.25:
             fileName += 'e'+str(e)
         if f != 0.75:
