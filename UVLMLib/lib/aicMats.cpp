@@ -1657,7 +1657,7 @@ void Y3(const double* gamma_,
 	 * @param m Chordwise panels.
 	 * @param n Spanwise panels.
 	 * @return Y3 Output.
-	 * @note If at the trailing edge the direct effect of dGamma is set zero.
+	 * @note If at the trailing edge the direct effect is set zero.
 	 */
 
 	// map Eigen types

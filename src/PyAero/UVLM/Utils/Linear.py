@@ -349,7 +349,7 @@ def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = Fa
     
     return E,F,G,C,D
 
-def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord):
+def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord, vRef = 1.0):
     """@details generate state-space matrices for linear UVLM.
     @param Zeta UVLM surface coordinates in a-frame (dimensional).
     @param ZetaStar UVLM wake coordinates in a-frame (dimensional).
@@ -364,12 +364,12 @@ def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord):
     @return zetaPri
     @return nu
     @note All of the return values are nondimensional and in the coordinate system for the linearized aerodynamics."""
-
+    
     # circulation dist
-    gam = Gamma.flatten()
+    gam = Gamma.flatten()/(chord*vRef)
     gamW = np.zeros(mW*N)
     for i in range(mW):
-        gamW[i*N:(i+1)*N]=GammaStar
+        gamW[i*N:(i+1)*N]=GammaStar/(chord*vRef)
         
     # geometry/external vels
     zeta=np.zeros((M+1,N+1,3))
@@ -382,7 +382,7 @@ def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord):
         for j in range(N+1):
             zeta[i,j,:]=np.dot(beam2aero,Zeta[i,j,:])
             nu[i,j,:]=np.dot(beam2aero,Uext[i,j,:])
-    zeta = zeta.flatten()
+    zeta = zeta.flatten()/chord
     nu=nu.flatten()/2.0
     # wake geom
     zetaW = np.zeros((mW+1,N+1,3))
@@ -392,13 +392,13 @@ def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord):
         for j in range(N+1):
             zetaW[i,j,:]=Zeta[M,j,:]+i*delW
             zetaW[i,j,:]=np.dot(beam2aero,zetaW[i,j,:])
-    zetaW = zetaW.flatten()
+    zetaW = zetaW.flatten()/chord
     
     # init uninit for SS uvlm description (zero reference conditions)
     gamPri = (np.zeros_like(Gamma)).flatten() #check these they might have to be flat
     
     # set relative velocity
-    zetaPri = (np.zeros_like(Zeta)).flatten()
+    zetaPri = (np.zeros_like(Zeta)).flatten() #remember to nondim if nonzero
     
     return gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero
 

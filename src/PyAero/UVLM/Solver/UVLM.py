@@ -23,8 +23,9 @@ from PyFSI.Beam2UVLM import InitSection, CoincidentGrid
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 from PyAero.UVLM.Utils.DerivedTypesAero import VMUnsteadyInput
 from scipy.io import savemat
+import getpass
 
-def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
+def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None):
     """@brief UVLM solver with prescribed inputs."""
     
     # Initialise DerivedTypes for PyBeam initialisation. 
@@ -52,8 +53,12 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
     
     # Initialise origin and orientation of surface velocities in a-frame
     CGa = Psi2TransMat(VMUNST.PsiA_G)
-    VelA_A = np.dot(CGa.T,VMUNST.VelA_G)
-    OmegaA_A = np.dot(CGa.T,VMUNST.OmegaA_G)
+    if vOmegaHist == None:
+        VelA_A = np.dot(CGa.T,VMUNST.VelA_G)
+        OmegaA_A = np.dot(CGa.T,VMUNST.OmegaA_G)
+    else:
+        VelA_A = np.dot(CGa.T,vOmegaHist[0,1:4])
+        OmegaA_A = np.dot(CGa.T,vOmegaHist[0,4:7])
     
     # Declare empty array for aerodynamic grid and velocities.
     Zeta = np.zeros((VMOPTS.M.value + 1,VMOPTS.N.value + 1,3), ct.c_double, 'C')
@@ -67,8 +72,12 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
                    VMINPUT.ctrlSurf)
     
     # Initialise wake for unsteady solution.
-    ZetaStar, GammaStar = InitSteadyWake(VMOPTS, VMINPUT, Zeta,
-                                         VMUNST.VelA_G)
+    if vOmegaHist == None:
+        velForWake = VMUNST.VelA_G
+    else:
+        velForWake = vOmegaHist[0,1:4]
+        
+    ZetaStar, GammaStar = InitSteadyWake(VMOPTS, VMINPUT, Zeta, velForWake)
     
     # Initialise external velocities.  
     Uext = InitSteadyExternalVels(VMOPTS,VMINPUT)
@@ -104,8 +113,13 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
         if iTimeStep > 0:
             
             # Update geometry.
-            VMUNST.OriginA_G[:] += VMUNST.VelA_G[:]*VMUNST.DelTime
-            # TODO: update OmegaA_A in pitching problem.
+            if vOmegaHist == None:
+                VMUNST.OriginA_G[:] += VMUNST.VelA_G[:]*VMUNST.DelTime
+                # TODO: update OmegaA_A, PsiA_A in pitching problem.
+            else:
+                VMUNST.OriginA_G[:] += vOmegaHist[iTimeStep,1:4]*VMUNST.DelTime
+                VelA_A = vOmegaHist[iTimeStep,1:4]
+                # TODO: update OmegaA_A, PsiA_G in pitching problem.
             
             # Update control surface defintion.
             if VMINPUT.ctrlSurf != None:
@@ -194,31 +208,35 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS):
         
 
 if __name__ == '__main__':
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/nonZeroAerofoil/UVLM/'
+    writeToMat = True
+    
     # Define options for aero solver.
-    M = 4
-    N = 20
-    Mstar = 80
+    M = 20
+    N = 1
+    Mstar = 1000
     U_mag = 1.0
     alpha = 0.0*np.pi/180.0
-    theta = 15.0*np.pi/180.0
+    theta = 1.0*np.pi/180.0
+    imageMeth=True
     
     # Define wing geometry parameters.
-    c = 1.0
-    b = 2.0 #semi-span
+    c = 1
+    b = 2000 #semi-span
     
-    VMOPTS = VMopts(M,N,False,Mstar,False,False,False,c/(M*U_mag),True,4)
+    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,False,c/(M*U_mag),False,4)
     
     # Define Control Surface
     ctrlSurf = None #ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
     
     # Define free stream conditions.
     
-    VMINPUT = VMinput(c, b, U_mag, alpha, theta, 15.0,  ctrlSurf)
+    VMINPUT = VMinput(c, b, U_mag, alpha, theta, Mstar/M,  ctrlSurf)
     
     # Define unsteady solver parameters.
-    WakeLength = 5.0
-    DeltaS = 0.25
-    NumChordLengths = 10.0
+    WakeLength = Mstar/M
+    DeltaS = 1/M # define wrt to #CHORD
+    NumChordLengths = 100.0
     VelA_A = np.array([0, 0, 0])
     OmegaA_A = np.array([0, 0, 0])
     VMUNST = VMUnsteadyInput(VMOPTS,VMINPUT,\
@@ -227,11 +245,32 @@ if __name__ == '__main__':
                              NumChordLengths,\
                              VelA_A, OmegaA_A)
     
+    # Generate history of axis sytem motions (in inertial frame)
+    omegaY=2*U_mag*0.1/c
+    Time = np.arange(0.0,VMUNST.FinalTime+VMUNST.DelTime,VMUNST.DelTime)
+    vOmegaHist = np.zeros((len(Time),7))
+    vOmegaHist[:,0] = Time
+    vOmegaHist[:,1] = 0.0 # along A-frame x-axis
+    vOmegaHist[:,2] = omegaY*0.01*np.cos(omegaY*Time) # y-axis (fore/aft)
+    vOmegaHist[:,3] = 0.0 # z-axis (up/down)
+    vOmegaHist[:,4] = 0.0 # about A-frame x-axis
+    vOmegaHist[:,5] = 0.0 # about y
+    vOmegaHist[:,6] = 0.0 # about z
+    
     # Define 'aeroelastic' options.
     AELOPTS = AeroelasticOps(ElasticAxis = -0.5)
     
     # Run C++ solver
-    Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS)
+    Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist)
     
-    print(Coeffs)
+    print(Coeffs[-50:,:])
+    
+    if writeToMat == True:
+        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2*DeltaS) + '_alpha' + str(theta)[:7]
+        if imageMeth != False:
+            fileName += '_half'
+        savemat(fileName,
+                {'vOmegaHist':vOmegaHist,
+                 'Coeffs':Coeffs},
+                True)
     

@@ -239,7 +239,7 @@ if __name__ == '__main__':
     Umag = 1.0
     alpha = 1.0*np.pi/180.0
     chord = 1.0
-    span=1.e3
+    span=2.e3
     WakeLength = 10000.0
     imageMeth = True
     VMINPUT = DerivedTypesAero.VMinput(chord ,
@@ -277,20 +277,26 @@ if __name__ == '__main__':
     
     # convert inputs from general kinematics to aerofil DoFs with heave
     T = np.zeros((9*(m+1)*(n+1),6))
+    rot=np.zeros((3,3))
+    rot[0,0]=np.cos(alpha)
+    rot[0,2]=-np.sin(alpha)
+    rot[1,1]=1.0
+    rot[2,0]=np.sin(alpha)
+    rot[2,2]=np.cos(alpha)
     for i in range(m+1):
         for j in range(n+1):
             q=i*(n+1)+j
             # alpha, alphaPrime
             T[3*(m+1)*(n+1)+3*q+2,0] = -(zeta[3*q]+0.25/m-e)
-            T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)*2.0
+            T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)
             # plunge
-            T[3*q+2,2] = -2.0
-            # heave
-            T[3*q,5] = -2.0
+            T[3*q:3*q+3,2]=np.dot(rot,np.array([0, 0, -1]))
+            # heave (+ towards tail)
+            T[3*q:3*q+3,5] = np.dot(rot,np.array([1, 0, 0]))
             # beta, betaPrime
             if zeta[3*q]+0.25/m > f:
                 T[3*(m+1)*(n+1)+3*q+2,3] = -(zeta[3*q]+0.25/m-f)
-                T[3*q+2,4] = -(zeta[3*q]+0.25/m-f)*2.0
+                T[3*q+2,4] = -(zeta[3*q]+0.25/m-f)
                 
                 
     G_s = np.dot(G,T)
@@ -304,7 +310,7 @@ if __name__ == '__main__':
         for j in range(n+1):
             q=i*(n+1)+j
             # moment = r*L, +ve nose-up, at quarter chord
-            T_coeff[2,3*q+2] = -(zeta[3*q]+0.25/m-e)
+            T_coeff[2,3*q+2] = -(zeta[3*q]-e)
     
     C_coeff = np.dot(T_coeff,C)
     D_coeff = np.dot(T_coeff,D)
