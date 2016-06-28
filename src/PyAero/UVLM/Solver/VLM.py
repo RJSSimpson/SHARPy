@@ -289,9 +289,9 @@ if __name__ == '__main__':
             # alpha, alphaPrime
             T[3*(m+1)*(n+1)+3*q+2,0] = -(zeta[3*q]+0.25/m-e)
             T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)
-            # plunge
+            # plunge velocity
             T[3*q:3*q+3,2]=np.dot(rot,np.array([0, 0, -1]))
-            # heave (+ towards tail)
+            # heave velocity (+ towards tail)
             T[3*q:3*q+3,5] = np.dot(rot,np.array([1, 0, 0]))
             # beta, betaPrime
             if zeta[3*q]+0.25/m > f:
