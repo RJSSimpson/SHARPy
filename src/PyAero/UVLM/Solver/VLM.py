@@ -20,9 +20,10 @@ from PyBeam.Utils import BeamInit
 from PyFSI.Beam2UVLM import CoincidentGrid
 from PyFSI.Beam2UVLM import InitSection
 import PyAero.UVLM.Utils.DerivedTypesAero as DerivedTypesAero
-from PyAero.UVLM.Utils.Linear import genSSuvlm, nln2linStates
+from PyAero.UVLM.Utils.Linear import genSSuvlm, nln2linStates, runLinearAero
 import getpass
 from scipy.io.matlab.mio import savemat
+import matplotlib.pyplot as plt
 
 def InitSteadyGrid(VMOPTS,VMINPUT):
     """@brief Initialise steady grid and zero grid velocities."""
@@ -231,10 +232,11 @@ def Run_Cpp_Solver_VLM(VMOPTS, VMINPUT, VMUNST = None, AELOPTS = None):
 if __name__ == '__main__':
     
     Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/nonZeroAerofoil/'
-    writeToMat = True
+    writeToMat = False
+    runLinear = True
     
     # Inputs.
-    m=10
+    m=20
     n=1
     Umag = 1.0
     alpha = 1.0*np.pi/180.0
@@ -291,7 +293,7 @@ if __name__ == '__main__':
             T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)
             # plunge velocity
             T[3*q:3*q+3,2]=np.dot(rot,np.array([0, 0, -1]))
-            # heave velocity (+ towards tail)
+            # in-plane velocity (+ free stream direction)
             T[3*q:3*q+3,5] = np.dot(rot,np.array([1, 0, 0]))
             # beta, betaPrime
             if zeta[3*q]+0.25/m > f:
@@ -336,5 +338,24 @@ if __name__ == '__main__':
                  'T_coeff':T_coeff, 'T_span':T_span,
                  'AR':span/chord, 'm':m, 'mW':mW, 'n':n, 'zeta':zeta},
                 True)
+        
+    if runLinear == True:
+        nT = 2001 # number of time steps
+        u = np.zeros((nT,G_s.shape[1])) # inputs
+        k = 0.1 # reduced frequency
+        hBar = 0.01 # 1% of chord
+        tau = np.linspace(0.0, nT*delS, nT)
+        surge=hBar*np.sin(k*tau)
+        u[:,5]=k*hBar*np.cos(k*tau) # in-plane vibrations
+        tOut, yOut = runLinearAero(E, F, G_s, C_coeff, D_s_coeff, delS, nT, u)[0:2]
+        print(tOut)
+        print(yOut)
+        plt.plot(tOut, 2*yOut[:,1]/(2*np.pi*np.pi/180),tOut,surge,'--')
+        plt.xlabel(r'$\tau$')
+        plt.ylabel(r'$C_l / 2\pi\alpha_0$')
+        plt.title('Linearized response to surging motion')
+        plt.grid(True)
+        #plt.savefig("test.png")
+        plt.show()
     # end if
     

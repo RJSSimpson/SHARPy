@@ -32,7 +32,7 @@ class StateSpace(lti):
         object disSys which is a MATLAB structure, i.e not the new style MATLAB
         lti class. To convert to a struct in MATLAB simply use
         disSys = struct(MATLAB_SS_object) before saving the .mat file.
-        @details the string to the .may file is the absolute filename without
+        @details the string to the .mat file is the absolute filename without
         the .mat extension.
         """
         N = len(args)

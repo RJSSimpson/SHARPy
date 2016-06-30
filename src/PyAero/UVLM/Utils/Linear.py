@@ -17,6 +17,8 @@ from scipy.io.matlab.mio import savemat
 import SharPySettings as Settings
 import getpass
 from XbeamLib import Skew
+from PyMPC.ssdiscrete import StateSpace
+from scipy.signal import dlsim
 
 np.set_printoptions(precision = 4)
 
@@ -238,7 +240,7 @@ def genLinearAerofoil(m,mW,writeToMat = False,e=0.25,f=0.75):
                 True)
     # end if
     
-    return E,F,G,C,D
+    return E,F,G,C,D,delS
 
 def genLinearRectWing(AR,m,mW,n,e=0.25,f=0.75,writeToMat = False, imageMeth = False):
     """@brief Generate linear model of rectangular wing.
@@ -402,10 +404,47 @@ def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord, vRef 
     
     return gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero
 
+def runLinearAero(E,F,G,C,D,delS,nT,u,x0 = None):
+    """@details run time-domain simulation of linear aerodynamics.
+    @param E Discrete-time state-space matrix.
+    @param F Discrete-time state-space matrix.
+    @param G Discrete-time state-space matrix.
+    @param C Discrete-time state-space matrix.
+    @param D Discrete-time state-space matrix.
+    @param delS Non-dimensional time step of model.
+    @param nT Number of time-steps to run simulation.
+    @param u Inputs, an nT x m array.
+    @return x State history, an nT x n array.
+    @return y Output history, an nT x l array.
+    """
+    
+    invE = np.linalg.inv(E)    
+    # run simulation
+    tOut, yOut, xOut = dlsim((np.dot(invE,F),np.dot(invE,G),C,D,delS),
+                             u,
+                             None,
+                             x0)
+    
+    return tOut, yOut, xOut
+    
+                        
+
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
-    AR=1e10
-    for m in (20,):
-        for mW in (30*m,):
-            #genLinearRectWing(AR,m,mW,40,e=0.33,writeToMat = True,imageMeth = True)
-            genLinearAerofoil(m,mW,writeToMat = True)
+    if False:
+        Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
+        AR=1e10
+        for m in (20,):
+            for mW in (30*m,):
+                #genLinearRectWing(AR,m,mW,40,e=0.33,writeToMat = True,imageMeth = True)
+                genLinearAerofoil(m,mW,writeToMat = True)
+                
+    if True:
+        # aerofoil model
+        m=20
+        mW=20*m
+        E,F,G,C,D,delS = genLinearAerofoil(m,mW)
+        # simulation inputs
+        nT=10 # number of time-steps
+        u = np.zeros((nT,D.shape[1]))
+        tOut,yOut,xOut = runLinearAero(E,F,G,C,D,delS,nT,u)
+        
