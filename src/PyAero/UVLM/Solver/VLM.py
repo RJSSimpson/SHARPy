@@ -22,7 +22,7 @@ from PyFSI.Beam2UVLM import InitSection
 import PyAero.UVLM.Utils.DerivedTypesAero as DerivedTypesAero
 from PyAero.UVLM.Utils.Linear import genSSuvlm, nln2linStates, runLinearAero
 import getpass
-from scipy.io.matlab.mio import savemat
+from scipy.io.matlab.mio import savemat, loadmat
 import matplotlib.pyplot as plt
 
 def InitSteadyGrid(VMOPTS,VMINPUT):
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     alpha = 1.0*np.pi/180.0
     chord = 1.0
     span=2.e3
-    WakeLength = 10000.0
+    WakeLength = 10.0
     imageMeth = True
     VMINPUT = DerivedTypesAero.VMinput(chord ,
                                    b = span,
@@ -260,7 +260,7 @@ if __name__ == '__main__':
                     Steady = True,
                     KJMeth = True)
     # run solver
-    Zeta, ZetaStar, Gamma, GammaStar, foo, Uext = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)[1:7]
+    Coeffs, Zeta, ZetaStar, Gamma, GammaStar, foo, Uext = Run_Cpp_Solver_VLM(VMOPTS,VMINPUT)[0:7]
     del foo
     
     # unsteady params
@@ -293,8 +293,8 @@ if __name__ == '__main__':
             T[3*q+2,1] = -(zeta[3*q]+0.25/m-e)
             # plunge velocity
             T[3*q:3*q+3,2]=np.dot(rot,np.array([0, 0, -1]))
-            # in-plane velocity (+ free stream direction)
-            T[3*q:3*q+3,5] = np.dot(rot,np.array([1, 0, 0]))
+            # in-plane velocity (+ nose direction)
+            T[3*q:3*q+3,5] = np.dot(rot,np.array([-1, 0, 0]))
             # beta, betaPrime
             if zeta[3*q]+0.25/m > f:
                 T[3*(m+1)*(n+1)+3*q+2,3] = -(zeta[3*q]+0.25/m-f)
@@ -340,7 +340,7 @@ if __name__ == '__main__':
                 True)
         
     if runLinear == True:
-        nT = 2001 # number of time steps
+        nT = 4001 # number of time steps
         u = np.zeros((nT,G_s.shape[1])) # inputs
         k = 0.1 # reduced frequency
         hBar = 0.01 # 1% of chord
@@ -348,13 +348,18 @@ if __name__ == '__main__':
         surge=hBar*np.sin(k*tau)
         u[:,5]=k*hBar*np.cos(k*tau) # in-plane vibrations
         tOut, yOut = runLinearAero(E, F, G_s, C_coeff, D_s_coeff, delS, nT, u)[0:2]
-        print(tOut)
-        print(yOut)
-        plt.plot(tOut, 2*yOut[:,1]/(2*np.pi*np.pi/180),tOut,surge,'--')
+        # load UVLM data
+        dataDir = '/home/rjs10/Documents/MATLAB/newUVLM/nonZeroAerofoil/UVLM/'
+        data = loadmat(dataDir + 'UVLMrectAR2000.0_m20mW200n1delS0.1_alpha0.01745_half.mat')
+        # Plot
+        plt.plot(tOut,surge,'b--',
+                 tOut, 2*yOut[:,1]/(2*np.pi*np.pi/180)/2000.0,'r-',
+                 data['Coeffs'][:,0]*2,(data['Coeffs'][:,3]-Coeffs[2])/(2*np.pi*np.pi/180),'k--')
         plt.xlabel(r'$\tau$')
         plt.ylabel(r'$C_l / 2\pi\alpha_0$')
-        plt.title('Linearized response to surging motion')
+        plt.title('Lift perturbations due to surging motion')
         plt.grid(True)
+        plt.ylim((-0.012,0.012))
         #plt.savefig("test.png")
         plt.show()
     # end if

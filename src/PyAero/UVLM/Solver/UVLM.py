@@ -214,7 +214,7 @@ if __name__ == '__main__':
     # Define options for aero solver.
     M = 20
     N = 1
-    Mstar = 1000
+    Mstar = 10*M
     U_mag = 1.0
     alpha = 0.0*np.pi/180.0
     theta = 1.0*np.pi/180.0
@@ -236,7 +236,7 @@ if __name__ == '__main__':
     # Define unsteady solver parameters.
     WakeLength = Mstar/M
     DeltaS = 1/M # define wrt to #CHORD
-    NumChordLengths = 100.0
+    NumChordLengths = 200.0
     VelA_A = np.array([0, 0, 0])
     OmegaA_A = np.array([0, 0, 0])
     VMUNST = VMUnsteadyInput(VMOPTS,VMINPUT,\
