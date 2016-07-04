@@ -342,7 +342,7 @@ if __name__ == '__main__':
     if runLinear == True:
         nT = 4001 # number of time steps
         u = np.zeros((nT,G_s.shape[1])) # inputs
-        k = 0.1 # reduced frequency
+        k = 1.0 # reduced frequency
         hBar = 0.01 # 1% of chord
         tau = np.linspace(0.0, nT*delS, nT)
         surge=hBar*np.sin(k*tau)
@@ -359,7 +359,7 @@ if __name__ == '__main__':
         plt.ylabel(r'$C_l / 2\pi\alpha_0$')
         plt.title('Lift perturbations due to surging motion')
         plt.grid(True)
-        plt.ylim((-0.012,0.012))
+        plt.ylim((-0.05,0.05))
         #plt.savefig("test.png")
         plt.show()
     # end if

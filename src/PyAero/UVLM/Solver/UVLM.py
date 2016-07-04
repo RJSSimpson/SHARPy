@@ -246,12 +246,14 @@ if __name__ == '__main__':
                              VelA_A, OmegaA_A)
     
     # Generate history of axis sytem motions (in inertial frame)
-    omegaY=2*U_mag*0.1/c
+    hBar=0.01
+    k=1.0
+    omegaY=2*U_mag*k/c
     Time = np.arange(0.0,VMUNST.FinalTime+VMUNST.DelTime,VMUNST.DelTime)
     vOmegaHist = np.zeros((len(Time),7))
     vOmegaHist[:,0] = Time
     vOmegaHist[:,1] = 0.0 # along A-frame x-axis
-    vOmegaHist[:,2] = omegaY*0.01*np.cos(omegaY*Time) # y-axis (fore/aft)
+    vOmegaHist[:,2] = omegaY*hBar*np.cos(omegaY*Time) # y-axis (fore/aft)
     vOmegaHist[:,3] = 0.0 # z-axis (up/down)
     vOmegaHist[:,4] = 0.0 # about A-frame x-axis
     vOmegaHist[:,5] = 0.0 # about y
