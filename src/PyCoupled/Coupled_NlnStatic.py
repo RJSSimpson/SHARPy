@@ -305,10 +305,11 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
     PostProcess.CloseAeroTecFile(FileObject)
         
     # Return solution
-    return PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni
+    return PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni, Uext
 
 if __name__ == '__main__':
     ## solve nlnstatic problem.
+    Settings.OutputDir='/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/'
     
     # beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
@@ -404,11 +405,10 @@ if __name__ == '__main__':
         AELAOPTS = AeroelasticOps(EApos,IApos,0.08891)
 #         AELAOPTS = AeroelasticOps(EApos,IApos,rho)
         
-        Settings.OutputDir='/home/rob/Documents/MATLAB/Patil_HALE_laptop/nlnFlutter/'
         Settings.OutputFileRoot='M'+str(M)+'N'+str(N)+'_V'+str(U_mag)+'_alpha'+str(alpha)
         
         # solve linear static problem
-        PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni = Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
+        PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni, Uext = Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
         
         ### linearized beam model
         A,B,C,kMat,phiSort = genSSbeam(XBINPUT,
@@ -430,8 +430,19 @@ if __name__ == '__main__':
         mW=10*M #10 chord-lengths
         delS=2.0/M
         
+        # save for unsteady aero about non-zero starting condition
+        if False:
+            fileName=Settings.OutputDir+Settings.OutputFileRoot+'_UVLMstates'
+            savemat(fileName,
+                    {'Zeta':Zeta,
+                     'ZetaStar':ZetaStar,
+                     'Gamma':Gamma,
+                     'GammaStar':GammaStar,
+                     'Uext':Uext},
+                    True)
+        
         # transform states/inputs 
-        gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero = nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, M, N, mW, chord)
+        gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero = nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord, U_mag)
         
         # generate model
         Ea,Fa,Ga,Ca,Da = genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,M,N,mW,delS,imageMeth=True)
@@ -452,11 +463,11 @@ if __name__ == '__main__':
                                                  np.dot(Skew([0, chord*(e-float(ii)/float(M)), 0]),
                                                         Tang)))
         # structural DoFs to aero inputs
-        xiUa = np.zeros((9*(M+1)*(N+1),12*(N+1)));
-        xiUa[:3*(M+1)*(N+1),:6*(N+1)] = 2*xiZeta/chord;
-        xiUa[3*(M+1)*(N+1):6*(M+1)*(N+1),6*(N+1):12*(N+1)] = xiZeta/chord;
+        xiUa = np.zeros((9*(M+1)*(N+1),12*(N+1)))
+        xiUa[:3*(M+1)*(N+1),:6*(N+1)] = xiZeta/chord
+        xiUa[3*(M+1)*(N+1):6*(M+1)*(N+1),6*(N+1):12*(N+1)] = xiZeta/chord
         
-        if False:
+        if True:
             fileName=Settings.OutputDir+Settings.OutputFileRoot+'_SSbeam'
             savemat(fileName,
                     {'A':A,'B':B,'C':C,'kMat':kMat,'phiSort':phiSort},

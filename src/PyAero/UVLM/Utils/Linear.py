@@ -385,7 +385,7 @@ def nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord, vRef 
             zeta[i,j,:]=np.dot(beam2aero,Zeta[i,j,:])
             nu[i,j,:]=np.dot(beam2aero,Uext[i,j,:])
     zeta = zeta.flatten()/chord
-    nu=nu.flatten()/2.0
+    nu=nu.flatten()/2.0/vRef
     # wake geom
     zetaW = np.zeros((mW+1,N+1,3))
     # get wake direction from root TE and far wake point
@@ -430,15 +430,15 @@ def runLinearAero(E,F,G,C,D,delS,nT,u,x0 = None):
                         
 
 if __name__ == '__main__':
-    if False:
-        Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/aerofoil/'
-        AR=1e10
-        for m in (20,):
+    if True:
+        Settings.OutputDir = '/home/' + getpass.getuser() + '/Desktop/'
+        # AR=1e10
+        for m in (30,):
             for mW in (30*m,):
                 #genLinearRectWing(AR,m,mW,40,e=0.33,writeToMat = True,imageMeth = True)
                 genLinearAerofoil(m,mW,writeToMat = True)
                 
-    if True:
+    if False:
         # aerofoil model
         m=20
         mW=20*m

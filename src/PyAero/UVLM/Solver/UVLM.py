@@ -22,7 +22,7 @@ import BeamInit
 from PyFSI.Beam2UVLM import InitSection, CoincidentGrid
 from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 from PyAero.UVLM.Utils.DerivedTypesAero import VMUnsteadyInput
-from scipy.io import savemat
+from scipy.io import savemat, loadmat
 import getpass
 
 def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None):
@@ -246,19 +246,47 @@ if __name__ == '__main__':
                              VelA_A, OmegaA_A)
     
     # Generate history of axis sytem motions (in inertial frame)
-    hBar=0.01
-    k=1.0
-    omegaY=2*U_mag*k/c
-    Time = np.arange(0.0,VMUNST.FinalTime+VMUNST.DelTime,VMUNST.DelTime)
-    vOmegaHist = np.zeros((len(Time),7))
-    vOmegaHist[:,0] = Time
-    vOmegaHist[:,1] = 0.0 # along A-frame x-axis
-    vOmegaHist[:,2] = omegaY*hBar*np.cos(omegaY*Time) # y-axis (fore/aft)
-    vOmegaHist[:,3] = 0.0 # z-axis (up/down)
-    vOmegaHist[:,4] = 0.0 # about A-frame x-axis
-    vOmegaHist[:,5] = 0.0 # about y
-    vOmegaHist[:,6] = 0.0 # about z
+    if True:
+        hBar=0.01
+        k=1.0
+        omegaY=2*U_mag*k/c
+        Time = np.arange(0.0,VMUNST.FinalTime+VMUNST.DelTime,VMUNST.DelTime)
+        vOmegaHist = np.zeros((len(Time),7))
+        vOmegaHist[:,0] = Time
+        vOmegaHist[:,1] = 0.0 # along A-frame x-axis
+        vOmegaHist[:,2] = omegaY*hBar*np.cos(omegaY*Time) # y-axis (fore/aft)
+        vOmegaHist[:,3] = 0.0 # z-axis (up/down)
+        vOmegaHist[:,4] = 0.0 # about A-frame x-axis
+        vOmegaHist[:,5] = 0.0 # about y
+        vOmegaHist[:,6] = 0.0 # about z
+    else:
+        vOmegaHist = None
     
+    # Generate a history of beam DoF motions (in A-frame)
+    if True:
+        etaHist = np.zeros((12*N,len(Time)))
+        modeFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SSbeam'
+        beamDict = loadmat(modeFile)
+        modeNum = 1
+        eigVec = beamDict['phiSort'][:,modeNum-1]
+        disps=np.array((np.arange(0, np.size(eigVec, 0)-1, 6),
+                        np.arange(1, np.size(eigVec, 0)-1, 6),
+                        np.arange(2, np.size(eigVec, 0)-1, 6)))
+        disps = np.sort(disps.flatten())
+        maxDef = np.max(eigVec[disps])
+        scale=(1/maxDef)*0.01*16.0
+        phi0=scale*eigVec
+        # get mode freq
+        k = np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1])
+        omega = 2*U_mag*k/c
+        tCount=0
+        for t in Time:
+            etaHist[:6*N,tCount]=phi0*np.sin(omega*t)
+            etaHist[6*N:,tCount]=omega*phi0*np.cos(omega*t)
+            tCount+=1
+    else:
+        etaHist = None
+        
     # Define 'aeroelastic' options.
     AELOPTS = AeroelasticOps(ElasticAxis = -0.5)
     
