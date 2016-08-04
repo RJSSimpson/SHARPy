@@ -25,8 +25,10 @@ from PyAero.UVLM.Utils.DerivedTypesAero import VMUnsteadyInput
 from scipy.io import savemat, loadmat
 import getpass
 
-def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None):
-    """@brief UVLM solver with prescribed inputs."""
+def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None):
+    """@brief UVLM solver with prescribed inputs.
+       @param vOmegaHist History of velocities of the A-frame, expressed in A-frame.
+       @param eta0 History of underlying beam disps/rotations in A-frame."""
     
     # Initialise DerivedTypes for PyBeam initialisation. 
     XBOPTS = DerivedTypes.Xbopts()
@@ -39,8 +41,13 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None):
     # Delete unnecessary variables.
     del XBELEM, XBNODE, NumDof  
     # Copy reference beam to current (deformed) variables.
-    PosDefor = PosIni.copy(order = 'F')
-    PsiDefor = PsiIni.copy(order = 'F')
+    if eta0==None:
+        PosDefor = PosIni.copy(order = 'F')
+        PsiDefor = PsiIni.copy(order = 'F')
+    else:
+        # posDefor=eta0[1:2,6:8....]
+        # psiDefor[iElem,iiElem,:]=eta0[3:6,9:12...] #assuming 2-noded beam elemnts for UVLM meshing
+    
     # Declare empty array for beam DoF rates.
     PosDotDef = np.zeros_like(PosDefor, ct.c_double, 'F')
     PsiDotDef = np.zeros_like(PsiDefor, ct.c_double, 'F')
@@ -194,7 +201,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None):
     PostProcess.CloseAeroTecFile(FileObject)
     
     # write geometry and circ dist. to file for matlab
-    if iTimeStep == len(Time)-1 and True:
+    if iTimeStep == len(Time)-1 and False:
         savemat('/home/rjs10/Desktop/uvlmOut.mat',
                 {'zeta':Zeta.flatten('C'),
                  'zetaW':ZetaStar.flatten('C'),
@@ -261,9 +268,17 @@ if __name__ == '__main__':
         vOmegaHist[:,6] = 0.0 # about z
     else:
         vOmegaHist = None
-    
-    # Generate a history of beam DoF motions (in A-frame)
+        
     if True:
+        refFile = '/home/rob/Documents/MATLAB/Patil_HALE_laptop/nonZeroAero/M4N10_V25_alpha2_SOL112_def.dat'
+        numElemsNode = 3
+        refDict=loadmat(refFile)
+        # TODO: extract nodal information
+    else:
+        eta0 = None
+        
+    # Generate a history of beam DoF motions (in A-frame)
+    if False:
         etaHist = np.zeros((12*N,len(Time)))
         modeFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SSbeam'
         beamDict = loadmat(modeFile)
