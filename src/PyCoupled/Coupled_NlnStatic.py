@@ -87,7 +87,6 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
                                                 Variables)
     
     # Start Load Loop.
-#         for iLoadStep in range(XBOPTS.NumLoadSteps.value):
     for iLoadStep in range(XBOPTS.MaxIterations.value):
         # Reset convergence parameters and loads.
         Iter = 0
@@ -271,8 +270,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
 
 
     if XBOPTS.PrintInfo.value==True:
-        sys.stdout.write(' ... done\n')
-    
+        sys.stdout.write(' ... done\n')    
      
     # Write deformed configuration to file.
     ofile = Settings.OutputDir + Settings.OutputFileRoot + '_SOL112_def.dat'
@@ -303,6 +301,19 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         
     # Close Tecplot ascii FileObject.
     PostProcess.CloseAeroTecFile(FileObject)
+    
+    if True:
+        # print deformed wing total force coefficients (may include gravity
+        # and other applied static loads). Coefficients in wind-axes.
+        cF = np.zeros((3,))
+        for i in range(VMOPTS.M.value+1):
+            for j in range(VMOPTS.N.value):
+                cF += AeroForces[i,j+1,:] 
+        
+        Calpha=Psi2TransMat(np.array([VMINPUT.alpha, 0.0, 0.0]))
+        cF=np.dot(Calpha,cF)
+        cF=cF/(0.5*AELAOPTS.AirDensity*np.linalg.norm(VMINPUT.U_infty)**2.0*VMINPUT.c*XBINPUT.BeamLength)
+        print(cF)
         
     # Return solution
     return PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni, Uext
@@ -315,9 +326,9 @@ if __name__ == '__main__':
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
                                  MaxIterations = ct.c_int(50),
                                  PrintInfo = ct.c_bool(True),
-                                 NumLoadSteps = ct.c_int(1),
+                                 NumLoadSteps = ct.c_int(10),
                                  Solution = ct.c_int(112),
-                                 MinDelta = ct.c_double(1e-4))
+                                 MinDelta = ct.c_double(1e-5))
      
     # beam inputs.
     XBINPUT = DerivedTypes.Xbinput(3,5)
@@ -407,7 +418,7 @@ if __name__ == '__main__':
         
         Settings.OutputFileRoot='M'+str(M)+'N'+str(N)+'_V'+str(U_mag)+'_alpha'+str(alpha)
         
-        # solve linear static problem
+        # solve static problem
         PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni, Uext = Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
         
         ### linearized beam model

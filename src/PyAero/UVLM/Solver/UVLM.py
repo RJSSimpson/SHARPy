@@ -24,15 +24,23 @@ from PyCoupled.Utils.DerivedTypesAeroelastic import AeroelasticOps
 from PyAero.UVLM.Utils.DerivedTypesAero import VMUnsteadyInput
 from scipy.io import savemat, loadmat
 import getpass
+from PyBeam.Utils.Misc import iNode2iElem
 
-def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None):
+def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,numNodesElem=2):
     """@brief UVLM solver with prescribed inputs.
        @param vOmegaHist History of velocities of the A-frame, expressed in A-frame.
        @param eta0 History of underlying beam disps/rotations in A-frame."""
     
     # Initialise DerivedTypes for PyBeam initialisation. 
     XBOPTS = DerivedTypes.Xbopts()
-    XBINPUT = DerivedTypes.Xbinput(2, VMOPTS.N.value, VMINPUT.b)  
+    if numNodesElem==2:
+        beamElems=VMOPTS.N.value
+    elif numNodesElem==3:
+        beamElems=int(VMOPTS.N.value/2)
+    else:
+        raise ValueError('numNodesElem should be 2 or 3')
+        
+    XBINPUT = DerivedTypes.Xbinput(numNodesElem, beamElems, VMINPUT.b)  
     # Create a dummy stiffness matrix to avoid errors.
     XBINPUT.BeamStiffness = np.eye(6,6,0,ct.c_double)
     # Use PyBeam to define reference beam (elastic axis).
@@ -45,8 +53,8 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None)
         PosDefor = PosIni.copy(order = 'F')
         PsiDefor = PsiIni.copy(order = 'F')
     else:
-        # posDefor=eta0[1:2,6:8....]
-        # psiDefor[iElem,iiElem,:]=eta0[3:6,9:12...] #assuming 2-noded beam elemnts for UVLM meshing
+        PosDefor=eta0[0]
+        PsiDefor=eta0[1]
     
     # Declare empty array for beam DoF rates.
     PosDotDef = np.zeros_like(PosDefor, ct.c_double, 'F')
@@ -107,7 +115,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None)
                                                 Variables)
     
     # Initialise vector of time steps.
-    Time = np.arange(0.0,VMUNST.FinalTime+VMUNST.DelTime,VMUNST.DelTime)
+    Time = np.arange(0.0,VMUNST.FinalTime,VMOPTS.DelTime.value)
     # Create Array for storing time and coefficient data.
     CoeffHistory = np.zeros((len(Time),4))
     
@@ -168,7 +176,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None)
             VMOPTS.NewAIC = ct.c_bool(1)
         
         UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS,
-                                   Forces, Gamma, GammaStar, AIC, BIC)
+                               Forces, Gamma, GammaStar, AIC, BIC)
         
         if iTimeStep == 0:
             VMOPTS.NewAIC = sav
@@ -215,49 +223,50 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None)
         
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/newUVLM/nonZeroAerofoil/UVLM/'
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/'
     writeToMat = True
     
     # Define options for aero solver.
-    M = 20
-    N = 1
-    Mstar = 10*M
-    U_mag = 1.0
-    alpha = 0.0*np.pi/180.0
-    theta = 1.0*np.pi/180.0
+    M = 4
+    N = 10
+    Mstar = 50*M
+    U_mag = 25.0
+    alpha = 2.0*np.pi/180.0
+    theta = 0.0*np.pi/180.0
     imageMeth=True
     
     # Define wing geometry parameters.
     c = 1
-    b = 2000 #semi-span
+    b = 16 #semi-span
     
-    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,False,c/(M*U_mag),False,4)
+    # Physical time-step
+    DeltaS = c/(M*U_mag)
     
-    # Define Control Surface
+    # Solver options
+    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,False,DeltaS,False,4)
+    
+    # Solver inputs
+    WakeLength = Mstar/M # specified in chord lengths
     ctrlSurf = None #ControlSurf(3, 4, 6, 9, 'sin', 1*np.pi/180.0, 2*np.pi)
+    VMINPUT = VMinput(c, b, U_mag, alpha, theta, WakeLength,  ctrlSurf)
     
-    # Define free stream conditions.
-    
-    VMINPUT = VMinput(c, b, U_mag, alpha, theta, Mstar/M,  ctrlSurf)
     
     # Define unsteady solver parameters.
-    WakeLength = Mstar/M
-    DeltaS = 1/M # define wrt to #CHORD
-    NumChordLengths = 200.0
+    NumChordLengths = 50.0
     VelA_A = np.array([0, 0, 0])
     OmegaA_A = np.array([0, 0, 0])
     VMUNST = VMUnsteadyInput(VMOPTS,VMINPUT,\
                              WakeLength,\
-                             DeltaS,\
+                             DeltaS*U_mag/c,\
                              NumChordLengths,\
                              VelA_A, OmegaA_A)
     
     # Generate history of axis sytem motions (in inertial frame)
-    if True:
+    Time = np.arange(0.0,VMUNST.FinalTime,VMOPTS.DelTime.value)
+    if False:
         hBar=0.01
         k=1.0
         omegaY=2*U_mag*k/c
-        Time = np.arange(0.0,VMUNST.FinalTime+VMUNST.DelTime,VMUNST.DelTime)
         vOmegaHist = np.zeros((len(Time),7))
         vOmegaHist[:,0] = Time
         vOmegaHist[:,1] = 0.0 # along A-frame x-axis
@@ -267,13 +276,39 @@ if __name__ == '__main__':
         vOmegaHist[:,5] = 0.0 # about y
         vOmegaHist[:,6] = 0.0 # about z
     else:
-        vOmegaHist = None
+        vOmegaHist = np.zeros((len(Time),7))
+        vOmegaHist[:,0] = Time
         
     if True:
-        refFile = '/home/rob/Documents/MATLAB/Patil_HALE_laptop/nonZeroAero/M4N10_V25_alpha2_SOL112_def.dat'
-        numElemsNode = 3
-        refDict=loadmat(refFile)
-        # TODO: extract nodal information
+        refFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SOL112_def.dat'
+        fp = open(refFile)
+        numNodesElem = 3
+        if numNodesElem == 2:
+            NumElems = N
+        elif numNodesElem == 3:
+            NumElems = int(N/2)
+        else:
+            raise ValueError('numNodesElem should be 2 or 3')
+        
+        # Initialize PosDefor, PsiDefor
+        PosDefor = np.zeros((N+1,3),dtype=ct.c_double, order='F')
+        PosDeforElem = np.zeros((NumElems,3,3),dtype=ct.c_double, order='F')
+        PsiDefor = np.zeros((NumElems,3,3),dtype=ct.c_double, order='F')
+        
+        data = np.loadtxt(refFile, skiprows=2)
+        i0=0
+        for iElem in range(NumElems):
+            for i in range(numNodesElem):
+                PosDeforElem[iElem,i,:] = data[i0,2:5]
+                PsiDefor[iElem,i,:] = data[i0,5:8]
+                i0+=1
+        
+        # extract nodal information (PosDefor)
+        for iNode in range(N+1):
+            iElem, iiElem = iNode2iElem(iNode, N+1, numNodesElem)
+            PosDefor[iNode,:] = PosDeforElem[iElem,iiElem,:]
+        
+        eta0 = (PosDefor, PsiDefor)
     else:
         eta0 = None
         
@@ -303,10 +338,10 @@ if __name__ == '__main__':
         etaHist = None
         
     # Define 'aeroelastic' options.
-    AELOPTS = AeroelasticOps(ElasticAxis = -0.5)
+    AELOPTS = AeroelasticOps(AirDensity = 0.08891)
     
     # Run C++ solver
-    Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist)
+    Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist,eta0,numNodesElem)
     
     print(Coeffs[-50:,:])
     

@@ -31,3 +31,4 @@ class AeroelasticOps:
 
 if __name__ == '__main__':
     AeroelasticOps(0.2,0.4,1.20)
+    AeroelasticOps()

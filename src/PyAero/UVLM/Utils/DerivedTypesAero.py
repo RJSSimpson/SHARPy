@@ -155,7 +155,7 @@ class VMUnsteadyInput:
     """@brief Contains data for unsteady run of UVLM.
     
     @param WakeLength Length of wake in chordlengths.
-    @param DelS non-dim timestep s = omega*c/U.
+    @param DelS non-dim timestep tau = tU/c, s = omega*c/U.
     @param NumChordLengths Number of chord lengths to travel 
     in prescribed simulation.
     @param VelA_G Velocity of reference frame.
@@ -182,9 +182,9 @@ class VMUnsteadyInput:
         except ZeroDivisionError:
             self.NumSteps = 1
         
+        self.DelTime = DelS
         self.FinalTime = NumChordLengths*VMINPUT.c / \
                     np.linalg.norm(VMINPUT.U_infty-VelA_G)
-        self.DelTime = self.FinalTime/self.NumSteps
         
         # Check Mstar is high enough to discretize wake.
         if self.DelTime != self.WakeLength*VMINPUT.c/VMOPTS.Mstar.value:
@@ -193,8 +193,8 @@ class VMUnsteadyInput:
                   "\nChanging Mstar to ", self.WakeLength*VMINPUT.c/self.DelTime)
             VMOPTS.Mstar.value = int(self.WakeLength*VMINPUT.c/self.DelTime)
             
-        # Set DelTime for VMOPTS
-        VMOPTS.DelTime = ct.c_double(self.DelTime)
+        # Set DelTime for VMOPTS (dimensional)
+        VMOPTS.DelTime = ct.c_double(self.DelTime*VMINPUT.c/np.linalg.norm(VMINPUT.U_infty-VelA_G))
         
 class Gust:
     """@brief Gust.
