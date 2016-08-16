@@ -119,10 +119,18 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
             ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta,XBINPUT.ForcedVel[0,:3])
         else:
             ZetaStar, GammaStar = InitSteadyWake(VMOPTS,VMINPUT,Zeta)
+            
+        # Define AICs here for debgugging - Rob 16/08/2016
+        AIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,
+                        VMOPTS.M.value*VMOPTS.N.value),
+                        ct.c_double,'C')
+        BIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,
+                        VMOPTS.M.value*VMOPTS.N.value),
+                        ct.c_double,'C')
         
         # Solve for AeroForces.
         UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, 
-                               AeroForces, Gamma, GammaStar)
+                               AeroForces, Gamma, GammaStar, AIC, BIC)
         
         AeroForces[:,:,:] = AELAOPTS.AirDensity*AeroForces[:,:,:]
         
@@ -307,8 +315,8 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         # and other applied static loads). Coefficients in wind-axes.
         cF = np.zeros((3,))
         for i in range(VMOPTS.M.value+1):
-            for j in range(VMOPTS.N.value):
-                cF += AeroForces[i,j+1,:] 
+            for j in range(VMOPTS.N.value+1):
+                cF += AeroForces[i,j,:] 
         
         Calpha=Psi2TransMat(np.array([VMINPUT.alpha, 0.0, 0.0]))
         cF=np.dot(Calpha,cF)
