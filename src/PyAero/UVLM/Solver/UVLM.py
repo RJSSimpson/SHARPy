@@ -135,6 +135,9 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
                 VMUNST.OriginA_G[:] += vOmegaHist[iTimeStep,1:4]*VMUNST.DelTime
                 VelA_A = vOmegaHist[iTimeStep,1:4]
                 # TODO: update OmegaA_A, PsiA_G in pitching problem.
+                
+            if etaHist ~= None:
+                pass # TODO: update here!
             
             # Update control surface defintion.
             if VMINPUT.ctrlSurf != None:
@@ -313,8 +316,12 @@ if __name__ == '__main__':
         eta0 = None
         
     # Generate a history of beam DoF motions (in A-frame)
-    if False:
-        etaHist = np.zeros((12*N,len(Time)))
+    if True:
+        etaHisty = np.zeros((12*N,len(Time)))
+        PosDefHist=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
+        PosDeforElemHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
+        PsiDeforHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
+        # load and scale eigenvector
         modeFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SSbeam'
         beamDict = loadmat(modeFile)
         modeNum = 1
@@ -329,11 +336,26 @@ if __name__ == '__main__':
         # get mode freq
         k = np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1])
         omega = 2*U_mag*k/c
+        # create history
         tCount=0
         for t in Time:
-            etaHist[:6*N,tCount]=phi0*np.sin(omega*t)
-            etaHist[6*N:,tCount]=omega*phi0*np.cos(omega*t)
+            etaHisty[:6*N,tCount]=phi0*np.sin(omega*t)
+            etaHisty[6*N:,tCount]=omega*phi0*np.cos(omega*t)
+            for j in range(N+1):
+                iElem, iiElem = iNode2iElem(iNode, N+1, numNodesElem)
+                # TODO: fill all elements
+                PosDeforElemHist[iElem,i,:,tCount] = etaHisty[]
+                PsiDeforHist[iElem,i,:] = etaHisty[]
+                # TODO: PosDot
+            
             tCount+=1
+        
+        # extract nodal information (PosDefor)
+        # TODO make the history
+        for iNode in range(N+1):
+            iElem, iiElem = iNode2iElem(iNode, N+1, numNodesElem)
+            PosDefHist[iNode,:] = PosDeforElem[iElem,iiElem,:]
+        
     else:
         etaHist = None
         
