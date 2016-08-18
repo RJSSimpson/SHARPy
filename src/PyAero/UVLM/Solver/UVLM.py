@@ -136,7 +136,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
                 VelA_A = vOmegaHist[iTimeStep,1:4]
                 # TODO: update OmegaA_A, PsiA_G in pitching problem.
                 
-            if etaHist ~= None:
+            if etaHist != None:
                 pass # TODO: update here!
             
             # Update control surface defintion.
@@ -319,7 +319,9 @@ if __name__ == '__main__':
     if True:
         etaHisty = np.zeros((12*N,len(Time)))
         PosDefHist=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
-        PosDeforElemHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
+        PosDotHist=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
+        PsiDefHistNode=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
+        PsiDotHistNode=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
         PsiDeforHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         # load and scale eigenvector
         modeFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SSbeam'
@@ -330,6 +332,7 @@ if __name__ == '__main__':
                         np.arange(1, np.size(eigVec, 0)-1, 6),
                         np.arange(2, np.size(eigVec, 0)-1, 6)))
         disps = np.sort(disps.flatten())
+        rots = np.setdiff1d(range(60), disps)
         maxDef = np.max(eigVec[disps])
         scale=(1/maxDef)*0.01*16.0
         phi0=scale*eigVec
@@ -341,21 +344,26 @@ if __name__ == '__main__':
         for t in Time:
             etaHisty[:6*N,tCount]=phi0*np.sin(omega*t)
             etaHisty[6*N:,tCount]=omega*phi0*np.cos(omega*t)
-            for j in range(N+1):
-                iElem, iiElem = iNode2iElem(iNode, N+1, numNodesElem)
-                # TODO: fill all elements
-                PosDeforElemHist[iElem,i,:,tCount] = etaHisty[]
-                PsiDeforHist[iElem,i,:] = etaHisty[]
-                # TODO: PosDot
-            
             tCount+=1
         
-        # extract nodal information (PosDefor)
-        # TODO make the history
-        for iNode in range(N+1):
-            iElem, iiElem = iNode2iElem(iNode, N+1, numNodesElem)
-            PosDefHist[iNode,:] = PosDeforElem[iElem,iiElem,:]
+        tCount=0
+        for t in Time:
+            for j in range(N):
+                # displacements are saved nodally
+                PosDefHist[j+1,:,tCount] = etaHisty[disps[3*j:3*j+3],tCount]
+                PosDotHist[j+1,:,tCount] = etaHisty[6*N+disps[3*j:3*j+3],tCount]
+                PsiDefHistNode[j+1,:,tCount] = etaHisty[rots[3*j:3*j+3],tCount]
+                PsiDotHistNode[j+1,:,tCount] = etaHisty[6*N+rots[3*j:3*j+3],tCount]
+            # end for j
+        # end for t
         
+        # loop through XBELEM.Conn to assign to [iElem,iiElem,:,tCount]
+        for tCount in len(Time):
+            connCount=0
+            for iElem in NumElems:
+                for iiElem in range(numNodesElem):
+                    PsiDeforHist[iElem,iiElem,:,tCount]=PsiDefHistNode[XBELEM.Conn[connCount],:,tCount] #TODO: get XBELEM
+                    connCount+=1
     else:
         etaHist = None
         
