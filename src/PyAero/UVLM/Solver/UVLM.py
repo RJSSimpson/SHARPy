@@ -26,7 +26,7 @@ from scipy.io import savemat, loadmat
 import getpass
 from PyBeam.Utils.Misc import iNode2iElem
 
-def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,numNodesElem=2):
+def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,numNodesElem=2,delEtaHist=None):
     """@brief UVLM solver with prescribed inputs.
        @param vOmegaHist History of velocities of the A-frame, expressed in A-frame.
        @param eta0 History of underlying beam disps/rotations in A-frame."""
@@ -52,13 +52,14 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
     if eta0==None:
         PosDefor = PosIni.copy(order = 'F')
         PsiDefor = PsiIni.copy(order = 'F')
+        # Declare empty array for beam DoF rates.
+        PosDotDef = np.zeros_like(PosDefor, ct.c_double, 'F')
+        PsiDotDef = np.zeros_like(PsiDefor, ct.c_double, 'F')
     else:
-        PosDefor=eta0[0]
-        PsiDefor=eta0[1]
-    
-    # Declare empty array for beam DoF rates.
-    PosDotDef = np.zeros_like(PosDefor, ct.c_double, 'F')
-    PsiDotDef = np.zeros_like(PsiDefor, ct.c_double, 'F')
+        PosDefor=eta0[0]+delEtaHist[0][:,:,0]
+        PsiDefor=eta0[1]+delEtaHist[1][:,:,:,0]
+        PosDotDef=delEtaHist[2][:,:,0]
+        PsiDotDef=delEtaHist[3][:,:,:,0]
        
     # Check the specified inputs from the PyAero have been properly applied.
     assert NumNodes_tot.value - 1 == VMOPTS.N.value, "Initialisation wrong"
@@ -136,8 +137,11 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
                 VelA_A = vOmegaHist[iTimeStep,1:4]
                 # TODO: update OmegaA_A, PsiA_G in pitching problem.
                 
-            if etaHist != None:
-                pass # TODO: update here!
+            if delEtaHist != None:
+                PosDefor=eta0[0]+delEtaHist[0][:,:,iTimeStep]
+                PsiDefor=eta0[1]+delEtaHist[1][:,:,:,iTimeStep]
+                PosDotDef=delEtaHist[2][:,:,iTimeStep]
+                PsiDotDef=delEtaHist[3][:,:,:,iTimeStep]
             
             # Update control surface defintion.
             if VMINPUT.ctrlSurf != None:
@@ -232,7 +236,7 @@ if __name__ == '__main__':
     # Define options for aero solver.
     M = 4
     N = 10
-    Mstar = 50*M
+    Mstar = 10*M
     U_mag = 25.0
     alpha = 2.0*np.pi/180.0
     theta = 0.0*np.pi/180.0
@@ -255,7 +259,7 @@ if __name__ == '__main__':
     
     
     # Define unsteady solver parameters.
-    NumChordLengths = 50.0
+    NumChordLengths = 200.0
     VelA_A = np.array([0, 0, 0])
     OmegaA_A = np.array([0, 0, 0])
     VMUNST = VMUnsteadyInput(VMOPTS,VMINPUT,\
@@ -317,12 +321,13 @@ if __name__ == '__main__':
         
     # Generate a history of beam DoF motions (in A-frame)
     if True:
-        etaHisty = np.zeros((12*N,len(Time)))
+        delEtaHisty = np.zeros((12*N,len(Time)))
         PosDefHist=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
         PosDotHist=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
         PsiDefHistNode=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
         PsiDotHistNode=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
         PsiDeforHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
+        PsiDotHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         # load and scale eigenvector
         modeFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SSbeam'
         beamDict = loadmat(modeFile)
@@ -332,51 +337,73 @@ if __name__ == '__main__':
                         np.arange(1, np.size(eigVec, 0)-1, 6),
                         np.arange(2, np.size(eigVec, 0)-1, 6)))
         disps = np.sort(disps.flatten())
-        rots = np.setdiff1d(range(60), disps)
+        rots = np.setdiff1d(range(6*N), disps)
         maxDef = np.max(eigVec[disps])
         scale=(1/maxDef)*0.01*16.0
         phi0=scale*eigVec
         # get mode freq
-        k = np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1])
+        k = np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
         omega = 2*U_mag*k/c
         # create history
         tCount=0
         for t in Time:
-            etaHisty[:6*N,tCount]=phi0*np.sin(omega*t)
-            etaHisty[6*N:,tCount]=omega*phi0*np.cos(omega*t)
+            delEtaHisty[:6*N,tCount]=phi0*np.sin(omega*t)
+            delEtaHisty[6*N:,tCount]=omega*phi0*np.cos(omega*t)
             tCount+=1
         
         tCount=0
         for t in Time:
             for j in range(N):
                 # displacements are saved nodally
-                PosDefHist[j+1,:,tCount] = etaHisty[disps[3*j:3*j+3],tCount]
-                PosDotHist[j+1,:,tCount] = etaHisty[6*N+disps[3*j:3*j+3],tCount]
-                PsiDefHistNode[j+1,:,tCount] = etaHisty[rots[3*j:3*j+3],tCount]
-                PsiDotHistNode[j+1,:,tCount] = etaHisty[6*N+rots[3*j:3*j+3],tCount]
+                PosDefHist[j+1,:,tCount] = delEtaHisty[disps[3*j:3*j+3],tCount]
+                PosDotHist[j+1,:,tCount] = delEtaHisty[6*N+disps[3*j:3*j+3],tCount]
+                PsiDefHistNode[j+1,:,tCount] = delEtaHisty[rots[3*j:3*j+3],tCount]
+                PsiDotHistNode[j+1,:,tCount] = delEtaHisty[6*N+rots[3*j:3*j+3],tCount]
             # end for j
+            tCount+=1
         # end for t
         
+        # populate connectivity array
+        conn = np.zeros((Settings.MaxElNod*NumElems))
+        if numNodesElem == 2:
+            for ElemNo in range(0,NumElems):
+                i = ElemNo*Settings.MaxElNod
+                conn[i]=ElemNo+1
+                conn[i+1]=ElemNo+2
+                
+            NumNodes_tot = ct.c_int(NumElems + 1) 
+                
+        elif numNodesElem == 3:
+            for ElemNo in range(0,NumElems):
+                i = ElemNo*Settings.MaxElNod
+                conn[i]=2*ElemNo+1
+                conn[i+1]=2*ElemNo+3
+                conn[i+2]=2*ElemNo+2
+                
         # loop through XBELEM.Conn to assign to [iElem,iiElem,:,tCount]
-        for tCount in len(Time):
+        for tCount in range(len(Time)):
             connCount=0
-            for iElem in NumElems:
+            for iElem in range(NumElems):
                 for iiElem in range(numNodesElem):
-                    PsiDeforHist[iElem,iiElem,:,tCount]=PsiDefHistNode[XBELEM.Conn[connCount],:,tCount] #TODO: get XBELEM
+                    PsiDeforHist[iElem,iiElem,:,tCount]=PsiDefHistNode[int(conn[connCount]-1),:,tCount]
+                    PsiDotHist[iElem,iiElem,:,tCount]=PsiDotHistNode[int(conn[connCount]-1),:,tCount]
                     connCount+=1
+        
+        delEtaHist = (PosDefHist,PsiDeforHist,PosDotHist,PsiDotHist)
+    
     else:
-        etaHist = None
+        delEtaHist = None
         
     # Define 'aeroelastic' options.
     AELOPTS = AeroelasticOps(AirDensity = 0.08891)
     
     # Run C++ solver
-    Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist,eta0,numNodesElem)
+    Coeffs = Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist,eta0,numNodesElem,delEtaHist)
     
     print(Coeffs[-50:,:])
     
     if writeToMat == True:
-        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2*DeltaS) + '_alpha' + str(theta)[:7]
+        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2/M) + 'V' + str(U_mag) + '_alpha' + str(alpha)[:6]
         if imageMeth != False:
             fileName += '_half'
         savemat(fileName,
