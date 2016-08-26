@@ -31,6 +31,7 @@ from PyBeam.Utils.Linear import genSSbeam
 from scipy.io.matlab.mio import savemat
 from PyAero.UVLM.Utils.Linear import genSSuvlm
 from Misc import iNode2iElem
+from getpass import getuser
 
 def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
     """Nonlinear static solver using Python to solve aeroelastic
@@ -328,7 +329,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
 
 if __name__ == '__main__':
     ## solve nlnstatic problem.
-    Settings.OutputDir='/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/'
+    Settings.OutputDir='/home/' + getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/'
     
     # beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
@@ -339,7 +340,7 @@ if __name__ == '__main__':
                                  MinDelta = ct.c_double(1e-5))
      
     # beam inputs.
-    XBINPUT = DerivedTypes.Xbinput(3,5)
+    XBINPUT = DerivedTypes.Xbinput(3,10)
     XBINPUT.BeamLength = 16.0
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -391,7 +392,7 @@ if __name__ == '__main__':
     XBINPUT.g = 0.0 
      
     # aero options. 
-    M = 4
+    M = 10
     N = XBINPUT.NumNodesTot - 1
     VMOPTS = DerivedTypesAero.VMopts(M = M,
                                      N = N,
@@ -405,6 +406,7 @@ if __name__ == '__main__':
 #     U_mag=170
     chord = 1.0 #m
 #     chord = c
+    wakeLength = 10 # in chords
     alphaVec = (2,)#range(1); #deg
     for alpha in alphaVec:
         VMINPUT = DerivedTypesAero.VMinput(c = chord,
@@ -412,7 +414,8 @@ if __name__ == '__main__':
                                            U_mag = U_mag*1.0,
                                            alpha = alpha*np.pi/180.0,
                                            theta = 0.0,
-                                           ctrlSurf = ctrlSurf)
+                                           ctrlSurf = ctrlSurf,
+                                           WakeLength = wakeLength)
          
         # aeroelastic opts.
         # Density due to US standard atmosphere at 20km.
@@ -446,19 +449,8 @@ if __name__ == '__main__':
         
         ### linearized aerodynamics
         # Unsteady aero parameters
-        mW=10*M #10 chord-lengths
+        mW=wakeLength*M #10 chord-lengths
         delS=2.0/M
-        
-        # save for unsteady aero about non-zero starting condition
-        if False:
-            fileName=Settings.OutputDir+Settings.OutputFileRoot+'_UVLMstates'
-            savemat(fileName,
-                    {'Zeta':Zeta,
-                     'ZetaStar':ZetaStar,
-                     'Gamma':Gamma,
-                     'GammaStar':GammaStar,
-                     'Uext':Uext},
-                    True)
         
         # transform states/inputs 
         gam, gamW, gamPri, zeta, zetaW, zetaPri, nu, beam2aero = nln2linStates(Zeta, ZetaStar, Gamma, GammaStar, Uext, M, N, mW, chord, U_mag)

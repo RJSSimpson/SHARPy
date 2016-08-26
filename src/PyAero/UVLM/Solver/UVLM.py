@@ -234,8 +234,8 @@ if __name__ == '__main__':
     writeToMat = True
     
     # Define options for aero solver.
-    M = 4
-    N = 10
+    M = 10
+    N = 20
     Mstar = 10*M
     U_mag = 25.0
     alpha = 2.0*np.pi/180.0
@@ -250,7 +250,7 @@ if __name__ == '__main__':
     DeltaS = c/(M*U_mag)
     
     # Solver options
-    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,False,DeltaS,False,4)
+    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,False,DeltaS,False,2)
     
     # Solver inputs
     WakeLength = Mstar/M # specified in chord lengths
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     
     
     # Define unsteady solver parameters.
-    NumChordLengths = 200.0
+    NumChordLengths = 250.0
     VelA_A = np.array([0, 0, 0])
     OmegaA_A = np.array([0, 0, 0])
     VMUNST = VMUnsteadyInput(VMOPTS,VMINPUT,\
@@ -287,7 +287,7 @@ if __name__ == '__main__':
         vOmegaHist[:,0] = Time
         
     if True:
-        refFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SOL112_def.dat'
+        refFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SOL112_def.dat'
         fp = open(refFile)
         numNodesElem = 3
         if numNodesElem == 2:
@@ -329,9 +329,10 @@ if __name__ == '__main__':
         PsiDeforHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         PsiDotHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         # load and scale eigenvector
-        modeFile = '/home/rjs10/Documents/MATLAB/Patil_HALE/nonZeroAero/M4N10_V25_alpha2_SSbeam'
+        modeFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SSbeam'
         beamDict = loadmat(modeFile)
-        modeNum = 1
+        modeNum = 2
+        amp=0.01 #nondim with span
         eigVec = beamDict['phiSort'][:,modeNum-1]
         disps=np.array((np.arange(0, np.size(eigVec, 0)-1, 6),
                         np.arange(1, np.size(eigVec, 0)-1, 6),
@@ -339,7 +340,7 @@ if __name__ == '__main__':
         disps = np.sort(disps.flatten())
         rots = np.setdiff1d(range(6*N), disps)
         maxDef = np.max(eigVec[disps])
-        scale=(1/maxDef)*0.01*16.0
+        scale=(1/maxDef)*amp*b
         phi0=scale*eigVec
         # get mode freq
         k = np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
@@ -403,7 +404,7 @@ if __name__ == '__main__':
     print(Coeffs[-50:,:])
     
     if writeToMat == True:
-        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2/M) + 'V' + str(U_mag) + '_alpha' + str(alpha)[:6]
+        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2/M) + 'V' + str(U_mag) + '_alpha' + str(alpha)[:6] + '_mode' + str(modeNum) + '_pcAmp' + str(int(amp*100))[:3]
         if imageMeth != False:
             fileName += '_half'
         savemat(fileName,
