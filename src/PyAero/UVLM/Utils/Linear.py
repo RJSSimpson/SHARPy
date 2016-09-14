@@ -129,7 +129,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     # Matrix C
     C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AICs3))
     C[:,m*n:m*n+mW*n] = -np.dot(H, np.dot(Y3,AICs3w))
-    C[:,m*n+mW*n:] = 2.0*np.dot(np.transpose(Xi),Y4)
+    #C[:,m*n+mW*n:] = 2.0*np.dot(np.transpose(Xi),Y4)
     
     # Matrix D
     D[:,0:3*(m+1)*(n+1)] = 2.0*np.dot(H, np.dot(Y3, H.transpose()))

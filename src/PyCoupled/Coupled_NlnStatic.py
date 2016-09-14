@@ -312,9 +312,9 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
     PostProcess.CloseAeroTecFile(FileObject)
     
     if True:
-        # print deformed wing total force coefficients (may include gravity
+        # print and save deformed wing total force coefficients (may include gravity
         # and other applied static loads). Coefficients in wind-axes.
-        cF = np.zeros((3,))
+        cF = np.zeros((3))
         for i in range(VMOPTS.M.value+1):
             for j in range(VMOPTS.N.value+1):
                 cF += AeroForces[i,j,:] 
@@ -322,14 +322,16 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
         Calpha=Psi2TransMat(np.array([VMINPUT.alpha, 0.0, 0.0]))
         cF=np.dot(Calpha,cF)
         cF=cF/(0.5*AELAOPTS.AirDensity*np.linalg.norm(VMINPUT.U_infty)**2.0*VMINPUT.c*XBINPUT.BeamLength)
-        print(cF)
+        print("Reference condition total force coefficients: {}".format(cF))
+        fileName = Settings.OutputDir + Settings.OutputFileRoot + 'refCf'
+        savemat(fileName,{'cF':cF})
         
     # Return solution
     return PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni, Uext
 
 if __name__ == '__main__':
     ## solve nlnstatic problem.
-    Settings.OutputDir='/home/' + getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/'
+    Settings.OutputDir='/home/' + getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/'
     
     # beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
@@ -340,7 +342,7 @@ if __name__ == '__main__':
                                  MinDelta = ct.c_double(1e-5))
      
     # beam inputs.
-    XBINPUT = DerivedTypes.Xbinput(3,10)
+    XBINPUT = DerivedTypes.Xbinput(3,5)
     XBINPUT.BeamLength = 16.0
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
@@ -392,7 +394,7 @@ if __name__ == '__main__':
     XBINPUT.g = 0.0 
      
     # aero options. 
-    M = 10
+    M = 4
     N = XBINPUT.NumNodesTot - 1
     VMOPTS = DerivedTypesAero.VMopts(M = M,
                                      N = N,
@@ -431,6 +433,14 @@ if __name__ == '__main__':
         
         # solve static problem
         PosDefor, PsiDefor, Zeta, ZetaStar, Gamma, GammaStar, iForceStep, NumNodes_tot, NumDof, XBELEM, XBNODE, PosIni, PsiIni, Uext = Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS)
+        
+        # save reference gamma
+        if True:
+            fileName=Settings.OutputDir+Settings.OutputFileRoot+'_Gamma0'
+            savemat(fileName,
+                {'Gamma0':Gamma},
+                True
+            )
         
         ### linearized beam model
         A,B,C,kMat,phiSort = genSSbeam(XBINPUT,

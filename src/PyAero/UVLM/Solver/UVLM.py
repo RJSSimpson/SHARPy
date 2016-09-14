@@ -28,8 +28,9 @@ from PyBeam.Utils.Misc import iNode2iElem
 
 def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,numNodesElem=2,delEtaHist=None):
     """@brief UVLM solver with prescribed inputs.
-       @param vOmegaHist History of velocities of the A-frame, expressed in A-frame.
-       @param eta0 History of underlying beam disps/rotations in A-frame."""
+       @param vOmegaHist None, or np.array history of velocities of the A-frame, expressed in A-frame.
+       @param eta0 None, or tuple containing reference disps, rots, and gamma.
+       @param delEtaHist None, or tuple of np.array histories of underlying beam disps, rotations, vels, and rotvels in A-frame."""
     
     # Initialise DerivedTypes for PyBeam initialisation. 
     XBOPTS = DerivedTypes.Xbopts()
@@ -107,6 +108,11 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
     BIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,
                    VMOPTS.M.value*VMOPTS.N.value),
                    ct.c_double,'C')
+    
+    if type(eta0) is tuple:
+        Gamma[:,:] = eta0[2]
+        for j in range(VMOPTS.N.value):
+            GammaStar[:,j]=Gamma[VMOPTS.M.value-1,j]
     
     # Open tecplot file object."
     Variables=['X', 'Y', 'Z','Gamma']
@@ -230,12 +236,12 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
         
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/'
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/'
     writeToMat = True
     
     # Define options for aero solver.
-    M = 10
-    N = 20
+    M = 4
+    N = 10
     Mstar = 10*M
     U_mag = 25.0
     alpha = 2.0*np.pi/180.0
@@ -287,7 +293,8 @@ if __name__ == '__main__':
         vOmegaHist[:,0] = Time
         
     if True:
-        refFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SOL112_def.dat'
+        # load non-zero reference
+        refFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SOL112_def.dat'
         fp = open(refFile)
         numNodesElem = 3
         if numNodesElem == 2:
@@ -314,8 +321,13 @@ if __name__ == '__main__':
         for iNode in range(N+1):
             iElem, iiElem = iNode2iElem(iNode, N+1, numNodesElem)
             PosDefor[iNode,:] = PosDeforElem[iElem,iiElem,:]
+            
+        # get reference circulation strengths
+        refFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/M' + str(M) + 'N' + str(N) + '_V25_alpha2_Gamma0'
+        myDict = loadmat(refFile)
+        gam0 = myDict['Gamma0']
         
-        eta0 = (PosDefor, PsiDefor)
+        eta0 = (PosDefor, PsiDefor, gam0)
     else:
         eta0 = None
         
@@ -329,10 +341,10 @@ if __name__ == '__main__':
         PsiDeforHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         PsiDotHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         # load and scale eigenvector
-        modeFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SSbeam'
+        modeFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SSbeam'
         beamDict = loadmat(modeFile)
-        modeNum = 2
-        amp=0.01 #nondim with span
+        modeNum = 1
+        amp=0.001 #nondim with span
         eigVec = beamDict['phiSort'][:,modeNum-1]
         disps=np.array((np.arange(0, np.size(eigVec, 0)-1, 6),
                         np.arange(1, np.size(eigVec, 0)-1, 6),
@@ -343,26 +355,38 @@ if __name__ == '__main__':
         scale=(1/maxDef)*amp*b
         phi0=scale*eigVec
         # get mode freq
-        k = np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
+        k = 0 #np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
         omega = 2*U_mag*k/c
         # create history
-        tCount=0
-        for t in Time:
-            delEtaHisty[:6*N,tCount]=phi0*np.sin(omega*t)
-            delEtaHisty[6*N:,tCount]=omega*phi0*np.cos(omega*t)
-            tCount+=1
-        
-        tCount=0
-        for t in Time:
+        if k==0:
+            for tCount in range(len(Time)):
+                delEtaHisty[:6*N,tCount]=phi0[:]
+                delEtaHisty[6*N:,tCount]=0.0
             for j in range(N):
                 # displacements are saved nodally
-                PosDefHist[j+1,:,tCount] = delEtaHisty[disps[3*j:3*j+3],tCount]
-                PosDotHist[j+1,:,tCount] = delEtaHisty[6*N+disps[3*j:3*j+3],tCount]
-                PsiDefHistNode[j+1,:,tCount] = delEtaHisty[rots[3*j:3*j+3],tCount]
-                PsiDotHistNode[j+1,:,tCount] = delEtaHisty[6*N+rots[3*j:3*j+3],tCount]
+                PosDefHist[j+1,:,:] = delEtaHisty[disps[3*j:3*j+3],:]
+                PosDotHist[j+1,:,:] = delEtaHisty[6*N+disps[3*j:3*j+3],:]
+                PsiDefHistNode[j+1,:,:] = delEtaHisty[rots[3*j:3*j+3],:]
+                PsiDotHistNode[j+1,:,:] = delEtaHisty[6*N+rots[3*j:3*j+3],:]
             # end for j
-            tCount+=1
-        # end for t
+        else:
+            tCount=0
+            for t in Time:
+                delEtaHisty[:6*N,tCount]=phi0*np.sin(omega*t)
+                delEtaHisty[6*N:,tCount]=omega*phi0*np.cos(omega*t)
+                tCount+=1
+            
+            tCount=0
+            for t in Time:
+                for j in range(N):
+                    # displacements are saved nodally
+                    PosDefHist[j+1,:,tCount] = delEtaHisty[disps[3*j:3*j+3],tCount]
+                    PosDotHist[j+1,:,tCount] = delEtaHisty[6*N+disps[3*j:3*j+3],tCount]
+                    PsiDefHistNode[j+1,:,tCount] = delEtaHisty[rots[3*j:3*j+3],tCount]
+                    PsiDotHistNode[j+1,:,tCount] = delEtaHisty[6*N+rots[3*j:3*j+3],tCount]
+                # end for j
+                tCount+=1
+            # end for t
         
         # populate connectivity array
         conn = np.zeros((Settings.MaxElNod*NumElems))
@@ -381,7 +405,7 @@ if __name__ == '__main__':
                 conn[i+1]=2*ElemNo+3
                 conn[i+2]=2*ElemNo+2
                 
-        # loop through XBELEM.Conn to assign to [iElem,iiElem,:,tCount]
+        # loop through conn to assign to [iElem,iiElem,:,tCount]
         for tCount in range(len(Time)):
             connCount=0
             for iElem in range(NumElems):
@@ -404,7 +428,7 @@ if __name__ == '__main__':
     print(Coeffs[-50:,:])
     
     if writeToMat == True:
-        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2/M) + 'V' + str(U_mag) + '_alpha' + str(alpha)[:6] + '_mode' + str(modeNum) + '_pcAmp' + str(int(amp*100))[:3]
+        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2/M) + 'V' + str(U_mag) + '_alpha' + str(alpha)[:6] + '_mode' + str(modeNum) + '_pcAmp' + str(int(amp*100))[:4] + '_k' + str(k)
         if imageMeth != False:
             fileName += '_half'
         savemat(fileName,

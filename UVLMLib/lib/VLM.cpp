@@ -83,6 +83,8 @@ void KJMethodForces(const double* Zeta_Vec, const double* Gamma_Vec,\
 									VMOPTS.DelTime;
 			}
 
+			dGamma_dt[i][j] = 0.0;
+
 			// pressure jump
 			DeltaP = dGamma_dt[i][j];
 
