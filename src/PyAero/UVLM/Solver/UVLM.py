@@ -25,6 +25,7 @@ from PyAero.UVLM.Utils.DerivedTypesAero import VMUnsteadyInput
 from scipy.io import savemat, loadmat
 import getpass
 from PyBeam.Utils.Misc import iNode2iElem
+# import matplotlib.pyplot as plt
 
 def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,numNodesElem=2,delEtaHist=None):
     """@brief UVLM solver with prescribed inputs.
@@ -57,8 +58,8 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
         PosDotDef = np.zeros_like(PosDefor, ct.c_double, 'F')
         PsiDotDef = np.zeros_like(PsiDefor, ct.c_double, 'F')
     else:
-        PosDefor=eta0[0]+delEtaHist[0][:,:,0]
-        PsiDefor=eta0[1]+delEtaHist[1][:,:,:,0]
+        PosDefor=eta0[0]#+delEtaHist[0][:,:,0]
+        PsiDefor=eta0[1]#+delEtaHist[1][:,:,:,0]
         PosDotDef=delEtaHist[2][:,:,0]
         PsiDotDef=delEtaHist[3][:,:,:,0]
        
@@ -136,10 +137,10 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
             
             # Update geometry.
             if vOmegaHist == None:
-                VMUNST.OriginA_G[:] += VMUNST.VelA_G[:]*VMUNST.DelTime
+                VMUNST.OriginA_G[:] += VMUNST.VelA_G[:]*VMOPTS.DelTime.value
                 # TODO: update OmegaA_A, PsiA_A in pitching problem.
             else:
-                VMUNST.OriginA_G[:] += vOmegaHist[iTimeStep,1:4]*VMUNST.DelTime
+                VMUNST.OriginA_G[:] += vOmegaHist[iTimeStep,1:4]*VMOPTS.DelTime.value
                 VelA_A = vOmegaHist[iTimeStep,1:4]
                 # TODO: update OmegaA_A, PsiA_G in pitching problem.
                 
@@ -176,17 +177,13 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
             # Overwrite Gamma with TE value from previous time step.
             GammaStar[0,:] = Gamma[VMOPTS.M.value-1,:]
             
-            # set NewAIC to false.
-            if VMINPUT.ctrlSurf == False:
-                VMOPTS.NewAIC = ct.c_bool(False)
-            
         # END if iTimeStep > 1
         
         
         # Calculate forces on aerodynamic grid.
         if iTimeStep == 0:
             sav = VMOPTS.NewAIC
-            VMOPTS.NewAIC = ct.c_bool(1)
+            VMOPTS.NewAIC = ct.c_bool(True)
         
         UVLMLib.Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS,
                                Forces, Gamma, GammaStar, AIC, BIC)
@@ -256,7 +253,7 @@ if __name__ == '__main__':
     DeltaS = c/(M*U_mag)
     
     # Solver options
-    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,False,DeltaS,False,2)
+    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,True,DeltaS,False,2)
     
     # Solver inputs
     WakeLength = Mstar/M # specified in chord lengths
@@ -344,18 +341,27 @@ if __name__ == '__main__':
         modeFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SSbeam'
         beamDict = loadmat(modeFile)
         modeNum = 1
-        amp=0.001 #nondim with span
+        amp=0.01 #nondim with span
         eigVec = beamDict['phiSort'][:,modeNum-1]
+        eigVec[:]=0.0
+#         for j=1:n
+#             phiSort((j-1)*6+3,1)=0.001*(16/n*j)^2;
+#             phiSort((j-1)*6+5,1)=-2*0.001*(16/n*j);
+#         end
+        for j in range(N):
+            eigVec[j*6+2]=0.001*(16.0/float(N)*(j+1))**2.0
+            eigVec[j*6+4]=-2.0*0.001*(16.0/float(N)*(j+1))
+            
         disps=np.array((np.arange(0, np.size(eigVec, 0)-1, 6),
                         np.arange(1, np.size(eigVec, 0)-1, 6),
                         np.arange(2, np.size(eigVec, 0)-1, 6)))
         disps = np.sort(disps.flatten())
         rots = np.setdiff1d(range(6*N), disps)
         maxDef = np.max(eigVec[disps])
-        scale=(1/maxDef)*amp*b
+        scale=1.0#(1/maxDef)*amp*b
         phi0=scale*eigVec
         # get mode freq
-        k = 0 #np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
+        k = 0.0 #np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
         omega = 2*U_mag*k/c
         # create history
         if k==0:
