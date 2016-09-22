@@ -134,7 +134,7 @@ def Cpp_Solver_VLM(Zeta, ZetaDot, Uext, ZetaStar, VMOPTS, Forces, \
     """@details wrapper for cpp_solver_vlm."""
     
     "If memory for AIC and BIC is not allocated, allocate here."
-    if AIC == None and BIC == None:
+    if AIC is None and BIC is None:
         AIC = np.zeros((VMOPTS.M.value*VMOPTS.N.value,\
                         VMOPTS.M.value*VMOPTS.N.value), \
                         ct.c_double,'C')

@@ -126,7 +126,7 @@ def CoincidentGrid(PosDefor, PsiDefor, Section,
         #END for jSection
     #END for iNode
     
-    if ( (OriginA_G != None) and (PsiA_G != None) ):
+    if ( (OriginA_G is not None) and (PsiA_G is not None) ):
         # Get transformation from a-frame to earth frame.
         CaG = Psi2TransMat(PsiA_G)
         CGa = CaG.T

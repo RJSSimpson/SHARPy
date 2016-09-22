@@ -84,10 +84,10 @@ def InitSteadyWake(VMOPTS,VMINPUT,Zeta,VelA_G = None):
     ZetaStar[0,:] = Zeta[VMOPTS.M.value,:]
     
     # Calculate incremental distance vector from trailing-edge to far-field."
-    if VelA_G == None:
+    if VelA_G is None:
         DeltaX = (VMINPUT.WakeLength * 
                  (VMINPUT.U_infty / np.linalg.norm(VMINPUT.U_infty)))
-    elif VelA_G != None:
+    elif VelA_G is not None:
         DeltaX = (VMINPUT.WakeLength * 
                  ((VMINPUT.U_infty - VelA_G) / 
                  np.linalg.norm(VMINPUT.U_infty - VelA_G)))

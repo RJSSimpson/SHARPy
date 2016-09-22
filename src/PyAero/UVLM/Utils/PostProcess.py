@@ -28,7 +28,7 @@ def GetCoeffs(VMOPTS, Forces, VMINPUT, VelA_G = None):
     #end for i
     
     # divide by denom.
-    if VelA_G != None:
+    if VelA_G is not None:
         denom = 0.5*(np.linalg.norm(VMINPUT.U_infty-VelA_G))**2.0*VMINPUT.area
     else:
         denom = 0.5*np.linalg.norm(VMINPUT.U_infty)**2.0*VMINPUT.area

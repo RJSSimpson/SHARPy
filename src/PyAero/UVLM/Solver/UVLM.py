@@ -51,7 +51,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
     # Delete unnecessary variables.
     del XBELEM, XBNODE, NumDof  
     # Copy reference beam to current (deformed) variables.
-    if eta0==None:
+    if eta0 is None:
         PosDefor = PosIni.copy(order = 'F')
         PsiDefor = PsiIni.copy(order = 'F')
         # Declare empty array for beam DoF rates.
@@ -71,7 +71,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
     
     # Initialise origin and orientation of surface velocities in a-frame
     CGa = Psi2TransMat(VMUNST.PsiA_G)
-    if vOmegaHist == None:
+    if vOmegaHist is None:
         VelA_A = np.dot(CGa.T,VMUNST.VelA_G)
         OmegaA_A = np.dot(CGa.T,VMUNST.OmegaA_G)
     else:
@@ -90,7 +90,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
                    VMINPUT.ctrlSurf)
     
     # Initialise wake for unsteady solution.
-    if vOmegaHist == None:
+    if vOmegaHist is None:
         velForWake = VMUNST.VelA_G
     else:
         velForWake = vOmegaHist[0,1:4]
@@ -136,7 +136,7 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
         if iTimeStep > 0:
             
             # Update geometry.
-            if vOmegaHist == None:
+            if vOmegaHist is None:
                 VMUNST.OriginA_G[:] += VMUNST.VelA_G[:]*VMOPTS.DelTime.value
                 # TODO: update OmegaA_A, PsiA_A in pitching problem.
             else:
@@ -144,14 +144,14 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
                 VelA_A = vOmegaHist[iTimeStep,1:4]
                 # TODO: update OmegaA_A, PsiA_G in pitching problem.
                 
-            if delEtaHist != None:
+            if type(delEtaHist) is tuple:
                 PosDefor=eta0[0]+delEtaHist[0][:,:,iTimeStep]
                 PsiDefor=eta0[1]+delEtaHist[1][:,:,:,iTimeStep]
-                PosDotDef=delEtaHist[2][:,:,iTimeStep]
+                PosDotDef=delEtaHist[2][:,:,iTimeStep] #TODO: PosDefor seems to be correct!
                 PsiDotDef=delEtaHist[3][:,:,:,iTimeStep]
             
             # Update control surface defintion.
-            if VMINPUT.ctrlSurf != None:
+            if VMINPUT.ctrlSurf is not None:
                 VMINPUT.ctrlSurf.update(Time[iTimeStep])
             
             # Update aerodynamic surface.
@@ -344,13 +344,10 @@ if __name__ == '__main__':
         amp=0.01 #nondim with span
         eigVec = beamDict['phiSort'][:,modeNum-1]
         eigVec[:]=0.0
-#         for j=1:n
-#             phiSort((j-1)*6+3,1)=0.001*(16/n*j)^2;
-#             phiSort((j-1)*6+5,1)=-2*0.001*(16/n*j);
-#         end
+#         eigVec[3::6]=0.001
         for j in range(N):
             eigVec[j*6+2]=0.001*(16.0/float(N)*(j+1))**2.0
-            eigVec[j*6+4]=-2.0*0.001*(16.0/float(N)*(j+1))
+#             eigVec[j*6+4]=-2.0*0.001*(16.0/float(N)*(j+1))
             
         disps=np.array((np.arange(0, np.size(eigVec, 0)-1, 6),
                         np.arange(1, np.size(eigVec, 0)-1, 6),
@@ -361,7 +358,7 @@ if __name__ == '__main__':
         scale=1.0#(1/maxDef)*amp*b
         phi0=scale*eigVec
         # get mode freq
-        k = 0.0 #np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
+        k = 0 #np.real(np.sqrt(beamDict['kMat'][modeNum-1,modeNum-1]))
         omega = 2*U_mag*k/c
         # create history
         if k==0:
@@ -397,15 +394,13 @@ if __name__ == '__main__':
         # populate connectivity array
         conn = np.zeros((Settings.MaxElNod*NumElems))
         if numNodesElem == 2:
-            for ElemNo in range(0,NumElems):
+            for ElemNo in range(NumElems):
                 i = ElemNo*Settings.MaxElNod
                 conn[i]=ElemNo+1
                 conn[i+1]=ElemNo+2
                 
-            NumNodes_tot = ct.c_int(NumElems + 1) 
-                
         elif numNodesElem == 3:
-            for ElemNo in range(0,NumElems):
+            for ElemNo in range(NumElems):
                 i = ElemNo*Settings.MaxElNod
                 conn[i]=2*ElemNo+1
                 conn[i+1]=2*ElemNo+3
