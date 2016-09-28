@@ -331,7 +331,7 @@ def Solve_Py(XBINPUT,XBOPTS,VMOPTS,VMINPUT,AELAOPTS):
 
 if __name__ == '__main__':
     ## solve nlnstatic problem.
-    Settings.OutputDir='/home/' + getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/'
+    Settings.OutputDir='/home/' + getuser() + '/Documents/MATLAB/Patil_HALE/incrementalTests/infiniteAlpha1SurgingWing/'
     
     # beam options.
     XBOPTS = DerivedTypes.Xbopts(FollowerForce = ct.c_bool(False),
@@ -343,7 +343,7 @@ if __name__ == '__main__':
      
     # beam inputs.
     XBINPUT = DerivedTypes.Xbinput(3,5)
-    XBINPUT.BeamLength = 16.0
+    XBINPUT.BeamLength = 2000.0
     XBINPUT.BeamStiffness[0,0] = 1.0e+09
     XBINPUT.BeamStiffness[1,1] = 1.0e+09
     XBINPUT.BeamStiffness[2,2] = 1.0e+09
@@ -351,7 +351,7 @@ if __name__ == '__main__':
     XBINPUT.BeamStiffness[4,4] = 2.0e+04
     XBINPUT.BeamStiffness[5,5] = 5.0e+06
       
-    XBINPUT.BeamStiffness[:,:] = 1.0*XBINPUT.BeamStiffness[:,:]
+    XBINPUT.BeamStiffness[:,:] = XBINPUT.BeamStiffness[:,:]*1.0e12
       
     XBINPUT.BeamMass[0,0] = 0.75
     XBINPUT.BeamMass[1,1] = 0.75
@@ -409,7 +409,7 @@ if __name__ == '__main__':
     chord = 1.0 #m
 #     chord = c
     wakeLength = 10 # in chords
-    alphaVec = (2,)#range(1); #deg
+    alphaVec = (1,)#range(1); #deg
     for alpha in alphaVec:
         VMINPUT = DerivedTypesAero.VMinput(c = chord,
                                            b = XBINPUT.BeamLength,

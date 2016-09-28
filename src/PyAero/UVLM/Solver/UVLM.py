@@ -54,14 +54,18 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
     if eta0 is None:
         PosDefor = PosIni.copy(order = 'F')
         PsiDefor = PsiIni.copy(order = 'F')
+    else:
+        PosDefor=eta0[0]#+delEtaHist[0][:,:,0]
+        PsiDefor=eta0[1]#+delEtaHist[1][:,:,:,0]
+        
+    if delEtaHist is None:
         # Declare empty array for beam DoF rates.
         PosDotDef = np.zeros_like(PosDefor, ct.c_double, 'F')
         PsiDotDef = np.zeros_like(PsiDefor, ct.c_double, 'F')
     else:
-        PosDefor=eta0[0]#+delEtaHist[0][:,:,0]
-        PsiDefor=eta0[1]#+delEtaHist[1][:,:,:,0]
         PosDotDef=delEtaHist[2][:,:,0]
         PsiDotDef=delEtaHist[3][:,:,:,0]
+        
        
     # Check the specified inputs from the PyAero have been properly applied.
     assert NumNodes_tot.value - 1 == VMOPTS.N.value, "Initialisation wrong"
@@ -143,10 +147,14 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
                 VMUNST.OriginA_G[:] += vOmegaHist[iTimeStep,1:4]*VMOPTS.DelTime.value
                 VelA_A = vOmegaHist[iTimeStep,1:4]
                 # TODO: update OmegaA_A, PsiA_G in pitching problem.
-                
+            
+            if type(eta0) is tuple:
+                PosDefor=eta0[0]
+                PsiDefor=eta0[1]
+            
             if type(delEtaHist) is tuple:
-                PosDefor=eta0[0]+delEtaHist[0][:,:,iTimeStep]
-                PsiDefor=eta0[1]+delEtaHist[1][:,:,:,iTimeStep]
+                PosDefor=PosDefor+delEtaHist[0][:,:,iTimeStep]
+                PsiDefor=PsiDefor+delEtaHist[1][:,:,:,iTimeStep]
                 PosDotDef=delEtaHist[2][:,:,iTimeStep] #TODO: PosDefor seems to be correct!
                 PsiDotDef=delEtaHist[3][:,:,:,iTimeStep]
             
@@ -233,27 +241,31 @@ def Run_Cpp_Solver_UVLM(VMOPTS,VMINPUT,VMUNST,AELOPTS,vOmegaHist=None,eta0=None,
         
 
 if __name__ == '__main__':
-    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/'
+    Settings.OutputDir = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/incrementalTests/infiniteAlpha1SurgingWing/'
     writeToMat = True
+    
+    aFrameMotion=True
+    nonZeroGeom=True
+    beamDOFmotion=False
     
     # Define options for aero solver.
     M = 4
     N = 10
     Mstar = 10*M
     U_mag = 25.0
-    alpha = 2.0*np.pi/180.0
+    alpha = 1.0*np.pi/180.0
     theta = 0.0*np.pi/180.0
     imageMeth=True
     
     # Define wing geometry parameters.
     c = 1
-    b = 16 #semi-span
+    b = 2000#16 #semi-span
     
     # Physical time-step
     DeltaS = c/(M*U_mag)
     
     # Solver options
-    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,True,DeltaS,False,2)
+    VMOPTS = VMopts(M,N,imageMeth,Mstar,False,True,True,DeltaS,False,4)
     
     # Solver inputs
     WakeLength = Mstar/M # specified in chord lengths
@@ -262,7 +274,7 @@ if __name__ == '__main__':
     
     
     # Define unsteady solver parameters.
-    NumChordLengths = 250.0
+    NumChordLengths = 100.0
     VelA_A = np.array([0, 0, 0])
     OmegaA_A = np.array([0, 0, 0])
     VMUNST = VMUnsteadyInput(VMOPTS,VMINPUT,\
@@ -273,9 +285,10 @@ if __name__ == '__main__':
     
     # Generate history of axis sytem motions (in inertial frame)
     Time = np.arange(0.0,VMUNST.FinalTime,VMOPTS.DelTime.value)
-    if False:
+    if aFrameMotion:
+        label = 'surge_h0.01_k0.1'
         hBar=0.01
-        k=1.0
+        k=0.1
         omegaY=2*U_mag*k/c
         vOmegaHist = np.zeros((len(Time),7))
         vOmegaHist[:,0] = Time
@@ -289,9 +302,9 @@ if __name__ == '__main__':
         vOmegaHist = np.zeros((len(Time),7))
         vOmegaHist[:,0] = Time
         
-    if True:
+    if nonZeroGeom:
         # load non-zero reference
-        refFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SOL112_def.dat'
+        refFile = Settings.OutputDir + 'M' + str(M) + 'N' + str(N) + '_V25_alpha' + str(int(alpha*180.0/np.pi)) + '_SOL112_def.dat'
         fp = open(refFile)
         numNodesElem = 3
         if numNodesElem == 2:
@@ -320,7 +333,7 @@ if __name__ == '__main__':
             PosDefor[iNode,:] = PosDeforElem[iElem,iiElem,:]
             
         # get reference circulation strengths
-        refFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/M' + str(M) + 'N' + str(N) + '_V25_alpha2_Gamma0'
+        refFile = Settings.OutputDir + 'M' + str(M) + 'N' + str(N) + '_V25_alpha' + str(int(alpha*180.0/np.pi)) + '_Gamma0'
         myDict = loadmat(refFile)
         gam0 = myDict['Gamma0']
         
@@ -329,7 +342,7 @@ if __name__ == '__main__':
         eta0 = None
         
     # Generate a history of beam DoF motions (in A-frame)
-    if True:
+    if beamDOFmotion:
         delEtaHisty = np.zeros((12*N,len(Time)))
         PosDefHist=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
         PosDotHist=np.zeros((N+1,3,len(Time)),dtype=ct.c_double, order='F')
@@ -338,7 +351,7 @@ if __name__ == '__main__':
         PsiDeforHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         PsiDotHist = np.zeros((NumElems,3,3,len(Time)),dtype=ct.c_double, order='F')
         # load and scale eigenvector
-        modeFile = '/home/' + getpass.getuser() + '/Documents/MATLAB/Patil_HALE/nonZeroAero/noAdded/M' + str(M) + 'N' + str(N) + '_V25_alpha2_SSbeam'
+        modeFile = Settings.OutputDir + 'M' + str(M) + 'N' + str(N) + '_V25_alpha' + str(int(alpha)) + '_SSbeam'
         beamDict = loadmat(modeFile)
         modeNum = 1
         amp=0.01 #nondim with span
@@ -346,8 +359,8 @@ if __name__ == '__main__':
         eigVec[:]=0.0
 #         eigVec[3::6]=0.001
         for j in range(N):
-            eigVec[j*6+2]=0.001*(16.0/float(N)*(j+1))**2.0
-#             eigVec[j*6+4]=-2.0*0.001*(16.0/float(N)*(j+1))
+            eigVec[j*6+2]=1.0#0.00001*(16.0/float(N)*(j+1))**2.0
+#             eigVec[j*6+5]=-2.0*0.0001*(16.0/float(N)*(j+1))
             
         disps=np.array((np.arange(0, np.size(eigVec, 0)-1, 6),
                         np.arange(1, np.size(eigVec, 0)-1, 6),
@@ -428,7 +441,16 @@ if __name__ == '__main__':
     
     print(Coeffs[-50:,:])
     
-    if writeToMat == True:
+    if writeToMat and aFrameMotion:
+        fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2/M) + 'V' + str(U_mag) + '_alpha' + str(alpha)[:6] + label
+        if imageMeth != False:
+            fileName += '_half'
+            savemat(fileName,
+                    {'vOmegaHist':vOmegaHist,
+                    'Coeffs':Coeffs},
+                    True)
+            
+    if writeToMat and nonZeroGeom and beamDOFmotion:
         fileName = Settings.OutputDir + 'UVLMrectAR' + str(b/c) + '_m' + str(M) + 'mW' + str(Mstar) + 'n' + str(N) + 'delS' + str(2/M) + 'V' + str(U_mag) + '_alpha' + str(alpha)[:6] + '_mode' + str(modeNum) + '_pcAmp' + str(int(amp*100))[:4] + '_k' + str(k)
         if imageMeth != False:
             fileName += '_half'
