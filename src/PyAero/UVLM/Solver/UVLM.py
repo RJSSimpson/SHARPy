@@ -293,8 +293,8 @@ if __name__ == '__main__':
         vOmegaHist = np.zeros((len(Time),7))
         vOmegaHist[:,0] = Time
         vOmegaHist[:,1] = 0.0 # along A-frame x-axis
-        vOmegaHist[:,2] = omegaY*hBar*np.cos(omegaY*Time) # y-axis (fore/aft)
-        vOmegaHist[:,3] = 0.0 # z-axis (up/down)
+        vOmegaHist[:,2] = omegaY*hBar*np.cos(omegaY*Time) *np.cos(alpha) # y-axis (fore/aft)
+        vOmegaHist[:,3] = -omegaY*hBar*np.cos(omegaY*Time)*np.sin(alpha) # z-axis (up/down)
         vOmegaHist[:,4] = 0.0 # about A-frame x-axis
         vOmegaHist[:,5] = 0.0 # about y
         vOmegaHist[:,6] = 0.0 # about z
