@@ -129,7 +129,7 @@ def genSSuvlm(gam,gamW,gamPri,zeta,zetaW,zetaPri,nu,m,n,mW,delS,imageMeth=False)
     # Matrix C
     C[:,0:m*n] = np.dot(H, Y1) - np.dot(H , np.dot(Y3,AICs3))
     C[:,m*n:m*n+mW*n] = -np.dot(H, np.dot(Y3,AICs3w))
-    #C[:,m*n+mW*n:] = 2.0*np.dot(np.transpose(Xi),Y4)
+    C[:,m*n+mW*n:] = 2.0*np.dot(np.transpose(Xi),Y4)
     
     # Matrix D
     D[:,0:3*(m+1)*(n+1)] = 2.0*np.dot(H, np.dot(Y3, H.transpose()))
@@ -431,9 +431,9 @@ def runLinearAero(E,F,G,C,D,delS,nT,u,x0 = None):
 
 if __name__ == '__main__':
     if True:
-        Settings.OutputDir = '/home/' + getpass.getuser() + '/Desktop/'
+        Settings.OutputDir = '/home/' + getpass.getuser() + '/Desktop/handoverScripts/aerofoilAero/'
         # AR=1e10
-        for m in (30,):
+        for m in (10,20):
             for mW in (30*m,):
                 #genLinearRectWing(AR,m,mW,40,e=0.33,writeToMat = True,imageMeth = True)
                 genLinearAerofoil(m,mW,writeToMat = True)
