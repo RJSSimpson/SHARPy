@@ -2,6 +2,7 @@
 # Installing SHARPy onto a fresh Ubuntu 16.04
 # r.simpson11@imperial.ac.uk
 # 15/08/16
+# Prerequisites: eclipse neon with CDT version 9.x, pydev verison 5.1.2
 
 # First, get all the software into your local repo with a one-liner from GitHub
 cd Software/git/
